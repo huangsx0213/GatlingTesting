@@ -8,7 +8,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -45,9 +44,16 @@ public class UserViewModel implements Initializable {
 
     private final IUserService userService = new UserServiceImpl(); // In a real app, use dependency injection
     private final ObservableList<User> userList = FXCollections.observableArrayList();
+    private MainViewModel mainViewModel; // To update status bar
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        // mainViewModel will be set by MainViewModel after loading this view
+    }
+
+    // Method to set MainViewModel instance
+    public void setMainViewModel(MainViewModel mainViewModel) {
+        this.mainViewModel = mainViewModel;
         // Initialize table columns
         idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -68,7 +74,7 @@ public class UserViewModel implements Initializable {
         try {
             userList.setAll(userService.findAllUsers());
         } catch (ServiceException e) {
-            showErrorAlert("Failed to load users", e.getMessage());
+            if (mainViewModel != null) mainViewModel.updateStatus("Failed to load users: " + e.getMessage(), MainViewModel.StatusType.ERROR);
         }
     }
 
@@ -91,7 +97,7 @@ public class UserViewModel implements Initializable {
         String email = emailField.getText();
 
         if (name.isEmpty() || email.isEmpty()) {
-            showErrorAlert("Input Error", "Name and email cannot be empty.");
+            if (mainViewModel != null) mainViewModel.updateStatus("Input Error: Name and email cannot be empty.", MainViewModel.StatusType.ERROR);
             return;
         }
 
@@ -101,9 +107,9 @@ public class UserViewModel implements Initializable {
             userList.add(newUser); // The ID will be set by DAO after insertion
             clearFields();
             userTable.getSelectionModel().select(newUser);
-            showInfoAlert("Success", "User added successfully.");
+            if (mainViewModel != null) mainViewModel.updateStatus("User added successfully.", MainViewModel.StatusType.SUCCESS);
         } catch (ServiceException e) {
-            showErrorAlert("Failed to add user", e.getMessage());
+            if (mainViewModel != null) mainViewModel.updateStatus("Failed to add user: " + e.getMessage(), MainViewModel.StatusType.ERROR);
         }
     }
 
@@ -112,7 +118,7 @@ public class UserViewModel implements Initializable {
         User selectedUserToUpdate = userTable.getSelectionModel().getSelectedItem();
 
         if (selectedUserToUpdate == null) {
-            showErrorAlert("Selection Error", "Please select a user from the table to update.");
+            if (mainViewModel != null) mainViewModel.updateStatus("Selection Error: Please select a user from the table to update.", MainViewModel.StatusType.ERROR);
             return;
         }
 
@@ -123,7 +129,7 @@ public class UserViewModel implements Initializable {
         String email = emailField.getText();
 
         if (name.isEmpty() || email.isEmpty()) {
-            showErrorAlert("Input Error", "Name and email cannot be empty.");
+            if (mainViewModel != null) mainViewModel.updateStatus("Input Error: Name and email cannot be empty.", MainViewModel.StatusType.ERROR);
             return;
         }
 
@@ -146,10 +152,10 @@ public class UserViewModel implements Initializable {
                 userList.set(selectedIndex, userToUpdate); // Assuming userToUpdate is the one with new values
             }
             userTable.refresh(); // Refresh table to show changes
-            showInfoAlert("Success", "User information updated successfully.");
+            if (mainViewModel != null) mainViewModel.updateStatus("User information updated successfully.", MainViewModel.StatusType.SUCCESS);
 
         } catch (ServiceException e) {
-            showErrorAlert("Failed to update user", e.getMessage());
+            if (mainViewModel != null) mainViewModel.updateStatus("Failed to update user: " + e.getMessage(), MainViewModel.StatusType.ERROR);
         }
     }
 
@@ -157,7 +163,7 @@ public class UserViewModel implements Initializable {
     private void handleDeleteUser() {
         User selectedUser = userTable.getSelectionModel().getSelectedItem();
         if (selectedUser == null) {
-            showErrorAlert("Selection Error", "Please select a user from the table to delete.");
+            if (mainViewModel != null) mainViewModel.updateStatus("Selection Error: Please select a user from the table to delete.", MainViewModel.StatusType.ERROR);
             return;
         }
 
@@ -165,9 +171,9 @@ public class UserViewModel implements Initializable {
             userService.removeUser(selectedUser.getId());
             userList.remove(selectedUser);
             clearFields();
-            showInfoAlert("Success", "User deleted successfully.");
+            if (mainViewModel != null) mainViewModel.updateStatus("User deleted successfully.", MainViewModel.StatusType.SUCCESS);
         } catch (ServiceException e) {
-            showErrorAlert("Failed to delete user", e.getMessage());
+            if (mainViewModel != null) mainViewModel.updateStatus("Failed to delete user: " + e.getMessage(), MainViewModel.StatusType.ERROR);
         }
     }
 
@@ -184,19 +190,5 @@ public class UserViewModel implements Initializable {
         nameField.requestFocus(); // Set focus to the first editable field
     }
 
-    private void showErrorAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
 
-    private void showInfoAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
 }

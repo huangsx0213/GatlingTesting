@@ -51,4 +51,11 @@
             </items>
         </SplitPane>
     </center>
+    <bottom>
+        <HBox alignment="CENTER_LEFT" prefHeight="30.0" style="-fx-background-color: #f0f0f0; -fx-padding: 5px;">
+            <children>
+                <Label fx:id="statusLabel" text="Ready" />
+            </children>
+        </HBox>
+    </bottom>
 </BorderPane>

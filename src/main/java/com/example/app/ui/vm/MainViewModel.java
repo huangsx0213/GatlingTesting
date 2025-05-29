@@ -9,6 +9,8 @@ import javafx.scene.Node;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.Label;
+import javafx.scene.paint.Color;
 import javafx.scene.layout.BorderPane;
 
 import java.io.IOException;
@@ -18,6 +20,9 @@ import java.util.Map;
 import java.util.ResourceBundle;
 
 public class MainViewModel implements Initializable {
+
+    @FXML
+    private Label statusLabel;
 
     @FXML
     private BorderPane mainPane;
@@ -30,6 +35,13 @@ public class MainViewModel implements Initializable {
     private final Map<String, String> fxmlMapping = new HashMap<>();
     private final Map<String, Node> loadedTabs = new HashMap<>();
 
+    // Enum for status types
+    public enum StatusType {
+        INFO,
+        SUCCESS,
+        ERROR
+    }
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Initialize FXML mapping
@@ -37,6 +49,7 @@ public class MainViewModel implements Initializable {
          // fxmlMapping.put("System Settings", "/com/example/app/ui/view/settings_view.fxml"); // Placeholder for settings view path
 
         navigationList.setItems(navItems); // navItems is already initialized with "User Management" and "System Settings"
+        updateStatus("Welcome to Gatling Testing System!", StatusType.INFO);
         navigationList.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
                 openOrSelectTab(newValue);
@@ -66,6 +79,10 @@ public class MainViewModel implements Initializable {
                 if (contentNode == null) {
                     FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
                     contentNode = loader.load();
+                    Object controller = loader.getController();
+                    if (controller instanceof UserViewModel) {
+                        ((UserViewModel) controller).setMainViewModel(this);
+                    }
                     loadedTabs.put(tabName, contentNode);
                 }
 
@@ -90,10 +107,28 @@ public class MainViewModel implements Initializable {
         } else {
             System.err.println("No FXML mapping found for: " + tabName);
             // Optionally, show a placeholder or error tab
-            Tab errorTab = new Tab(tabName + " (Not Implemented)");
-            errorTab.setContent(new javafx.scene.control.Label("Feature '" + tabName + "' is not yet implemented."));
-            contentTabPane.getTabs().add(errorTab);
-            contentTabPane.getSelectionModel().select(errorTab);
+             Tab errorTab = new Tab(tabName + " (Not Implemented)");
+             errorTab.setContent(new javafx.scene.control.Label("Feature '" + tabName + "' is not yet implemented."));
+             contentTabPane.getTabs().add(errorTab);
+             contentTabPane.getSelectionModel().select(errorTab);
+             updateStatus("Feature '" + tabName + "' is not yet implemented.", StatusType.INFO);
+         }
+     }
+
+    public void updateStatus(String message, StatusType type) {
+        if (statusLabel != null) {
+            statusLabel.setText(message);
+            switch (type) {
+                case INFO:
+                    statusLabel.setTextFill(Color.BLACK);
+                    break;
+                case SUCCESS:
+                    statusLabel.setTextFill(Color.GREEN);
+                    break;
+                case ERROR:
+                    statusLabel.setTextFill(Color.RED);
+                    break;
+            }
         }
     }
 }
