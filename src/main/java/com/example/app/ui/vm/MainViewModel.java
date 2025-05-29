@@ -31,6 +31,9 @@ public class MainViewModel implements Initializable {
     @FXML
     private TabPane contentTabPane;
 
+    @FXML
+    private Label currentFeatureLabel;
+
     private final ObservableList<String> navItems = FXCollections.observableArrayList("User Management", "System Settings"); // Add more items as needed
     private final Map<String, String> fxmlMapping = new HashMap<>();
     private final Map<String, Node> loadedTabs = new HashMap<>();
@@ -53,12 +56,26 @@ public class MainViewModel implements Initializable {
         navigationList.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
                 openOrSelectTab(newValue);
+                if (currentFeatureLabel != null) {
+                    currentFeatureLabel.setText(newValue);
+                }
+            }
+        });
+
+        contentTabPane.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && currentFeatureLabel != null) {
+                currentFeatureLabel.setText(newValue.getText());
             }
         });
 
         // Select the first item by default if available
         if (!navItems.isEmpty()) {
+            String firstItem = navItems.get(0);
             navigationList.getSelectionModel().selectFirst();
+            // openOrSelectTab(firstItem); // This will be triggered by the listener above
+            if (currentFeatureLabel != null) {
+                currentFeatureLabel.setText(firstItem);
+            }
         }
     }
 
@@ -67,6 +84,9 @@ public class MainViewModel implements Initializable {
         for (Tab tab : contentTabPane.getTabs()) {
             if (tab.getText().equals(tabName)) {
                 contentTabPane.getSelectionModel().select(tab);
+                if (currentFeatureLabel != null) {
+                    currentFeatureLabel.setText(tabName);
+                }
                 return;
             }
         }
@@ -93,6 +113,9 @@ public class MainViewModel implements Initializable {
 
                 contentTabPane.getTabs().add(newTab);
                 contentTabPane.getSelectionModel().select(newTab);
+                if (currentFeatureLabel != null) {
+                    currentFeatureLabel.setText(tabName);
+                }
 
             } catch (IOException e) {
                 System.err.println("Failed to load FXML for tab: " + tabName + " from " + fxmlPath);
@@ -111,6 +134,9 @@ public class MainViewModel implements Initializable {
              errorTab.setContent(new javafx.scene.control.Label("Feature '" + tabName + "' is not yet implemented."));
              contentTabPane.getTabs().add(errorTab);
              contentTabPane.getSelectionModel().select(errorTab);
+             if (currentFeatureLabel != null) {
+                currentFeatureLabel.setText(tabName + " (Not Implemented)");
+             }
              updateStatus("Feature '" + tabName + "' is not yet implemented.", StatusType.INFO);
          }
      }
