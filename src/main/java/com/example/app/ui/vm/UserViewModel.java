@@ -68,13 +68,16 @@ public class UserViewModel implements Initializable {
         try {
             userList.setAll(userService.findAllUsers());
         } catch (ServiceException e) {
-            showErrorAlert("加载用户失败", e.getMessage());
+            showErrorAlert("Failed to load users", e.getMessage());
         }
     }
 
     private void showUserDetails(User user) {
         if (user != null) {
-            userIdField.setText(String.valueOf(user.getId()));
+            // userIdField is now hidden, but we still store the ID internally if needed for logic
+            // For example, if you need to display it elsewhere or use it for operations:
+            // currentSelectedUserId = user.getId(); // Store it in a member variable if needed
+            userIdField.setText(String.valueOf(user.getId())); // Keep this to hold the ID internally
             nameField.setText(user.getName());
             emailField.setText(user.getEmail());
         } else {
@@ -88,7 +91,7 @@ public class UserViewModel implements Initializable {
         String email = emailField.getText();
 
         if (name.isEmpty() || email.isEmpty()) {
-            showErrorAlert("输入错误", "姓名和邮箱不能为空。");
+            showErrorAlert("Input Error", "Name and email cannot be empty.");
             return;
         }
 
@@ -98,52 +101,55 @@ public class UserViewModel implements Initializable {
             userList.add(newUser); // The ID will be set by DAO after insertion
             clearFields();
             userTable.getSelectionModel().select(newUser);
-            showInfoAlert("成功", "用户添加成功。");
+            showInfoAlert("Success", "User added successfully.");
         } catch (ServiceException e) {
-            showErrorAlert("添加用户失败", e.getMessage());
+            showErrorAlert("Failed to add user", e.getMessage());
         }
     }
 
     @FXML
     private void handleUpdateUser() {
-        String idText = userIdField.getText();
-        if (idText.isEmpty()) {
-            showErrorAlert("选择错误", "请先从表格中选择一个用户进行修改。");
+        User selectedUserToUpdate = userTable.getSelectionModel().getSelectedItem();
+
+        if (selectedUserToUpdate == null) {
+            showErrorAlert("Selection Error", "Please select a user from the table to update.");
+            return;
+        }
+
+        // ID is taken from the selected user in the table, not from a visible text field
+        int userId = selectedUserToUpdate.getId();
+
+        String name = nameField.getText();
+        String email = emailField.getText();
+
+        if (name.isEmpty() || email.isEmpty()) {
+            showErrorAlert("Input Error", "Name and email cannot be empty.");
             return;
         }
 
         try {
-            int userId = Integer.parseInt(idText);
-            String name = nameField.getText();
-            String email = emailField.getText();
+            // Create a new User object or update the selected one for the service call
+            User userToUpdate = new User(userId, name, email);
+            // Or, if your service expects the original object to be modified:
+            // selectedUserToUpdate.setName(name);
+            // selectedUserToUpdate.setEmail(email);
+            // User userToUpdate = selectedUserToUpdate;
 
-            if (name.isEmpty() || email.isEmpty()) {
-                showErrorAlert("输入错误", "姓名和邮箱不能为空。");
-                return;
+            userService.updateUserProfile(userToUpdate);
+
+            // Update the item in the list to reflect changes in TableView
+            // This ensures the TableView updates if the User object's properties are JavaFX properties
+            // and the table columns are correctly bound.
+            // If not, you might need to replace the item in the list:
+            int selectedIndex = userList.indexOf(selectedUserToUpdate);
+            if (selectedIndex >= 0) {
+                userList.set(selectedIndex, userToUpdate); // Assuming userToUpdate is the one with new values
             }
+            userTable.refresh(); // Refresh table to show changes
+            showInfoAlert("Success", "User information updated successfully.");
 
-            User selectedUser = userTable.getSelectionModel().getSelectedItem();
-            if (selectedUser == null || selectedUser.getId() != userId) {
-                 selectedUser = userService.findUserById(userId);
-                 if(selectedUser == null){
-                    showErrorAlert("错误", "未找到要更新的用户。");
-                    return;
-                 }
-            }
-
-            selectedUser.setName(name);
-            selectedUser.setEmail(email);
-
-            userService.updateUserProfile(selectedUser);
-            // Refresh the table item if PropertyValueFactory is used correctly
-            // or manually refresh the list/item
-            userTable.refresh(); // This should update the view for the modified user
-            showInfoAlert("成功", "用户信息更新成功。");
-
-        } catch (NumberFormatException e) {
-            showErrorAlert("输入错误", "用户ID格式无效。");
         } catch (ServiceException e) {
-            showErrorAlert("更新用户失败", e.getMessage());
+            showErrorAlert("Failed to update user", e.getMessage());
         }
     }
 
@@ -151,7 +157,7 @@ public class UserViewModel implements Initializable {
     private void handleDeleteUser() {
         User selectedUser = userTable.getSelectionModel().getSelectedItem();
         if (selectedUser == null) {
-            showErrorAlert("选择错误", "请先从表格中选择一个用户进行删除。");
+            showErrorAlert("Selection Error", "Please select a user from the table to delete.");
             return;
         }
 
@@ -159,9 +165,9 @@ public class UserViewModel implements Initializable {
             userService.removeUser(selectedUser.getId());
             userList.remove(selectedUser);
             clearFields();
-            showInfoAlert("成功", "用户删除成功。");
+            showInfoAlert("Success", "User deleted successfully.");
         } catch (ServiceException e) {
-            showErrorAlert("删除用户失败", e.getMessage());
+            showErrorAlert("Failed to delete user", e.getMessage());
         }
     }
 
@@ -172,9 +178,10 @@ public class UserViewModel implements Initializable {
     }
 
     private void clearFields() {
-        userIdField.clear();
+        userIdField.clear(); // Still clear it, as it holds the ID of the selected user internally
         nameField.clear();
         emailField.clear();
+        nameField.requestFocus(); // Set focus to the first editable field
     }
 
     private void showErrorAlert(String title, String message) {
