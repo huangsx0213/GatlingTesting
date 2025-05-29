@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.example</groupId>
-    <artifactId>javafx-sqlite-mvvm-app</artifactId>
+    <artifactId>gatling-testing-system</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
