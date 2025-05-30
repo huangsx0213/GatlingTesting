@@ -9,38 +9,43 @@
         <VBox layoutX="10.0" layoutY="10.0" prefHeight="780.0" prefWidth="1180.0" spacing="10.0" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="10.0">
             <children>
             <!-- Form Section -->
-                <GridPane hgap="10.0" vgap="10.0">
-                    <columnConstraints>
-                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="120.0" />
-                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="400.0" />
-                    </columnConstraints>
-                    <rowConstraints>
-                        <RowConstraints minHeight="10.0" prefHeight="40.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" prefHeight="40.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" prefHeight="120.0" vgrow="SOMETIMES" />
-                    </rowConstraints>
+                <VBox spacing="10.0" style="-fx-border-color: #cccccc; -fx-border-radius: 6; -fx-border-width: 1; -fx-padding: 15;">
                     <children>
-                        <Label text="Template Name:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                        <TextField fx:id="templateNameField" promptText="Template Name" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-                        <Label text="Body Format:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                        <ComboBox fx:id="bodyFormatComboBox" GridPane.columnIndex="1" GridPane.rowIndex="1" promptText="Select Format" />
-                        <Label text="Body Content:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                        <HBox spacing="10.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                        <GridPane hgap="10.0" vgap="10.0">
+                            <columnConstraints>
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="50.0" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="470.0" />
+                            </columnConstraints>
+                            <rowConstraints>
+                                <RowConstraints minHeight="10.0" prefHeight="40.0" vgrow="SOMETIMES" />
+                                <RowConstraints minHeight="10.0" prefHeight="40.0" vgrow="SOMETIMES" />
+                                <RowConstraints minHeight="10.0" prefHeight="120.0" vgrow="SOMETIMES" />
+                            </rowConstraints>
                             <children>
-                                <TextArea fx:id="bodyContentArea" promptText="Body Template Content" prefRowCount="6" HBox.hgrow="ALWAYS" />
+                                <Label text="Template Name:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                                <TextField fx:id="templateNameField" promptText="Template Name" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                <Label text="Body Format:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                                <ComboBox fx:id="bodyFormatComboBox" GridPane.columnIndex="1" GridPane.rowIndex="1" promptText="Select Format" />
+                                <Label text="Body Content:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                                <HBox spacing="10.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                                    <children>
+                                        <TextArea fx:id="bodyContentArea" promptText="Body Template Content" prefRowCount="6" HBox.hgrow="ALWAYS" />
+                                    </children>
+                                </HBox>
                             </children>
-                        </HBox>
+                        </GridPane>
                     </children>
-                </GridPane>
+                </VBox>
                 <!-- Action Buttons -->
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                     <children>
-                        <Button fx:id="addButton" text="Add Template" onAction="#handleAddTemplate" style="-fx-background-color: #4CAF50; -fx-text-fill: white;" />
-                        <Button fx:id="updateButton" text="Update Template" onAction="#handleUpdateTemplate" style="-fx-background-color: #2196F3; -fx-text-fill: white;" />
-                        <Button fx:id="deleteButton" text="Delete Template" onAction="#handleDeleteTemplate" style="-fx-background-color: #f44336; -fx-text-fill: white;" />
+                        <Button fx:id="addButton" text="Add Template" onAction="#handleAddTemplate" />
+                        <Button fx:id="updateButton" text="Update Template" onAction="#handleUpdateTemplate" />
+                        <Button fx:id="deleteButton" text="Delete Template" onAction="#handleDeleteTemplate" />
                         <Button fx:id="clearButton" text="Clear Form" onAction="#handleClearForm" />
-                        <Button fx:id="formatButton" text="Format" onAction="#handleFormatTemplate" style="-fx-background-color: #FF9800; -fx-text-fill: white;" />
-                                        <Button fx:id="validateButton" text="Validate" onAction="#handleValidateTemplate" style="-fx-background-color: #9C27B0; -fx-text-fill: white;" />
+                        <Separator orientation="VERTICAL" />
+                        <Button fx:id="formatButton" text="Format" onAction="#handleFormatTemplate" />
+                        <Button fx:id="validateButton" text="Validate" onAction="#handleValidateTemplate" />
                     </children>
                     <padding>
                         <Insets bottom="10.0" top="10.0" />

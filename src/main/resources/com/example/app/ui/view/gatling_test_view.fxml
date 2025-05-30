@@ -10,7 +10,7 @@
         <VBox layoutX="10.0" layoutY="10.0" prefHeight="780.0" prefWidth="1180.0" spacing="10.0" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="10.0">
             <children>
                 <!-- Form Section -->
-                <ScrollPane fitToWidth="true" prefHeight="300.0">
+                <ScrollPane fitToWidth="true" prefHeight="350.0">
                     <content>
                         <VBox spacing="10.0">
                             <padding>
@@ -117,13 +117,13 @@
                 <!-- Action Buttons -->
                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                     <children>
-                        <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddTest" text="Add Test" style="-fx-background-color: #4CAF50; -fx-text-fill: white;" />
-                        <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateTest" text="Update Test" style="-fx-background-color: #2196F3; -fx-text-fill: white;" />
-                        <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteTest" text="Delete Test" style="-fx-background-color: #f44336; -fx-text-fill: white;" />
+                        <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddTest" text="Add Test" />
+                        <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateTest" text="Update Test" />
+                        <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteTest" text="Delete Test" />
                         <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearFields" text="Clear Form" />
                         <Separator orientation="VERTICAL" />
-                        <Button fx:id="runTestButton" mnemonicParsing="false" onAction="#handleRunTest" text="Run Selected Test" style="-fx-background-color: #FF9800; -fx-text-fill: white;" />
-                        <Button fx:id="runSuiteButton" mnemonicParsing="false" onAction="#handleRunSuite" text="Run Suite" style="-fx-background-color: #9C27B0; -fx-text-fill: white;" />
+                        <Button fx:id="runTestButton" mnemonicParsing="false" onAction="#handleRunTest" text="Run Selected Test" />
+                        <Button fx:id="runSuiteButton" mnemonicParsing="false" onAction="#handleRunSuite" text="Run Suite" />
                     </children>
                     <padding>
                         <Insets bottom="10.0" top="10.0" />
@@ -131,7 +131,7 @@
                 </HBox>
                 
                 <!-- Test Table -->
-                <TableView fx:id="testTable" prefHeight="400.0" VBox.vgrow="ALWAYS">
+                <TableView fx:id="testTable" prefHeight="350.0" VBox.vgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="idColumn" prefWidth="50.0" text="ID" />
                         <TableColumn fx:id="isRunColumn" prefWidth="60.0" text="Run" />
