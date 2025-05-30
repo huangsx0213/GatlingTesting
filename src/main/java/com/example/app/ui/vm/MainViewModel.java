@@ -109,6 +109,10 @@ public class MainViewModel implements Initializable {
                     Object controller = loader.getController();
                     if (controller instanceof GatlingTestViewModel) {
                         ((GatlingTestViewModel) controller).setMainViewModel(this);
+                    } else if (controller instanceof BodyTemplateViewModel) {
+                        ((BodyTemplateViewModel) controller).setMainViewModel(this);
+                    } else if (controller instanceof HeadersTemplateViewModel) {
+                        ((HeadersTemplateViewModel) controller).setMainViewModel(this);
                     }
                     loadedTabs.put(tabName, contentNode);
                 }
