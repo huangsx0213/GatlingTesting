@@ -42,9 +42,9 @@
     <center>
         <SplitPane dividerPositions="0.25" prefHeight="160.0" prefWidth="150.0" BorderPane.alignment="CENTER">
             <items>
-                <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="150.0" spacing="10.0">
+                <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="150.0" spacing="10.0" maxWidth="250.0">
                     <children>
-                        <ListView fx:id="navigationList" prefWidth="150.0" VBox.vgrow="ALWAYS"/>
+                        <ListView fx:id="navigationList" prefWidth="150.0" VBox.vgrow="ALWAYS" />
                     </children>
                     <padding>
                         <Insets left="5.0" right="5.0" />

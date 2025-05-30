@@ -34,7 +34,12 @@ public class MainViewModel implements Initializable {
     @FXML
     private Label currentFeatureLabel;
 
-    private final ObservableList<String> navItems = FXCollections.observableArrayList("Gatling Test Management", "System Settings"); // Add more items as needed
+    private final ObservableList<String> navItems = FXCollections.observableArrayList(
+        "Gatling Test Management",
+        "Body Template Management",
+        "Headers Template Management",
+        "System Settings"
+    );
     private final Map<String, String> fxmlMapping = new HashMap<>();
     private final Map<String, Node> loadedTabs = new HashMap<>();
 
@@ -49,9 +54,11 @@ public class MainViewModel implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         // Initialize FXML mapping
         fxmlMapping.put("Gatling Test Management", "/com/example/app/ui/view/gatling_test_view.fxml");
-         // fxmlMapping.put("System Settings", "/com/example/app/ui/view/settings_view.fxml"); // Placeholder for settings view path
+        fxmlMapping.put("Body Template Management", "/com/example/app/ui/view/body_template_view.fxml");
+        fxmlMapping.put("Headers Template Management", "/com/example/app/ui/view/headers_template_view.fxml");
+        // fxmlMapping.put("System Settings", "/com/example/app/ui/view/settings_view.fxml"); // Placeholder for settings view path
 
-        navigationList.setItems(navItems); // navItems is already initialized with "Gatling Test Management" and "System Settings"
+        navigationList.setItems(navItems); // navItems is already initialized with "Gatling Test Management", "Body Template Management", "Headers Template Management", and "System Settings"
         updateStatus("Welcome to Gatling Testing System!", StatusType.INFO);
         navigationList.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {

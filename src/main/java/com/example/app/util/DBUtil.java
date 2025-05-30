@@ -60,7 +60,23 @@ public class DBUtil {
                     + ");";
             stmt.execute(testsSql);
             
-            System.out.println("Database initialized with users and gatling_tests tables created (if not exists).");
+            // Create body_templates table if it doesn't exist
+            String bodyTemplateSql = "CREATE TABLE IF NOT EXISTS body_templates ("
+                    + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + " name TEXT NOT NULL UNIQUE,"
+                    + " content TEXT NOT NULL"
+                    + ");";
+            stmt.execute(bodyTemplateSql);
+
+            // Create headers_templates table if it doesn't exist
+            String headersTemplateSql = "CREATE TABLE IF NOT EXISTS headers_templates ("
+                    + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + " name TEXT NOT NULL UNIQUE,"
+                    + " content TEXT NOT NULL"
+                    + ");";
+            stmt.execute(headersTemplateSql);
+            
+            System.out.println("Database initialized with users, gatling_tests, body_templates, and headers_templates tables created (if not exists).");
         } catch (SQLException e) {
             System.err.println("Error initializing database: " + e.getMessage());
         }
