@@ -1,17 +1,19 @@
-package com.example.app.service;
+package com.example.app.service.impl;
 
-import com.example.app.dao.HeadersTemplateDaoImpl;
-import com.example.app.dao.IHeadersTemplateDao;
-import com.example.app.model.HeadersTemplate;
+import com.example.app.dao.impl.BodyTemplateDaoImpl;
+import com.example.app.dao.api.IBodyTemplateDao;
+import com.example.app.model.BodyTemplate;
+import com.example.app.service.ServiceException;
+import com.example.app.service.api.IBodyTemplateService;
 
 import java.sql.SQLException;
 import java.util.List;
 
-public class HeadersTemplateServiceImpl implements IHeadersTemplateService {
-    private final IHeadersTemplateDao dao = new HeadersTemplateDaoImpl();
+public class BodyTemplateServiceImpl implements IBodyTemplateService {
+    private final IBodyTemplateDao dao = new BodyTemplateDaoImpl();
 
     @Override
-    public void addTemplate(HeadersTemplate template) throws ServiceException {
+    public void addTemplate(BodyTemplate template) throws ServiceException {
         try {
             if (template == null || template.getName() == null || template.getName().trim().isEmpty()) {
                 throw new ServiceException("Template name is required.");
@@ -26,7 +28,7 @@ public class HeadersTemplateServiceImpl implements IHeadersTemplateService {
     }
 
     @Override
-    public void updateTemplate(HeadersTemplate template) throws ServiceException {
+    public void updateTemplate(BodyTemplate template) throws ServiceException {
         try {
             if (template == null || template.getId() <= 0) {
                 throw new ServiceException("Template ID is required.");
@@ -47,7 +49,7 @@ public class HeadersTemplateServiceImpl implements IHeadersTemplateService {
     }
 
     @Override
-    public HeadersTemplate getTemplateById(int id) throws ServiceException {
+    public BodyTemplate getTemplateById(int id) throws ServiceException {
         try {
             return dao.getTemplateById(id);
         } catch (SQLException e) {
@@ -56,7 +58,7 @@ public class HeadersTemplateServiceImpl implements IHeadersTemplateService {
     }
 
     @Override
-    public HeadersTemplate getTemplateByName(String name) throws ServiceException {
+    public BodyTemplate getTemplateByName(String name) throws ServiceException {
         try {
             return dao.getTemplateByName(name);
         } catch (SQLException e) {
@@ -65,7 +67,7 @@ public class HeadersTemplateServiceImpl implements IHeadersTemplateService {
     }
 
     @Override
-    public List<HeadersTemplate> getAllTemplates() throws ServiceException {
+    public List<BodyTemplate> getAllTemplates() throws ServiceException {
         try {
             return dao.getAllTemplates();
         } catch (SQLException e) {

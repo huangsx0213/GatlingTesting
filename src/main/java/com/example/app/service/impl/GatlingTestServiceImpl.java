@@ -1,8 +1,10 @@
-package com.example.app.service;
+package com.example.app.service.impl;
 
-import com.example.app.dao.GatlingTestDaoImpl;
-import com.example.app.dao.IGatlingTestDao;
+import com.example.app.dao.impl.GatlingTestDaoImpl;
+import com.example.app.dao.api.IGatlingTestDao;
 import com.example.app.model.GatlingTest;
+import com.example.app.service.ServiceException;
+import com.example.app.service.api.IGatlingTestService;
 
 import java.sql.SQLException;
 import java.util.List;

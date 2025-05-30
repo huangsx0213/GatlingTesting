@@ -10,8 +10,8 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 import com.example.app.model.HeadersTemplate;
-import com.example.app.service.HeadersTemplateServiceImpl;
-import com.example.app.service.IHeadersTemplateService;
+import com.example.app.service.impl.HeadersTemplateServiceImpl;
+import com.example.app.service.api.IHeadersTemplateService;
 import com.example.app.service.ServiceException;
 
 public class HeadersTemplateViewModel implements Initializable {

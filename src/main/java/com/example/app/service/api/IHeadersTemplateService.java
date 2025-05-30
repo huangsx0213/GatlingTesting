@@ -1,6 +1,8 @@
-package com.example.app.service;
+package com.example.app.service.api;
 
 import com.example.app.model.HeadersTemplate;
+import com.example.app.service.ServiceException;
+
 import java.util.List;
 
 public interface IHeadersTemplateService {

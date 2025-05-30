@@ -1,8 +1,8 @@
 package com.example.app.ui.vm;
 
 import com.example.app.model.GatlingTest;
-import com.example.app.service.GatlingTestServiceImpl;
-import com.example.app.service.IGatlingTestService;
+import com.example.app.service.impl.GatlingTestServiceImpl;
+import com.example.app.service.api.IGatlingTestService;
 import com.example.app.service.ServiceException;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;

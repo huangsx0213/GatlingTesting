@@ -1,6 +1,7 @@
-package com.example.app.service;
+package com.example.app.service.api;
 
 import com.example.app.model.GatlingTest;
+import com.example.app.service.ServiceException;
 
 import java.util.List;
 

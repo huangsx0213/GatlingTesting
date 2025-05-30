@@ -1,5 +1,6 @@
-package com.example.app.dao;
+package com.example.app.dao.impl;
 
+import com.example.app.dao.api.IGatlingTestDao;
 import com.example.app.model.GatlingTest;
 import com.example.app.util.DBUtil;
 

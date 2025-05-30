@@ -1,4 +1,4 @@
-package com.example.app.dao;
+package com.example.app.dao.api;
 
 import com.example.app.model.GatlingTest;
 

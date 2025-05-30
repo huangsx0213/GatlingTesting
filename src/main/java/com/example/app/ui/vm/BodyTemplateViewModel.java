@@ -10,8 +10,8 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 import com.example.app.model.BodyTemplate;
-import com.example.app.service.BodyTemplateServiceImpl;
-import com.example.app.service.IBodyTemplateService;
+import com.example.app.service.impl.BodyTemplateServiceImpl;
+import com.example.app.service.api.IBodyTemplateService;
 import com.example.app.service.ServiceException;
 
 public class BodyTemplateViewModel implements Initializable {
