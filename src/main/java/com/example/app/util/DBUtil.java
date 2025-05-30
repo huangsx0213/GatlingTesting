@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 public class DBUtil {
-    private static final String URL = "jdbc:sqlite:user_management.db";
+    private static final String URL = "jdbc:sqlite:gatling_testing_system.db";
 
     public static Connection getConnection() throws SQLException {
         try {
@@ -31,14 +31,36 @@ public class DBUtil {
     public static void initializeDatabase() {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
-            // Create users table if it doesn't exist
-            String sql = "CREATE TABLE IF NOT EXISTS users ("
+            // Create users table if it doesn't exist (keeping for backward compatibility)
+            String usersSql = "CREATE TABLE IF NOT EXISTS users ("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + " name TEXT NOT NULL,"
                     + " email TEXT UNIQUE"
                     + ");";
-            stmt.execute(sql);
-            System.out.println("Database initialized and users table created (if not exists).");
+            stmt.execute(usersSql);
+            
+            // Create gatling_tests table if it doesn't exist
+            String testsSql = "CREATE TABLE IF NOT EXISTS gatling_tests ("
+                    + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + " is_run BOOLEAN NOT NULL DEFAULT 0,"
+                    + " suite TEXT NOT NULL,"
+                    + " tcid TEXT NOT NULL UNIQUE,"
+                    + " descriptions TEXT,"
+                    + " conditions TEXT,"
+                    + " body_override TEXT,"
+                    + " exp_status TEXT,"
+                    + " exp_result TEXT,"
+                    + " save_fields TEXT,"
+                    + " endpoint TEXT NOT NULL,"
+                    + " headers TEXT,"
+                    + " body_template TEXT,"
+                    + " body_default TEXT,"
+                    + " tags TEXT,"
+                    + " wait_time INTEGER DEFAULT 0"
+                    + ");";
+            stmt.execute(testsSql);
+            
+            System.out.println("Database initialized with users and gatling_tests tables created (if not exists).");
         } catch (SQLException e) {
             System.err.println("Error initializing database: " + e.getMessage());
         }

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.app.ui.vm.GatlingTestViewModel">
+    <children>
+        <VBox layoutX="10.0" layoutY="10.0" prefHeight="780.0" prefWidth="1180.0" spacing="10.0" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="10.0">
+            <children>
+                <!-- Form Section -->
+                <ScrollPane fitToWidth="true" prefHeight="300.0">
+                    <content>
+                        <VBox spacing="10.0">
+                            <padding>
+                                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                            </padding>
+                            <children>
+                                <!-- Basic Information -->
+                                <Label text="Basic Information" style="-fx-font-weight: bold; -fx-font-size: 14px;" />
+                                <GridPane hgap="10.0" vgap="10.0">
+                                    <columnConstraints>
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="200.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="200.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="200.0" />
+                                    </columnConstraints>
+                                    <rowConstraints>
+                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    </rowConstraints>
+                                    <children>
+                                        <Label text="Is Run:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                                        <CheckBox fx:id="isRunCheckBox" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                        <Label text="Suite:" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                                        <TextField fx:id="suiteField" promptText="Test Suite Name" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+                                        <Label text="TCID:" GridPane.columnIndex="4" GridPane.rowIndex="0" />
+                                        <TextField fx:id="tcidField" promptText="Test Case ID" GridPane.columnIndex="5" GridPane.rowIndex="0" />
+                                        
+                                        <Label text="Endpoint:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                                        <TextField fx:id="endpointField" promptText="API Endpoint URL" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="1" />
+                                        <Label text="Wait Time:" GridPane.columnIndex="4" GridPane.rowIndex="1" />
+                                        <Spinner fx:id="waitTimeSpinner" prefWidth="100.0" GridPane.columnIndex="5" GridPane.rowIndex="1" />
+                                    </children>
+                                </GridPane>
+                                
+                                <!-- Test Details -->
+                                <Separator />
+                                <Label text="Test Details" style="-fx-font-weight: bold; -fx-font-size: 14px;" />
+                                <GridPane hgap="10.0" vgap="10.0">
+                                    <columnConstraints>
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="500.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="500.0" />
+                                    </columnConstraints>
+                                    <rowConstraints>
+                                        <RowConstraints minHeight="10.0" prefHeight="60.0" vgrow="SOMETIMES" />
+                                        <RowConstraints minHeight="10.0" prefHeight="60.0" vgrow="SOMETIMES" />
+                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    </rowConstraints>
+                                    <children>
+                                        <Label text="Descriptions:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                                        <TextArea fx:id="descriptionsArea" promptText="Test descriptions" prefRowCount="3" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                        <Label text="Conditions:" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                                        <TextArea fx:id="conditionsArea" promptText="Test conditions" prefRowCount="3" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+                                        
+                                        <Label text="Headers:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                                        <TextArea fx:id="headersArea" promptText="HTTP Headers (JSON format)" prefRowCount="3" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                        <Label text="Body Override:" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                                        <TextArea fx:id="bodyOverrideArea" promptText="Request body override" prefRowCount="3" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+                                        
+                                        <Label text="Exp Status:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                                        <TextField fx:id="expStatusField" promptText="Expected HTTP Status" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                        <Label text="Tags:" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+                                        <TextField fx:id="tagsField" promptText="Test tags (comma separated)" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+                                    </children>
+                                </GridPane>
+                                
+                                <!-- Request/Response Templates -->
+                                <Separator />
+                                <Label text="Request/Response Templates" style="-fx-font-weight: bold; -fx-font-size: 14px;" />
+                                <GridPane hgap="10.0" vgap="10.0">
+                                    <columnConstraints>
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="350.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="350.0" />
+                                    </columnConstraints>
+                                    <rowConstraints>
+                                        <RowConstraints minHeight="10.0" prefHeight="80.0" vgrow="SOMETIMES" />
+                                        <RowConstraints minHeight="10.0" prefHeight="80.0" vgrow="SOMETIMES" />
+                                    </rowConstraints>
+                                    <children>
+                                        <Label text="Body Template:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                                        <TextArea fx:id="bodyTemplateArea" promptText="Request body template" prefRowCount="4" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                        <Label text="Body Default:" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                                        <TextArea fx:id="bodyDefaultArea" promptText="Default request body" prefRowCount="4" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+                                        
+                                        <Label text="Exp Result:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                                        <TextArea fx:id="expResultArea" promptText="Expected response result" prefRowCount="4" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                        <Label text="Save Fields:" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                                        <TextField fx:id="saveFieldsField" promptText="Fields to save from response" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+                                    </children>
+                                </GridPane>
+                                
+                                <!-- Hidden field for ID -->
+                                <TextField fx:id="testIdField" visible="false" managed="false" />
+                            </children>
+                        </VBox>
+                    </content>
+                </ScrollPane>
+                
+                <!-- Action Buttons -->
+                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                    <children>
+                        <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddTest" text="Add Test" style="-fx-background-color: #4CAF50; -fx-text-fill: white;" />
+                        <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateTest" text="Update Test" style="-fx-background-color: #2196F3; -fx-text-fill: white;" />
+                        <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteTest" text="Delete Test" style="-fx-background-color: #f44336; -fx-text-fill: white;" />
+                        <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearFields" text="Clear Form" />
+                        <Separator orientation="VERTICAL" />
+                        <Button fx:id="runTestButton" mnemonicParsing="false" onAction="#handleRunTest" text="Run Selected Test" style="-fx-background-color: #FF9800; -fx-text-fill: white;" />
+                        <Button fx:id="runSuiteButton" mnemonicParsing="false" onAction="#handleRunSuite" text="Run Suite" style="-fx-background-color: #9C27B0; -fx-text-fill: white;" />
+                    </children>
+                    <padding>
+                        <Insets bottom="10.0" top="10.0" />
+                    </padding>
+                </HBox>
+                
+                <!-- Test Table -->
+                <TableView fx:id="testTable" prefHeight="400.0" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="idColumn" prefWidth="50.0" text="ID" />
+                        <TableColumn fx:id="isRunColumn" prefWidth="60.0" text="Run" />
+                        <TableColumn fx:id="suiteColumn" prefWidth="120.0" text="Suite" />
+                        <TableColumn fx:id="tcidColumn" prefWidth="120.0" text="TCID" />
+                        <TableColumn fx:id="descriptionsColumn" prefWidth="200.0" text="Descriptions" />
+                        <TableColumn fx:id="endpointColumn" prefWidth="250.0" text="Endpoint" />
+                        <TableColumn fx:id="tagsColumn" prefWidth="120.0" text="Tags" />
+                        <TableColumn fx:id="waitTimeColumn" prefWidth="80.0" text="Wait(s)" />
+                    </columns>
+                    <columnResizePolicy>
+                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                    </columnResizePolicy>
+                </TableView>
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>

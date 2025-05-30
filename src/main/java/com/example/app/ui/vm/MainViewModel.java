@@ -34,7 +34,7 @@ public class MainViewModel implements Initializable {
     @FXML
     private Label currentFeatureLabel;
 
-    private final ObservableList<String> navItems = FXCollections.observableArrayList("User Management", "System Settings"); // Add more items as needed
+    private final ObservableList<String> navItems = FXCollections.observableArrayList("Gatling Test Management", "System Settings"); // Add more items as needed
     private final Map<String, String> fxmlMapping = new HashMap<>();
     private final Map<String, Node> loadedTabs = new HashMap<>();
 
@@ -48,10 +48,10 @@ public class MainViewModel implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Initialize FXML mapping
-        fxmlMapping.put("User Management", "/com/example/app/ui/view/user_view.fxml");
+        fxmlMapping.put("Gatling Test Management", "/com/example/app/ui/view/gatling_test_view.fxml");
          // fxmlMapping.put("System Settings", "/com/example/app/ui/view/settings_view.fxml"); // Placeholder for settings view path
 
-        navigationList.setItems(navItems); // navItems is already initialized with "User Management" and "System Settings"
+        navigationList.setItems(navItems); // navItems is already initialized with "Gatling Test Management" and "System Settings"
         updateStatus("Welcome to Gatling Testing System!", StatusType.INFO);
         navigationList.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
@@ -100,8 +100,8 @@ public class MainViewModel implements Initializable {
                     FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
                     contentNode = loader.load();
                     Object controller = loader.getController();
-                    if (controller instanceof UserViewModel) {
-                        ((UserViewModel) controller).setMainViewModel(this);
+                    if (controller instanceof GatlingTestViewModel) {
+                        ((GatlingTestViewModel) controller).setMainViewModel(this);
                     }
                     loadedTabs.put(tabName, contentNode);
                 }
@@ -120,12 +120,6 @@ public class MainViewModel implements Initializable {
             } catch (IOException e) {
                 System.err.println("Failed to load FXML for tab: " + tabName + " from " + fxmlPath);
                 e.printStackTrace();
-                // Show an error dialog to the user
-                // Alert alert = new Alert(Alert.AlertType.ERROR);
-                // alert.setTitle("Loading Error");
-                // alert.setHeaderText("Could not load module: " + tabName);
-                // alert.setContentText("Please check the FXML file path or contact an administrator.");
-                // alert.showAndWait();
             }
         } else {
             System.err.println("No FXML mapping found for: " + tabName);
