@@ -49,7 +49,6 @@ public class DBUtil {
                     + " tcid TEXT NOT NULL UNIQUE,"
                     + " descriptions TEXT,"
                     + " conditions TEXT,"
-                    + " body_override TEXT,"
                     + " exp_status TEXT,"
                     + " exp_result TEXT,"
                     + " save_fields TEXT,"

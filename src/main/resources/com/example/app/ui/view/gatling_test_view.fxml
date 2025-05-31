@@ -70,13 +70,10 @@
                                         
                                         <Label text="Headers:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
                                         <TextArea fx:id="headersArea" promptText="HTTP Headers (JSON format)" prefRowCount="3" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                                        <Label text="Body Override:" GridPane.columnIndex="2" GridPane.rowIndex="1" />
-                                        <TextArea fx:id="bodyOverrideArea" promptText="Request body override" prefRowCount="3" GridPane.columnIndex="3" GridPane.rowIndex="1" />
-                                        
-                                        <Label text="Exp Status:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                                        <TextField fx:id="expStatusField" promptText="Expected HTTP Status" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-                                        <Label text="Tags:" GridPane.columnIndex="2" GridPane.rowIndex="2" />
-                                        <TextField fx:id="tagsField" promptText="Test tags (comma separated)" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+                                        <Label text="Exp Status:" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                                        <TextField fx:id="expStatusField" promptText="Expected HTTP Status" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+                                        <Label text="Tags:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                                        <TextField fx:id="tagsField" promptText="Test tags (comma separated)" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                                     </children>
                                 </GridPane>
                                 

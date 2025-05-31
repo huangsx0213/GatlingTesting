@@ -12,7 +12,6 @@ public class GatlingTest {
     private final StringProperty tcid = new SimpleStringProperty();
     private final StringProperty descriptions = new SimpleStringProperty();
     private final StringProperty conditions = new SimpleStringProperty();
-    private final StringProperty bodyOverride = new SimpleStringProperty();
     private final StringProperty expStatus = new SimpleStringProperty();
     private final StringProperty expResult = new SimpleStringProperty();
     private final StringProperty saveFields = new SimpleStringProperty();
@@ -37,7 +36,7 @@ public class GatlingTest {
     }
 
     public GatlingTest(int id, boolean isRun, String suite, String tcid, String descriptions,
-                      String conditions, String bodyOverride, String expStatus, String expResult,
+                      String conditions, String expStatus, String expResult,
                       String saveFields, String endpoint, String headers, String bodyTemplate,
                       String tags, int waitTime, String bodyTemplateName, Map<String, String> dynamicVariables) {
         this.id.set(id);
@@ -46,7 +45,6 @@ public class GatlingTest {
         this.tcid.set(tcid);
         this.descriptions.set(descriptions);
         this.conditions.set(conditions);
-        this.bodyOverride.set(bodyOverride);
         this.expStatus.set(expStatus);
         this.expResult.set(expResult);
         this.saveFields.set(saveFields);
@@ -83,10 +81,6 @@ public class GatlingTest {
     public String getConditions() { return conditions.get(); }
     public void setConditions(String conditions) { this.conditions.set(conditions); }
     public StringProperty conditionsProperty() { return conditions; }
-
-    public String getBodyOverride() { return bodyOverride.get(); }
-    public void setBodyOverride(String bodyOverride) { this.bodyOverride.set(bodyOverride); }
-    public StringProperty bodyOverrideProperty() { return bodyOverride; }
 
     public String getExpStatus() { return expStatus.get(); }
     public void setExpStatus(String expStatus) { this.expStatus.set(expStatus); }

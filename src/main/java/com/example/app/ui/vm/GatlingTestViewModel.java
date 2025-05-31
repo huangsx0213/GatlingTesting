@@ -212,7 +212,6 @@ public class GatlingTestViewModel implements Initializable {
             tcidField.setText(test.getTcid());
             descriptionsArea.setText(test.getDescriptions());
             conditionsArea.setText(test.getConditions());
-            bodyOverrideArea.setText(test.getBodyOverride());
             expStatusField.setText(test.getExpStatus());
             expResultArea.setText(test.getExpResult());
             saveFieldsArea.setText(test.getSaveFields());
@@ -237,7 +236,6 @@ public class GatlingTestViewModel implements Initializable {
         tcidField.clear();
         descriptionsArea.clear();
         conditionsArea.clear();
-        bodyOverrideArea.clear();
         expStatusField.clear();
         expResultArea.clear();
         saveFieldsArea.clear();
@@ -279,7 +277,6 @@ public class GatlingTestViewModel implements Initializable {
         GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpoint);
         newTest.setRun(isRunCheckBox.isSelected());
         newTest.setConditions(conditionsArea.getText());
-        newTest.setBodyOverride(bodyOverrideArea.getText());
         newTest.setExpStatus(expStatusField.getText());
         newTest.setExpResult(expResultArea.getText());
         newTest.setSaveFields(saveFieldsArea.getText());
@@ -334,7 +331,6 @@ public class GatlingTestViewModel implements Initializable {
         selectedTest.setTcid(tcid);
         selectedTest.setDescriptions(descriptionsArea.getText());
         selectedTest.setConditions(conditionsArea.getText());
-        selectedTest.setBodyOverride(bodyOverrideArea.getText());
         selectedTest.setExpStatus(expStatusField.getText());
         selectedTest.setExpResult(expResultArea.getText());
         selectedTest.setSaveFields(saveFieldsArea.getText());
