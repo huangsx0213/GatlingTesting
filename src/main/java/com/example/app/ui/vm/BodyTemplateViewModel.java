@@ -69,7 +69,7 @@ public class BodyTemplateViewModel implements Initializable {
     private void loadTemplates() {
         templateList.clear();
         try {
-            for (BodyTemplate t : bodyTemplateService.getAllTemplates()) {
+            for (BodyTemplate t : bodyTemplateService.findAllTemplates()) {
                 templateList.add(new TemplateItem(t.getId(), t.getName(), t.getContent()));
             }
         } catch (ServiceException e) {
@@ -98,7 +98,7 @@ public class BodyTemplateViewModel implements Initializable {
         }
         try {
             BodyTemplate t = new BodyTemplate(name, content);
-            bodyTemplateService.addTemplate(t);
+            bodyTemplateService.createTemplate(t);
             loadTemplates();
             clearFields();
             if (mainViewModel != null) {

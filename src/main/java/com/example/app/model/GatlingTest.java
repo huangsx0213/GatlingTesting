@@ -2,6 +2,9 @@ package com.example.app.model;
 
 import javafx.beans.property.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class GatlingTest {
     private final IntegerProperty id = new SimpleIntegerProperty();
     private final BooleanProperty isRun = new SimpleBooleanProperty();
@@ -16,9 +19,10 @@ public class GatlingTest {
     private final StringProperty endpoint = new SimpleStringProperty();
     private final StringProperty headers = new SimpleStringProperty();
     private final StringProperty bodyTemplate = new SimpleStringProperty();
-    private final StringProperty bodyDefault = new SimpleStringProperty();
     private final StringProperty tags = new SimpleStringProperty();
     private final IntegerProperty waitTime = new SimpleIntegerProperty();
+    private final StringProperty bodyTemplateName = new SimpleStringProperty();
+    private Map<String, String> dynamicVariables = new HashMap<>();
 
     public GatlingTest() {
     }
@@ -32,10 +36,10 @@ public class GatlingTest {
         this.waitTime.set(0);
     }
 
-    public GatlingTest(int id, boolean isRun, String suite, String tcid, String descriptions, 
+    public GatlingTest(int id, boolean isRun, String suite, String tcid, String descriptions,
                       String conditions, String bodyOverride, String expStatus, String expResult,
                       String saveFields, String endpoint, String headers, String bodyTemplate,
-                      String bodyDefault, String tags, int waitTime) {
+                      String tags, int waitTime, String bodyTemplateName, Map<String, String> dynamicVariables) {
         this.id.set(id);
         this.isRun.set(isRun);
         this.suite.set(suite);
@@ -49,9 +53,10 @@ public class GatlingTest {
         this.endpoint.set(endpoint);
         this.headers.set(headers);
         this.bodyTemplate.set(bodyTemplate);
-        this.bodyDefault.set(bodyDefault);
         this.tags.set(tags);
         this.waitTime.set(waitTime);
+        this.bodyTemplateName.set(bodyTemplateName);
+        this.dynamicVariables = dynamicVariables;
     }
 
     // Getters and Setters
@@ -107,10 +112,6 @@ public class GatlingTest {
     public void setBodyTemplate(String bodyTemplate) { this.bodyTemplate.set(bodyTemplate); }
     public StringProperty bodyTemplateProperty() { return bodyTemplate; }
 
-    public String getBodyDefault() { return bodyDefault.get(); }
-    public void setBodyDefault(String bodyDefault) { this.bodyDefault.set(bodyDefault); }
-    public StringProperty bodyDefaultProperty() { return bodyDefault; }
-
     public String getTags() { return tags.get(); }
     public void setTags(String tags) { this.tags.set(tags); }
     public StringProperty tagsProperty() { return tags; }
@@ -118,6 +119,13 @@ public class GatlingTest {
     public int getWaitTime() { return waitTime.get(); }
     public void setWaitTime(int waitTime) { this.waitTime.set(waitTime); }
     public IntegerProperty waitTimeProperty() { return waitTime; }
+
+    public String getBodyTemplateName() { return bodyTemplateName.get(); }
+    public void setBodyTemplateName(String bodyTemplateName) { this.bodyTemplateName.set(bodyTemplateName); }
+    public StringProperty bodyTemplateNameProperty() { return bodyTemplateName; }
+
+    public Map<String, String> getDynamicVariables() { return dynamicVariables; }
+    public void setDynamicVariables(Map<String, String> dynamicVariables) { this.dynamicVariables = dynamicVariables; }
 
     @Override
     public String toString() {

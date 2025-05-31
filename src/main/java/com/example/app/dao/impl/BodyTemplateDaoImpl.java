@@ -50,52 +50,54 @@ public class BodyTemplateDaoImpl implements IBodyTemplateDao {
     @Override
     public BodyTemplate getTemplateById(int id) throws SQLException {
         String sql = "SELECT * FROM body_templates WHERE id = ?";
+        BodyTemplate template = null;
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    return createFromResultSet(rs);
+                    template = createTemplateFromResultSet(rs);
                 }
             }
         }
-        return null;
+        return template;
     }
 
     @Override
     public BodyTemplate getTemplateByName(String name) throws SQLException {
         String sql = "SELECT * FROM body_templates WHERE name = ?";
+        BodyTemplate template = null;
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, name);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    return createFromResultSet(rs);
+                    template = createTemplateFromResultSet(rs);
                 }
             }
         }
-        return null;
+        return template;
     }
 
     @Override
     public List<BodyTemplate> getAllTemplates() throws SQLException {
-        String sql = "SELECT * FROM body_templates ORDER BY id";
-        List<BodyTemplate> list = new ArrayList<>();
+        String sql = "SELECT * FROM body_templates ORDER BY name";
+        List<BodyTemplate> templates = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                list.add(createFromResultSet(rs));
+                templates.add(createTemplateFromResultSet(rs));
             }
         }
-        return list;
+        return templates;
     }
 
-    private BodyTemplate createFromResultSet(ResultSet rs) throws SQLException {
-        return new BodyTemplate(
-                rs.getInt("id"),
-                rs.getString("name"),
-                rs.getString("content")
-        );
+    private BodyTemplate createTemplateFromResultSet(ResultSet rs) throws SQLException {
+        BodyTemplate template = new BodyTemplate();
+        template.setId(rs.getInt("id"));
+        template.setName(rs.getString("name"));
+        template.setContent(rs.getString("content"));
+        return template;
     }
 } 

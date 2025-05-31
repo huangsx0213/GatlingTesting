@@ -6,9 +6,9 @@ import java.util.List;
 
 public interface IBodyTemplateDao {
     void addTemplate(BodyTemplate template) throws SQLException;
-    void updateTemplate(BodyTemplate template) throws SQLException;
-    void deleteTemplate(int id) throws SQLException;
     BodyTemplate getTemplateById(int id) throws SQLException;
     BodyTemplate getTemplateByName(String name) throws SQLException;
     List<BodyTemplate> getAllTemplates() throws SQLException;
+    void updateTemplate(BodyTemplate template) throws SQLException;
+    void deleteTemplate(int id) throws SQLException;
 } 

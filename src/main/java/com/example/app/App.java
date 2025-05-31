@@ -21,7 +21,7 @@ public class App extends Application {
         Parent root = loader.load();
 
         primaryStage.setTitle("Gatling Testing System");
-        primaryStage.setScene(new Scene(root, 1024, 768));
+        primaryStage.setScene(new Scene(root, 1440, 900));
         primaryStage.show();
     }
 

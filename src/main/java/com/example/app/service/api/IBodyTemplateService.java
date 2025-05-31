@@ -6,10 +6,10 @@ import com.example.app.service.ServiceException;
 import java.util.List;
 
 public interface IBodyTemplateService {
-    void addTemplate(BodyTemplate template) throws ServiceException;
+    void createTemplate(BodyTemplate template) throws ServiceException;
+    BodyTemplate findTemplateById(int id) throws ServiceException;
+    BodyTemplate findTemplateByName(String name) throws ServiceException;
+    List<BodyTemplate> findAllTemplates() throws ServiceException;
     void updateTemplate(BodyTemplate template) throws ServiceException;
     void deleteTemplate(int id) throws ServiceException;
-    BodyTemplate getTemplateById(int id) throws ServiceException;
-    BodyTemplate getTemplateByName(String name) throws ServiceException;
-    List<BodyTemplate> getAllTemplates() throws ServiceException;
 } 
