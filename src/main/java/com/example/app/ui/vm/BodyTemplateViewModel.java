@@ -257,6 +257,11 @@ public class BodyTemplateViewModel implements Initializable {
         this.mainViewModel = mainViewModel;
     }
 
+    public void refresh() {
+        loadTemplates();
+        clearFields();
+    }
+
     // 内部类用于表格项
     public static class TemplateItem {
         private final int id;

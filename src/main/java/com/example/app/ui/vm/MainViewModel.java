@@ -94,6 +94,23 @@ public class MainViewModel implements Initializable {
                 if (currentFeatureLabel != null) {
                     currentFeatureLabel.setText(tabName);
                 }
+                // 切换到已打开tab时刷新内容
+                Node contentNode = tab.getContent();
+                Object controller = null;
+                if (contentNode != null) {
+                    controller = contentNode.getProperties().get("controller");
+                }
+                if (controller == null && contentNode != null) {
+                    // 尝试通过UserData获取
+                    controller = contentNode.getUserData();
+                }
+                if (controller instanceof GatlingTestViewModel) {
+                    ((GatlingTestViewModel) controller).refresh();
+                } else if (controller instanceof BodyTemplateViewModel) {
+                    ((BodyTemplateViewModel) controller).refresh();
+                } else if (controller instanceof HeadersTemplateViewModel) {
+                    ((HeadersTemplateViewModel) controller).refresh();
+                }
                 return;
             }
         }
@@ -103,8 +120,9 @@ public class MainViewModel implements Initializable {
         if (fxmlPath != null) {
             try {
                 Node contentNode = loadedTabs.get(tabName);
+                FXMLLoader loader = null;
                 if (contentNode == null) {
-                    FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+                    loader = new FXMLLoader(getClass().getResource(fxmlPath));
                     contentNode = loader.load();
                     Object controller = loader.getController();
                     if (controller instanceof GatlingTestViewModel) {
@@ -114,6 +132,8 @@ public class MainViewModel implements Initializable {
                     } else if (controller instanceof HeadersTemplateViewModel) {
                         ((HeadersTemplateViewModel) controller).setMainViewModel(this);
                     }
+                    // 让Node能找到controller
+                    contentNode.getProperties().put("controller", controller);
                     loadedTabs.put(tabName, contentNode);
                 }
 
@@ -126,6 +146,18 @@ public class MainViewModel implements Initializable {
                 contentTabPane.getSelectionModel().select(newTab);
                 if (currentFeatureLabel != null) {
                     currentFeatureLabel.setText(tabName);
+                }
+                // 新打开tab时也刷新内容
+                Object controller = contentNode.getProperties().get("controller");
+                if (controller == null) {
+                    controller = contentNode.getUserData();
+                }
+                if (controller instanceof GatlingTestViewModel) {
+                    ((GatlingTestViewModel) controller).refresh();
+                } else if (controller instanceof BodyTemplateViewModel) {
+                    ((BodyTemplateViewModel) controller).refresh();
+                } else if (controller instanceof HeadersTemplateViewModel) {
+                    ((HeadersTemplateViewModel) controller).refresh();
                 }
 
             } catch (IOException e) {

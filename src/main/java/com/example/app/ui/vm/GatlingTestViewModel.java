@@ -525,4 +525,11 @@ public class GatlingTestViewModel implements Initializable {
             }
         }
     }
+
+    public void refresh() {
+        loadTests();
+        loadTemplates();
+        loadHeadersTemplates();
+        clearFields();
+    }
 }
