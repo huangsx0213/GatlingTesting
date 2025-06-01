@@ -140,7 +140,6 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             // Mark test as running
             testDao.updateTestRunStatus(test.getId(), true);
 
-            // TODO: Implement actual API test execution logic here
             // For now, just simulate test execution
             System.out.println("Executing test: " + test.getTcid() + " on endpoint: " + test.getEndpoint());
             

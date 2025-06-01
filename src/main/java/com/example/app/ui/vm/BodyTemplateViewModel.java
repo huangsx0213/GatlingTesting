@@ -13,16 +13,6 @@ import com.example.app.model.BodyTemplate;
 import com.example.app.service.impl.BodyTemplateServiceImpl;
 import com.example.app.service.api.IBodyTemplateService;
 import com.example.app.service.ServiceException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import javax.xml.transform.Source;
-import javax.xml.transform.stream.StreamSource;
-import javax.xml.transform.stream.StreamResult;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.DocumentBuilder;
-import org.xml.sax.InputSource;
 
 public class BodyTemplateViewModel implements Initializable {
     @FXML
