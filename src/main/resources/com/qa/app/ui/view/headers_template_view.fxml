@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.qa.app.ui.vm.HeadersTemplateViewModel">
+    <children>
+        <VBox spacing="15.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" VBox.vgrow="ALWAYS">
+            <padding>
+                <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
+            </padding>
+            <Label text="Headers Template Management" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
+            <Separator />
+            <GridPane hgap="15.0" vgap="10.0" VBox.vgrow="NEVER" maxWidth="Infinity">
+                <columnConstraints>
+                    <ColumnConstraints prefWidth="120.0"/>
+                    <ColumnConstraints prefWidth="500.0" hgrow="ALWAYS"/>
+                </columnConstraints>
+                <rowConstraints>
+                    <RowConstraints minHeight="40.0"/>
+                    <RowConstraints minHeight="120.0"/>
+                </rowConstraints>
+                <children>
+                    <Label text="Template Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                    <TextField fx:id="headersTemplateNameField" promptText="Template Name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                    <Label text="Headers Content:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                    <TextArea fx:id="headersTemplateContentArea" promptText="Headers Template Content" prefRowCount="6" GridPane.rowIndex="1" GridPane.columnIndex="1" VBox.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"/>
+                </children>
+            </GridPane>
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddHeadersTemplate" text="Add Template" />
+                <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateHeadersTemplate" text="Update Template" />
+                <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteHeadersTemplate" text="Delete Template" />
+                <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearHeadersTemplateForm" text="Clear Form" />
+                <Separator orientation="VERTICAL"/>
+                <Button fx:id="formatButton" text="Format" onAction="#handleFormatTemplate"/>
+                <Button fx:id="validateButton" text="Validate" onAction="#handleValidateTemplate"/>
+            </HBox>
+            <Label text="Template List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+            <TableView fx:id="headersTemplateTable" prefHeight="0" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="headersTemplateNameColumn" prefWidth="200.0" text="Template Name"/>
+                    <TableColumn fx:id="headersTemplateContentColumn" prefWidth="800.0" text="Headers Content"/>
+                </columns>
+            </TableView>
+        </VBox>
+    </children>
+</AnchorPane> 
