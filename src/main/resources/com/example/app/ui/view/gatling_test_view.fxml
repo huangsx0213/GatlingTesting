@@ -167,18 +167,16 @@
                                     <children>
                                         <Label text="Response Configuration" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
                                         <Separator />
-                                        
-                                        <!-- Expected Status -->
-                                        <VBox spacing="5.0">
-                                            <children>
-                                                <Label text="Expected Status:" style="-fx-font-weight: bold;" />
-                                                <ComboBox fx:id="expStatusComboBox" promptText="Select status code" prefWidth="200.0" />
-                                            </children>
-                                        </VBox>
-                                        
                                         <!-- Expected Result and Save Fields -->
                                         <HBox spacing="15.0" alignment="TOP_LEFT">
                                             <children>
+                                                <!-- Expected Status -->
+                                                <VBox spacing="5.0">
+                                                    <children>
+                                                        <Label text="Expected Status:" style="-fx-font-weight: bold;" />
+                                                        <ComboBox fx:id="expStatusComboBox" promptText="Select status code" prefWidth="150.0" />
+                                                    </children>
+                                                </VBox>
                                                 <VBox spacing="5.0" HBox.hgrow="ALWAYS">
                                                     <children>
                                                         <Label text="Expected Result:" style="-fx-font-weight: bold;" />
