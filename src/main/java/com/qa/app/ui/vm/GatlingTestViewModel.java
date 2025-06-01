@@ -28,7 +28,9 @@ import com.qa.app.service.impl.GatlingTestServiceImpl;
 import com.qa.app.service.impl.HeadersTemplateServiceImpl;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.regex.Matcher;
@@ -141,6 +143,9 @@ public class GatlingTestViewModel implements Initializable {
     private final ObservableList<ConditionRow> conditionRows = FXCollections.observableArrayList();
     private final ObservableList<String> allTcids = FXCollections.observableArrayList();
     private final ObservableList<String> prefixOptions = FXCollections.observableArrayList("Setup", "Teardown", "SuiteSetup", "SuiteTeardown", "CheckWith");
+
+    // 用于保存所有TCID下拉的引用
+    private final List<CheckComboBox<String>> conditionTcidComboBoxes = new ArrayList<>();
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -259,15 +264,25 @@ public class GatlingTestViewModel implements Initializable {
             return new javafx.beans.property.SimpleStringProperty(joined);
         });
         conditionTcidColumn.setCellFactory(col -> new TableCell<ConditionRow, String>() {
+            private CheckComboBox<String> checkComboBox;
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty) {
                     setGraphic(null);
                     setText(null);
+                    if (checkComboBox != null) {
+                        conditionTcidComboBoxes.remove(checkComboBox);
+                        checkComboBox = null;
+                    }
                 } else {
                     ConditionRow row = getTableView().getItems().get(getIndex());
-                    CheckComboBox<String> checkComboBox = new CheckComboBox<>(allTcids);
+                    if (checkComboBox == null) {
+                        checkComboBox = new CheckComboBox<>();
+                        conditionTcidComboBoxes.add(checkComboBox);
+                    }
+                    // 先清空再加最新的allTcids
+                    checkComboBox.getItems().setAll(allTcids);
                     checkComboBox.setPrefWidth(180);
                     checkComboBox.setMaxWidth(180);
                     checkComboBox.setMinWidth(120);
@@ -393,6 +408,10 @@ public class GatlingTestViewModel implements Initializable {
             allTcids.clear();
             for (GatlingTest t : testService.findAllTests()) {
                 allTcids.add(t.getTcid());
+            }
+            // 通知所有CheckComboBox刷新items
+            for (CheckComboBox<String> cb : conditionTcidComboBoxes) {
+                cb.getItems().setAll(allTcids);
             }
         } catch (ServiceException e) {
             if (mainViewModel != null) {
@@ -533,6 +552,8 @@ public class GatlingTestViewModel implements Initializable {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Test added successfully.", MainViewModel.StatusType.SUCCESS);
             }
+            loadAllTcids();
+            conditionsTable.refresh();
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to add test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
@@ -596,6 +617,8 @@ public class GatlingTestViewModel implements Initializable {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Test updated successfully.", MainViewModel.StatusType.SUCCESS);
             }
+            loadAllTcids();
+            conditionsTable.refresh();
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to update test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
@@ -621,6 +644,8 @@ public class GatlingTestViewModel implements Initializable {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Test deleted successfully.", MainViewModel.StatusType.SUCCESS);
             }
+            loadAllTcids();
+            conditionsTable.refresh();
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to delete test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
@@ -779,9 +804,11 @@ public class GatlingTestViewModel implements Initializable {
     }
 
     public void refresh() {
+        loadAllTcids();
         loadTests();
         loadTemplates();
         loadHeadersTemplates();
         clearFields();
+        conditionsTable.refresh();
     }
 }
