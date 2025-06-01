@@ -12,7 +12,6 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.cell.ComboBoxTableCell;
-import javafx.util.StringConverter;
 import org.controlsfx.control.CheckComboBox;
 
 import com.qa.app.model.BodyTemplate;
@@ -27,8 +26,6 @@ import com.qa.app.service.api.IHeadersTemplateService;
 import com.qa.app.service.impl.BodyTemplateServiceImpl;
 import com.qa.app.service.impl.GatlingTestServiceImpl;
 import com.qa.app.service.impl.HeadersTemplateServiceImpl;
-
-import javafx.scene.input.MouseEvent;
 
 import java.net.URL;
 import java.util.HashMap;
