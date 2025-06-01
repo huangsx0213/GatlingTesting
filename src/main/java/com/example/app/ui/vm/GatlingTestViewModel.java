@@ -1,12 +1,15 @@
 package com.example.app.ui.vm;
 
 import com.example.app.model.BodyTemplate;
+import com.example.app.model.HeadersTemplate;
 import com.example.app.model.DynamicVariable;
 import com.example.app.model.GatlingTest;
 import com.example.app.service.impl.BodyTemplateServiceImpl;
 import com.example.app.service.impl.GatlingTestServiceImpl;
 import com.example.app.service.api.IBodyTemplateService;
 import com.example.app.service.api.IGatlingTestService;
+import com.example.app.service.api.IHeadersTemplateService;
+import com.example.app.service.impl.HeadersTemplateServiceImpl;
 import com.example.app.service.ServiceException;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -92,12 +95,23 @@ public class GatlingTestViewModel implements Initializable {
     private TableColumn<GatlingTest, String> tagsColumn;
     @FXML
     private TableColumn<GatlingTest, Integer> waitTimeColumn;
+    @FXML
+    private ComboBox<String> headersTemplateComboBox;
+    @FXML
+    private TableView<DynamicVariable> headersDynamicVarsTable;
+    @FXML
+    private TableColumn<DynamicVariable, String> headersDynamicKeyColumn;
+    @FXML
+    private TableColumn<DynamicVariable, String> headersDynamicValueColumn;
 
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
+    private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
     private final ObservableList<GatlingTest> testList = FXCollections.observableArrayList();
     private final ObservableList<DynamicVariable> dynamicVariables = FXCollections.observableArrayList();
     private Map<String, String> bodyTemplates = new HashMap<>();
+    private final ObservableList<DynamicVariable> headersDynamicVariables = FXCollections.observableArrayList();
+    private Map<String, String> headersTemplates = new HashMap<>();
 
     private MainViewModel mainViewModel;
 
@@ -140,6 +154,26 @@ public class GatlingTestViewModel implements Initializable {
                         }
                     }
             );
+
+        // Initialize headers dynamic variables table
+        headersDynamicKeyColumn.setCellValueFactory(new PropertyValueFactory<>("key"));
+        headersDynamicValueColumn.setCellValueFactory(new PropertyValueFactory<>("value"));
+        headersDynamicVarsTable.setItems(headersDynamicVariables);
+        headersDynamicVarsTable.setEditable(true);
+        // only headersDynamicValueColumn should be editable
+        headersDynamicValueColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        headersDynamicValueColumn.setOnEditCommit(event -> {
+            DynamicVariable editedVar = event.getTableView().getItems().get(event.getTablePosition().getRow());
+            editedVar.setValue(event.getNewValue());
+        });
+        // Add listener for headersTemplateComboBox selection
+        headersTemplateComboBox.getSelectionModel().selectedItemProperty().addListener(
+            (observable, oldValue, newValue) -> {
+                if (newValue != null) {
+                    populateHeadersDynamicVariables(headersTemplates.get(newValue));
+                }
+            }
+        );
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -163,10 +197,11 @@ public class GatlingTestViewModel implements Initializable {
         testTable.getSelectionModel().selectedItemProperty().addListener(
                 (observable, oldValue, newValue) -> showTestDetails(newValue)
         );
-
+        
         // Load initial data and templates
         loadTests();
         loadTemplates();
+        loadHeadersTemplates();
     }
 
     private void loadTemplates() {
@@ -183,6 +218,19 @@ public class GatlingTestViewModel implements Initializable {
         }
     }
 
+    private void loadHeadersTemplates() {
+        try {
+            headersTemplates.clear();
+            for (HeadersTemplate template : headersTemplateService.getAllTemplates()) {
+                headersTemplates.put(template.getName(), template.getContent());
+            }
+            headersTemplateComboBox.setItems(FXCollections.observableArrayList(headersTemplates.keySet()));
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to load headers templates: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+        }
+    }
     private void populateDynamicVariables(String template) {
         dynamicVariables.clear();
         if (template != null) {
@@ -193,7 +241,16 @@ public class GatlingTestViewModel implements Initializable {
             }
         }
     }
-
+    private void populateHeadersDynamicVariables(String template) {
+        headersDynamicVariables.clear();
+        if (template != null) {
+            Pattern pattern = Pattern.compile("\\$\\{([^}]+)\\}");
+            Matcher matcher = pattern.matcher(template);
+            while (matcher.find()) {
+                headersDynamicVariables.add(new DynamicVariable(matcher.group(1), ""));
+            }
+        }
+    }
     private void loadTests() {
         try {
             testList.setAll(testService.findAllTests());
@@ -216,11 +273,16 @@ public class GatlingTestViewModel implements Initializable {
             expResultArea.setText(test.getExpResult());
             saveFieldsArea.setText(test.getSaveFields());
             endpointField.setText(test.getEndpoint());
-            headersArea.setText(test.getHeaders());
             templateComboBox.setValue(test.getBodyTemplateName());
+
             dynamicVariables.clear();
             if (test.getDynamicVariables() != null) {
                 test.getDynamicVariables().forEach((key, value) -> dynamicVariables.add(new DynamicVariable(key, value)));
+            }
+            headersTemplateComboBox.setValue(test.getHeadersTemplateName());
+            headersDynamicVariables.clear();
+            if (test.getHeadersDynamicVariables() != null) {
+                test.getHeadersDynamicVariables().forEach((key, value) -> headersDynamicVariables.add(new DynamicVariable(key, value)));
             }
             tagsField.setText(test.getTags());
             waitTimeSpinner.getValueFactory().setValue(test.getWaitTime());
@@ -240,9 +302,10 @@ public class GatlingTestViewModel implements Initializable {
         expResultArea.clear();
         saveFieldsArea.clear();
         endpointField.clear();
-        headersArea.clear();
         templateComboBox.getSelectionModel().clearSelection();
         dynamicVariables.clear();
+        headersTemplateComboBox.getSelectionModel().clearSelection();
+        headersDynamicVariables.clear();
         tagsField.clear();
         waitTimeSpinner.getValueFactory().setValue(0);
     }
@@ -258,6 +321,19 @@ public class GatlingTestViewModel implements Initializable {
             body = body.replace("${" + var.getKey() + "}", var.getValue());
         }
         return body;
+    }
+
+    private String buildHeaders() {
+        String selectedTemplateName = headersTemplateComboBox.getSelectionModel().getSelectedItem();
+        if (selectedTemplateName == null || !headersTemplates.containsKey(selectedTemplateName)) {
+            return null;
+        }
+        String template = headersTemplates.get(selectedTemplateName);
+        String headers = template;
+        for (DynamicVariable var : headersDynamicVariables) {
+            headers = headers.replace("${" + var.getKey() + "}", var.getValue());
+        }
+        return headers;
     }
 
     @FXML
@@ -280,14 +356,19 @@ public class GatlingTestViewModel implements Initializable {
         newTest.setExpStatus(expStatusField.getText());
         newTest.setExpResult(expResultArea.getText());
         newTest.setSaveFields(saveFieldsArea.getText());
-        newTest.setHeaders(headersArea.getText());
-        newTest.setBodyTemplateName(templateComboBox.getSelectionModel().getSelectedItem());
+        newTest.setHeaders(headersTemplateComboBox.getSelectionModel().getSelectedItem());
         Map<String, String> vars = new HashMap<>();
         dynamicVariables.forEach(dv -> vars.put(dv.getKey(), dv.getValue()));
         newTest.setDynamicVariables(vars);
-        newTest.setBodyTemplate(buildRequestBody());
+        newTest.setBody(buildRequestBody());
+        newTest.setHeaders(buildHeaders());
+        newTest.setBodyTemplateName(templateComboBox.getSelectionModel().getSelectedItem());
+        newTest.setHeadersTemplateName(headersTemplateComboBox.getSelectionModel().getSelectedItem());
         newTest.setTags(tagsField.getText());
         newTest.setWaitTime(waitTimeSpinner.getValue());
+        Map<String, String> headersVars = new HashMap<>();
+        headersDynamicVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
+        newTest.setHeadersDynamicVariables(headersVars);
 
         try {
             testService.createTest(newTest);
@@ -335,14 +416,19 @@ public class GatlingTestViewModel implements Initializable {
         selectedTest.setExpResult(expResultArea.getText());
         selectedTest.setSaveFields(saveFieldsArea.getText());
         selectedTest.setEndpoint(endpoint);
-        selectedTest.setHeaders(headersArea.getText());
-        selectedTest.setBodyTemplateName(templateComboBox.getSelectionModel().getSelectedItem());
+        selectedTest.setHeaders(headersTemplateComboBox.getSelectionModel().getSelectedItem());
         Map<String, String> vars = new HashMap<>();
         dynamicVariables.forEach(dv -> vars.put(dv.getKey(), dv.getValue()));
         selectedTest.setDynamicVariables(vars);
-        selectedTest.setBodyTemplate(buildRequestBody());
+        selectedTest.setBody(buildRequestBody());
+        selectedTest.setBodyTemplateName(templateComboBox.getSelectionModel().getSelectedItem());
+        selectedTest.setHeaders(buildHeaders());
+        selectedTest.setHeadersTemplateName(headersTemplateComboBox.getSelectionModel().getSelectedItem());
         selectedTest.setTags(tagsField.getText());
         selectedTest.setWaitTime(waitTimeSpinner.getValue());
+        Map<String, String> headersVars = new HashMap<>();
+        headersDynamicVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
+        selectedTest.setHeadersDynamicVariables(headersVars);
 
         try {
             testService.updateTest(selectedTest);

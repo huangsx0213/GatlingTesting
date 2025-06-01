@@ -68,12 +68,22 @@
                                         <Label text="Conditions:" GridPane.columnIndex="2" GridPane.rowIndex="0" />
                                         <TextArea fx:id="conditionsArea" promptText="Test conditions" prefRowCount="3" GridPane.columnIndex="3" GridPane.rowIndex="0" />
                                         
-                                        <Label text="Headers:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                                        <TextArea fx:id="headersArea" promptText="HTTP Headers (JSON format)" prefRowCount="3" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                                        <Label text="Exp Status:" GridPane.columnIndex="2" GridPane.rowIndex="1" />
-                                        <TextField fx:id="expStatusField" promptText="Expected HTTP Status" GridPane.columnIndex="3" GridPane.rowIndex="1" />
-                                        <Label text="Tags:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                                        <TextField fx:id="tagsField" promptText="Test tags (comma separated)" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                        <Label text="Headers Template:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                                        <ComboBox fx:id="headersTemplateComboBox" prefWidth="350.0" promptText="Select Headers Template" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                        <Label text="Headers Dynamic Variables:" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                                        <TableView fx:id="headersDynamicVarsTable" prefHeight="80.0" prefWidth="350.0" GridPane.columnIndex="3" GridPane.rowIndex="1">
+                                            <columns>
+                                                <TableColumn fx:id="headersDynamicKeyColumn" prefWidth="175.0" text="Key" />
+                                                <TableColumn fx:id="headersDynamicValueColumn" prefWidth="175.0" text="Value" />
+                                            </columns>
+                                            <columnResizePolicy>
+                                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                            </columnResizePolicy>
+                                        </TableView>
+                                        <Label text="Exp Status:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                                        <TextField fx:id="expStatusField" promptText="Expected HTTP Status" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                        <Label text="Tags:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                                        <TextField fx:id="tagsField" promptText="Test tags (comma separated)" GridPane.columnIndex="1" GridPane.rowIndex="3" />
                                     </children>
                                 </GridPane>
                                 

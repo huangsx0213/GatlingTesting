@@ -18,8 +18,8 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     public void addTest(GatlingTest test) throws SQLException {
         String sql = "INSERT INTO gatling_tests (is_run, suite, tcid, descriptions, conditions, " +
                     "exp_status, exp_result, save_fields, endpoint, headers, " +
-                    "body_template, tags, wait_time, body_template_name, dynamic_variables) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "body, tags, wait_time, body_template_name, dynamic_variables, headers_dynamic_variables) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setBoolean(1, test.isRun());
@@ -32,11 +32,12 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             pstmt.setString(8, test.getSaveFields());
             pstmt.setString(9, test.getEndpoint());
             pstmt.setString(10, test.getHeaders());
-            pstmt.setString(11, test.getBodyTemplate());
+            pstmt.setString(11, test.getBody());
             pstmt.setString(12, test.getTags());
             pstmt.setInt(13, test.getWaitTime());
             pstmt.setString(14, test.getBodyTemplateName());
             pstmt.setString(15, convertMapToJson(test.getDynamicVariables()));
+            pstmt.setString(16, convertMapToJson(test.getHeadersDynamicVariables()));
             pstmt.executeUpdate();
 
             // Get the generated ID and set it to the test object
@@ -114,8 +115,8 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     public void updateTest(GatlingTest test) throws SQLException {
         String sql = "UPDATE gatling_tests SET is_run = ?, suite = ?, tcid = ?, descriptions = ?, " +
                     "conditions = ?, exp_status = ?, exp_result = ?, save_fields = ?, " +
-                    "endpoint = ?, headers = ?, body_template = ?, tags = ?, wait_time = ?, " +
-                    "body_template_name = ?, dynamic_variables = ? WHERE id = ?";
+                    "endpoint = ?, headers = ?, body = ?, tags = ?, wait_time = ?, headers_template_name = ?, " +
+                    "body_template_name = ?, dynamic_variables = ?, headers_dynamic_variables = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setBoolean(1, test.isRun());
@@ -128,12 +129,14 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             pstmt.setString(8, test.getSaveFields());
             pstmt.setString(9, test.getEndpoint());
             pstmt.setString(10, test.getHeaders());
-            pstmt.setString(11, test.getBodyTemplate());
+            pstmt.setString(11, test.getBody());
             pstmt.setString(12, test.getTags());
             pstmt.setInt(13, test.getWaitTime());
-            pstmt.setString(14, test.getBodyTemplateName());
-            pstmt.setString(15, convertMapToJson(test.getDynamicVariables()));
-            pstmt.setInt(16, test.getId());
+            pstmt.setString(14, test.getHeadersTemplateName());
+            pstmt.setString(15, test.getBodyTemplateName());
+            pstmt.setString(16, convertMapToJson(test.getDynamicVariables()));
+            pstmt.setString(17, convertMapToJson(test.getHeadersDynamicVariables()));
+            pstmt.setInt(18, test.getId());
             pstmt.executeUpdate();
         }
     }
@@ -172,11 +175,13 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
         test.setSaveFields(rs.getString("save_fields"));
         test.setEndpoint(rs.getString("endpoint"));
         test.setHeaders(rs.getString("headers"));
-        test.setBodyTemplate(rs.getString("body_template") == null ? "" : rs.getString("body_template"));
+        test.setBody(rs.getString("body") == null ? "" : rs.getString("body"));
         test.setTags(rs.getString("tags"));
         test.setWaitTime(rs.getInt("wait_time"));
         test.setBodyTemplateName(rs.getString("body_template_name") == null ? "" : rs.getString("body_template_name"));
+        test.setHeadersTemplateName(rs.getString("headers_template_name") == null ? "" : rs.getString("headers_template_name"));    
         test.setDynamicVariables(convertJsonToMap(rs.getString("dynamic_variables")));
+        test.setHeadersDynamicVariables(convertJsonToMap(rs.getString("headers_dynamic_variables")));
         return test;
     }
 
