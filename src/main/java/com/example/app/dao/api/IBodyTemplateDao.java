@@ -5,10 +5,10 @@ import java.sql.SQLException;
 import java.util.List;
 
 public interface IBodyTemplateDao {
-    void addTemplate(BodyTemplate template) throws SQLException;
-    BodyTemplate getTemplateById(int id) throws SQLException;
-    BodyTemplate getTemplateByName(String name) throws SQLException;
-    List<BodyTemplate> getAllTemplates() throws SQLException;
-    void updateTemplate(BodyTemplate template) throws SQLException;
-    void deleteTemplate(int id) throws SQLException;
+    void addBodyTemplate(BodyTemplate template) throws SQLException;
+    BodyTemplate getBodyTemplateById(int id) throws SQLException;
+    BodyTemplate getBodyTemplateByName(String name) throws SQLException;
+    List<BodyTemplate> getAllBodyTemplates() throws SQLException;
+    void updateBodyTemplate(BodyTemplate template) throws SQLException;
+    void deleteBodyTemplate(int id) throws SQLException;
 } 

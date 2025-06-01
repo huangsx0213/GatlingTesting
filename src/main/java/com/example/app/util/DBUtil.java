@@ -59,7 +59,7 @@ public class DBUtil {
                     + " headers_template_name TEXT,"
                     + " body_template_name TEXT,"
                     + " headers_dynamic_variables TEXT,"
-                    + " dynamic_variables TEXT"
+                    + " body_dynamic_variables TEXT"
                     + ");";
             stmt.execute(testsSql);
 

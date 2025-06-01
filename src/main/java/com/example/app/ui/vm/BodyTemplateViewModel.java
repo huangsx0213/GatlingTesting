@@ -16,9 +16,9 @@ import com.example.app.service.ServiceException;
 
 public class BodyTemplateViewModel implements Initializable {
     @FXML
-    private TextField templateNameField;
+    private TextField bodyTemplateNameField;
     @FXML
-    private TextArea bodyContentArea;
+    private TextArea bodyTemplateContentArea;
     @FXML
     private Button addButton;
     @FXML
@@ -28,11 +28,11 @@ public class BodyTemplateViewModel implements Initializable {
     @FXML
     private Button clearButton;
     @FXML
-    private TableView<TemplateItem> templateTable;
+    private TableView<BodyTemplateItem> bodyTemplateTable;
     @FXML
-    private TableColumn<TemplateItem, String> nameColumn;
+    private TableColumn<BodyTemplateItem, String> bodyTemplateNameColumn;
     @FXML
-    private TableColumn<TemplateItem, String> contentColumn;
+    private TableColumn<BodyTemplateItem, String> bodyTemplateContentColumn;
     @FXML
     private ComboBox<String> bodyFormatComboBox;
     @FXML
@@ -40,46 +40,46 @@ public class BodyTemplateViewModel implements Initializable {
     @FXML
     private Button validateButton;
 
-    private final ObservableList<TemplateItem> templateList = FXCollections.observableArrayList();
+    private final ObservableList<BodyTemplateItem> bodyTemplateList = FXCollections.observableArrayList();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
     private MainViewModel mainViewModel;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        nameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
-        contentColumn.setCellValueFactory(cellData -> cellData.getValue().contentProperty());
-        templateTable.setItems(templateList);
-        templateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showTemplateDetails(newSel));
-        loadTemplates();
+        bodyTemplateNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
+        bodyTemplateContentColumn.setCellValueFactory(cellData -> cellData.getValue().contentProperty());
+        bodyTemplateTable.setItems(bodyTemplateList);
+        bodyTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showBodyTemplateDetails(newSel));
+        loadBodyTemplates();
         // 初始化格式下拉框
         bodyFormatComboBox.getItems().addAll("JSON", "XML", "TEXT");
         bodyFormatComboBox.getSelectionModel().selectFirst();
     }
 
-    private void loadTemplates() {
-        templateList.clear();
+    private void loadBodyTemplates() {
+        bodyTemplateList.clear();
         try {
-            for (BodyTemplate t : bodyTemplateService.findAllTemplates()) {
-                templateList.add(new TemplateItem(t.getId(), t.getName(), t.getContent()));
+            for (BodyTemplate t : bodyTemplateService.findAllBodyTemplates()) {
+                bodyTemplateList.add(new BodyTemplateItem(t.getId(), t.getName(), t.getContent()));
             }
         } catch (ServiceException e) {
             // 可加错误提示
         }
     }
 
-    private void showTemplateDetails(TemplateItem item) {
+    private void showBodyTemplateDetails(BodyTemplateItem item) {
         if (item != null) {
-            templateNameField.setText(item.getName());
-            bodyContentArea.setText(item.getContent());
+            bodyTemplateNameField.setText(item.getName());
+            bodyTemplateContentArea.setText(item.getContent());
         } else {
             clearFields();
         }
     }
 
     @FXML
-    private void handleAddTemplate() {
-        String name = templateNameField.getText().trim();
-        String content = bodyContentArea.getText().trim();
+    private void handleAddBodyTemplate() {
+        String name = bodyTemplateNameField.getText().trim();
+        String content = bodyTemplateContentArea.getText().trim();
         if (name.isEmpty() || content.isEmpty()) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: Name and Content are required.", MainViewModel.StatusType.ERROR);
@@ -88,8 +88,8 @@ public class BodyTemplateViewModel implements Initializable {
         }
         try {
             BodyTemplate t = new BodyTemplate(name, content);
-            bodyTemplateService.createTemplate(t);
-            loadTemplates();
+            bodyTemplateService.createBodyTemplate(t);
+            loadBodyTemplates();
             clearFields();
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Template added successfully.", MainViewModel.StatusType.SUCCESS);
@@ -102,8 +102,8 @@ public class BodyTemplateViewModel implements Initializable {
     }
 
     @FXML
-    private void handleUpdateTemplate() {
-        TemplateItem selected = templateTable.getSelectionModel().getSelectedItem();
+    private void handleUpdateBodyTemplate() {
+        BodyTemplateItem selected = bodyTemplateTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Selection Error: Please select a template to update.", MainViewModel.StatusType.ERROR);
@@ -111,13 +111,12 @@ public class BodyTemplateViewModel implements Initializable {
             return;
         }
         try {
-            BodyTemplate t = new BodyTemplate(selected.getId(), templateNameField.getText().trim(), bodyContentArea.getText().trim());
-            bodyTemplateService.updateTemplate(t);
-            loadTemplates();
-            // 重新选中当前行
-            for (TemplateItem item : templateList) {
+            BodyTemplate t = new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), bodyTemplateContentArea.getText().trim());
+            bodyTemplateService.updateBodyTemplate(t);
+            loadBodyTemplates();
+            for (BodyTemplateItem item : bodyTemplateList) {
                 if (item.getId() == t.getId()) {
-                    templateTable.getSelectionModel().select(item);
+                    bodyTemplateTable.getSelectionModel().select(item);
                     break;
                 }
             }
@@ -132,12 +131,12 @@ public class BodyTemplateViewModel implements Initializable {
     }
 
     @FXML
-    private void handleDeleteTemplate() {
-        TemplateItem selected = templateTable.getSelectionModel().getSelectedItem();
+    private void handleDeleteBodyTemplate() {
+        BodyTemplateItem selected = bodyTemplateTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             try {
-                bodyTemplateService.deleteTemplate(selected.getId());
-                loadTemplates();
+                bodyTemplateService.deleteBodyTemplate(selected.getId());
+                loadBodyTemplates();
                 clearFields();
                 if (mainViewModel != null) {
                     mainViewModel.updateStatus("Template deleted successfully.", MainViewModel.StatusType.SUCCESS);
@@ -155,15 +154,15 @@ public class BodyTemplateViewModel implements Initializable {
     }
 
     @FXML
-    private void handleClearForm() {
+    private void handleClearBodyTemplateForm() {
         clearFields();
-        templateTable.getSelectionModel().clearSelection();
+        bodyTemplateTable.getSelectionModel().clearSelection();
     }
 
     @FXML
     private void handleFormatTemplate() {
         String format = bodyFormatComboBox.getValue();
-        String content = bodyContentArea.getText();
+        String content = bodyTemplateContentArea.getText();
         if (format == null || content == null || content.isEmpty()) return;
         try {
             String formatted = content;
@@ -172,7 +171,7 @@ public class BodyTemplateViewModel implements Initializable {
             } else if ("XML".equals(format)) {
                 formatted = formatXml(content);
             } // TEXT 不处理
-            bodyContentArea.setText(formatted);
+            bodyTemplateContentArea.setText(formatted);
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Format Success: Content formatted as " + format + ".", MainViewModel.StatusType.SUCCESS);
             } else {
@@ -189,7 +188,7 @@ public class BodyTemplateViewModel implements Initializable {
     @FXML
     private void handleValidateTemplate() {
         String format = bodyFormatComboBox.getValue();
-        String content = bodyContentArea.getText();
+        String content = bodyTemplateContentArea.getText();
         if (format == null || content == null || content.isEmpty()) return;
         try {
             if ("JSON".equals(format)) {
@@ -249,8 +248,8 @@ public class BodyTemplateViewModel implements Initializable {
     }
 
     private void clearFields() {
-        templateNameField.clear();
-        bodyContentArea.clear();
+        bodyTemplateNameField.clear();
+        bodyTemplateContentArea.clear();
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -258,21 +257,21 @@ public class BodyTemplateViewModel implements Initializable {
     }
 
     public void refresh() {
-        loadTemplates();
+        loadBodyTemplates();
         clearFields();
     }
 
     // 内部类用于表格项
-    public static class TemplateItem {
+    public static class BodyTemplateItem {
         private final int id;
         private final javafx.beans.property.SimpleStringProperty name;
         private final javafx.beans.property.SimpleStringProperty content;
-        public TemplateItem(int id, String name, String content) {
+        public BodyTemplateItem(int id, String name, String content) {
             this.id = id;
             this.name = new javafx.beans.property.SimpleStringProperty(name);
             this.content = new javafx.beans.property.SimpleStringProperty(content);
         }
-        public TemplateItem(String name, String content) {
+        public BodyTemplateItem(String name, String content) {
             this(0, name, content);
         }
         public int getId() { return id; }

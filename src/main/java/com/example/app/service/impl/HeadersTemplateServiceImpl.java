@@ -13,63 +13,63 @@ public class HeadersTemplateServiceImpl implements IHeadersTemplateService {
     private final IHeadersTemplateDao dao = new HeadersTemplateDaoImpl();
 
     @Override
-    public void addTemplate(HeadersTemplate template) throws ServiceException {
+    public void addHeadersTemplate(HeadersTemplate template) throws ServiceException {
         try {
             if (template == null || template.getName() == null || template.getName().trim().isEmpty()) {
                 throw new ServiceException("Template name is required.");
             }
-            if (dao.getTemplateByName(template.getName()) != null) {
+            if (dao.getHeadersTemplateByName(template.getName()) != null) {
                 throw new ServiceException("Template with this name already exists.");
             }
-            dao.addTemplate(template);
+            dao.addHeadersTemplate(template);
         } catch (SQLException e) {
             throw new ServiceException("Database error: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public void updateTemplate(HeadersTemplate template) throws ServiceException {
+    public void updateHeadersTemplate(HeadersTemplate template) throws ServiceException {
         try {
             if (template == null || template.getId() <= 0) {
                 throw new ServiceException("Template ID is required.");
             }
-            dao.updateTemplate(template);
+            dao.updateHeadersTemplate(template);
         } catch (SQLException e) {
             throw new ServiceException("Database error: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public void deleteTemplate(int id) throws ServiceException {
+    public void deleteHeadersTemplate(int id) throws ServiceException {
         try {
-            dao.deleteTemplate(id);
+            dao.deleteHeadersTemplate(id);
         } catch (SQLException e) {
             throw new ServiceException("Database error: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public HeadersTemplate getTemplateById(int id) throws ServiceException {
+    public HeadersTemplate getHeadersTemplateById(int id) throws ServiceException {
         try {
-            return dao.getTemplateById(id);
+            return dao.getHeadersTemplateById(id);
         } catch (SQLException e) {
             throw new ServiceException("Database error: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public HeadersTemplate getTemplateByName(String name) throws ServiceException {
+    public HeadersTemplate getHeadersTemplateByName(String name) throws ServiceException {
         try {
-            return dao.getTemplateByName(name);
+            return dao.getHeadersTemplateByName(name);
         } catch (SQLException e) {
             throw new ServiceException("Database error: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public List<HeadersTemplate> getAllTemplates() throws ServiceException {
+    public List<HeadersTemplate> getAllHeadersTemplates() throws ServiceException {
         try {
-            return dao.getAllTemplates();
+            return dao.getAllHeadersTemplates();
         } catch (SQLException e) {
             throw new ServiceException("Database error: " + e.getMessage(), e);
         }

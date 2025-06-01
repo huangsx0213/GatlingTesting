@@ -10,7 +10,7 @@ import java.util.List;
 
 public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
     @Override
-    public void addTemplate(HeadersTemplate template) throws SQLException {
+    public void addHeadersTemplate(HeadersTemplate template) throws SQLException {
         String sql = "INSERT INTO headers_templates (name, content) VALUES (?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -26,7 +26,7 @@ public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
     }
 
     @Override
-    public void updateTemplate(HeadersTemplate template) throws SQLException {
+    public void updateHeadersTemplate(HeadersTemplate template) throws SQLException {
         String sql = "UPDATE headers_templates SET name = ?, content = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -38,7 +38,7 @@ public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
     }
 
     @Override
-    public void deleteTemplate(int id) throws SQLException {
+    public void deleteHeadersTemplate(int id) throws SQLException {
         String sql = "DELETE FROM headers_templates WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -48,7 +48,7 @@ public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
     }
 
     @Override
-    public HeadersTemplate getTemplateById(int id) throws SQLException {
+    public HeadersTemplate getHeadersTemplateById(int id) throws SQLException {
         String sql = "SELECT * FROM headers_templates WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -63,7 +63,7 @@ public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
     }
 
     @Override
-    public HeadersTemplate getTemplateByName(String name) throws SQLException {
+    public HeadersTemplate getHeadersTemplateByName(String name) throws SQLException {
         String sql = "SELECT * FROM headers_templates WHERE name = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -78,7 +78,7 @@ public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
     }
 
     @Override
-    public List<HeadersTemplate> getAllTemplates() throws SQLException {
+    public List<HeadersTemplate> getAllHeadersTemplates() throws SQLException {
         String sql = "SELECT * FROM headers_templates ORDER BY id";
         List<HeadersTemplate> list = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection();

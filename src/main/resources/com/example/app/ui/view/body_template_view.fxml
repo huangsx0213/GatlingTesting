@@ -24,27 +24,27 @@
                 </rowConstraints>
                 <children>
                     <Label text="Template Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                    <TextField fx:id="templateNameField" promptText="Template Name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                    <TextField fx:id="bodyTemplateNameField" promptText="Template Name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
                     <Label text="Body Format:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
                     <ComboBox fx:id="bodyFormatComboBox" promptText="Select Format" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
                     <Label text="Body Content:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                    <TextArea fx:id="bodyContentArea" promptText="Body Template Content" prefRowCount="6" GridPane.rowIndex="2" GridPane.columnIndex="1" VBox.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"/>
+                    <TextArea fx:id="bodyTemplateContentArea" promptText="Body Template Content" prefRowCount="6" GridPane.rowIndex="2" GridPane.columnIndex="1" VBox.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"/>
                 </children>
             </GridPane>
             <HBox alignment="CENTER_LEFT" spacing="10.0">
-                <Button fx:id="addButton" text="Add Template" onAction="#handleAddTemplate"/>
-                <Button fx:id="updateButton" text="Update Template" onAction="#handleUpdateTemplate"/>
-                <Button fx:id="deleteButton" text="Delete Template" onAction="#handleDeleteTemplate"/>
-                <Button fx:id="clearButton" text="Clear Form" onAction="#handleClearForm"/>
+                <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddBodyTemplate" text="Add Template" />
+                <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateBodyTemplate" text="Update Template" />
+                <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteBodyTemplate" text="Delete Template" />
+                <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearBodyTemplateForm" text="Clear Form" />
                 <Separator orientation="VERTICAL"/>
                 <Button fx:id="formatButton" text="Format" onAction="#handleFormatTemplate"/>
                 <Button fx:id="validateButton" text="Validate" onAction="#handleValidateTemplate"/>
             </HBox>
             <Label text="Template List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
-            <TableView fx:id="templateTable" prefHeight="0" VBox.vgrow="ALWAYS">
+            <TableView fx:id="bodyTemplateTable" prefHeight="0" VBox.vgrow="ALWAYS">
                 <columns>
-                    <TableColumn fx:id="nameColumn" prefWidth="200.0" text="Template Name"/>
-                    <TableColumn fx:id="contentColumn" prefWidth="800.0" text="Body Content"/>
+                    <TableColumn fx:id="bodyTemplateNameColumn" prefWidth="200.0" text="Template Name"/>
+                    <TableColumn fx:id="bodyTemplateContentColumn" prefWidth="800.0" text="Body Content"/>
                 </columns>
             </TableView>
         </VBox>

@@ -60,7 +60,7 @@
                                             </children>
                                         </HBox>
                                         
-                                        <!-- Third Row: Test Descriptions and Conditions -->
+                                        <!-- Second Row: Test Conditions and Test Descriptions -->
                                         <HBox spacing="15.0" alignment="TOP_LEFT">
                                             <children>
                                                 <VBox spacing="5.0" minWidth="365.0" maxWidth="350.0">
@@ -97,7 +97,7 @@
                                                 </VBox>
                                                 <VBox spacing="5.0" HBox.hgrow="ALWAYS">
                                                     <children>
-                                                        <Label text="API Endpoint URL:" style="-fx-font-weight: bold;" />
+                                                        <Label text="Endpoint:" style="-fx-font-weight: bold;" />
                                                         <TextField fx:id="endpointField" promptText="Enter complete API endpoint URL" />
                                                     </children>
                                                 </VBox>
@@ -115,11 +115,11 @@
                                                 </VBox>
                                                 <VBox spacing="5.0" HBox.hgrow="ALWAYS">
                                                     <children>
-                                                        <Label text="Dynamic Headers Variables:" style="-fx-font-weight: bold;" />
-                                                        <TableView fx:id="headersDynamicVarsTable" prefHeight="100.0">
+                                                        <Label text="Headers Dynamic Variables:" style="-fx-font-weight: bold;" />
+                                                        <TableView fx:id="headersTemplateVarsTable" prefHeight="100.0">
                                             <columns>
-                                                <TableColumn fx:id="headersDynamicKeyColumn" prefWidth="175.0" text="Key" />
-                                                <TableColumn fx:id="headersDynamicValueColumn" prefWidth="175.0" text="Value" />
+                                                <TableColumn fx:id="headersTemplateKeyColumn" prefWidth="175.0" text="Variable Name" />
+                                                <TableColumn fx:id="headersTemplateValueColumn" prefWidth="175.0" text="Variable Value" />
                                             </columns>
                                             <columnResizePolicy>
                                                 <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
@@ -136,16 +136,16 @@
                                                 <VBox spacing="5.0" prefWidth="350.0">
                                                     <children>
                                                         <Label text="Body Template:" style="-fx-font-weight: bold;" />
-                                                        <ComboBox fx:id="templateComboBox" prefWidth="350.0" promptText="Select request body template" />
+                                                        <ComboBox fx:id="bodyTemplateComboBox" prefWidth="350.0" promptText="Select body template" />
                                                     </children>
                                                 </VBox>
                                                 <VBox spacing="5.0" HBox.hgrow="ALWAYS">
                                                     <children>
                                                         <Label text="Body Dynamic Variables:" style="-fx-font-weight: bold;" />
-                                                        <TableView fx:id="dynamicVarsTable" prefHeight="100.0">
+                                                        <TableView fx:id="bodyDynamicVarsTable" prefHeight="100.0">
                                             <columns>
-                                                                <TableColumn fx:id="dynamicKeyColumn" prefWidth="175.0" text="Variable Name" />
-                                                                <TableColumn fx:id="dynamicValueColumn" prefWidth="175.0" text="Variable Value" />
+                                                                <TableColumn fx:id="bodyDynamicKeyColumn" prefWidth="175.0" text="Variable Name" />
+                                                                <TableColumn fx:id="bodyDynamicValueColumn" prefWidth="175.0" text="Variable Value" />
                                             </columns>
                                             <columnResizePolicy>
                                                 <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
@@ -226,14 +226,16 @@
                         <Label text="Test Cases List" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
                         <TableView fx:id="testTable" prefHeight="300.0" VBox.vgrow="ALWAYS">
                     <columns>
-                        <TableColumn fx:id="idColumn" prefWidth="50.0" text="ID" />
                         <TableColumn fx:id="isRunColumn" prefWidth="60.0" text="Run" />
                         <TableColumn fx:id="suiteColumn" prefWidth="120.0" text="Suite" />
                         <TableColumn fx:id="tcidColumn" prefWidth="120.0" text="TCID" />
-                        <TableColumn fx:id="descriptionsColumn" prefWidth="200.0" text="Descriptions" />
-                                <TableColumn fx:id="endpointColumn" prefWidth="280.0" text="Endpoint" />
+                        <TableColumn fx:id="httpMethodColumn" prefWidth="120.0" text="Method" />
+                        <TableColumn fx:id="endpointColumn" prefWidth="280.0" text="Endpoint" />
+                        <TableColumn fx:id="headersTemplateNameColumn" prefWidth="120.0" text="Headers" />
+                        <TableColumn fx:id="bodyTemplateNameColumn" prefWidth="120.0" text="Body" />
                         <TableColumn fx:id="tagsColumn" prefWidth="120.0" text="Tags" />
                         <TableColumn fx:id="waitTimeColumn" prefWidth="80.0" text="Wait(s)" />
+                        <TableColumn fx:id="descriptionsColumn" prefWidth="200.0" text="Descriptions" />
                     </columns>
                     <columnResizePolicy>
                         <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />

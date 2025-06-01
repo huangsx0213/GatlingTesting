@@ -6,10 +6,10 @@ import com.example.app.service.ServiceException;
 import java.util.List;
 
 public interface IHeadersTemplateService {
-    void addTemplate(HeadersTemplate template) throws ServiceException;
-    void updateTemplate(HeadersTemplate template) throws ServiceException;
-    void deleteTemplate(int id) throws ServiceException;
-    HeadersTemplate getTemplateById(int id) throws ServiceException;
-    HeadersTemplate getTemplateByName(String name) throws ServiceException;
-    List<HeadersTemplate> getAllTemplates() throws ServiceException;
+    void addHeadersTemplate(HeadersTemplate template) throws ServiceException;
+    void updateHeadersTemplate(HeadersTemplate template) throws ServiceException;
+    void deleteHeadersTemplate(int id) throws ServiceException;
+    HeadersTemplate getHeadersTemplateById(int id) throws ServiceException;
+    HeadersTemplate getHeadersTemplateByName(String name) throws ServiceException;
+    List<HeadersTemplate> getAllHeadersTemplates() throws ServiceException;
 } 

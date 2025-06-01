@@ -14,75 +14,75 @@ public class BodyTemplateServiceImpl implements IBodyTemplateService {
     private final IBodyTemplateDao templateDao = new BodyTemplateDaoImpl();
 
     @Override
-    public void createTemplate(BodyTemplate template) throws ServiceException {
+    public void createBodyTemplate(BodyTemplate template) throws ServiceException {
         try {
             if (template == null || template.getName() == null || template.getName().trim().isEmpty()) {
                 throw new ServiceException("Template name is required.");
             }
-            if (templateDao.getTemplateByName(template.getName()) != null) {
+            if (templateDao.getBodyTemplateByName(template.getName()) != null) {
                 throw new ServiceException("Template with name '" + template.getName() + "' already exists.");
             }
-            templateDao.addTemplate(template);
+            templateDao.addBodyTemplate(template);
         } catch (SQLException e) {
             throw new ServiceException("Database error while creating template: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public BodyTemplate findTemplateById(int id) throws ServiceException {
+    public BodyTemplate findBodyTemplateById(int id) throws ServiceException {
         try {
-            return templateDao.getTemplateById(id);
+            return templateDao.getBodyTemplateById(id);
         } catch (SQLException e) {
             throw new ServiceException("Database error while finding template by ID: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public BodyTemplate findTemplateByName(String name) throws ServiceException {
+    public BodyTemplate findBodyTemplateByName(String name) throws ServiceException {
         try {
-            return templateDao.getTemplateByName(name);
+            return templateDao.getBodyTemplateByName(name);
         } catch (SQLException e) {
             throw new ServiceException("Database error while finding template by name: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public List<BodyTemplate> findAllTemplates() throws ServiceException {
+    public List<BodyTemplate> findAllBodyTemplates() throws ServiceException {
         try {
-            return templateDao.getAllTemplates();
+            return templateDao.getAllBodyTemplates();
         } catch (SQLException e) {
             throw new ServiceException("Database error while retrieving all templates: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public void updateTemplate(BodyTemplate template) throws ServiceException {
+    public void updateBodyTemplate(BodyTemplate template) throws ServiceException {
         try {
             if (template == null || template.getId() <= 0 || template.getName() == null || template.getName().trim().isEmpty()) {
                 throw new ServiceException("Template ID and name are required for update.");
             }
-            BodyTemplate existingTemplate = templateDao.getTemplateById(template.getId());
+            BodyTemplate existingTemplate = templateDao.getBodyTemplateById(template.getId());
             if (existingTemplate == null) {
                 throw new ServiceException("Template with ID " + template.getId() + " not found.");
             }
             if (!existingTemplate.getName().equals(template.getName())) {
-                if (templateDao.getTemplateByName(template.getName()) != null) {
+                if (templateDao.getBodyTemplateByName(template.getName()) != null) {
                     throw new ServiceException("Template with name '" + template.getName() + "' already exists.");
                 }
             }
-            templateDao.updateTemplate(template);
+            templateDao.updateBodyTemplate(template);
         } catch (SQLException e) {
             throw new ServiceException("Database error while updating template: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public void deleteTemplate(int id) throws ServiceException {
+    public void deleteBodyTemplate(int id) throws ServiceException {
         try {
-            if (templateDao.getTemplateById(id) == null) {
+            if (templateDao.getBodyTemplateById(id) == null) {
                 throw new ServiceException("Template with ID " + id + " not found.");
             }
-            templateDao.deleteTemplate(id);
+            templateDao.deleteBodyTemplate(id);
         } catch (SQLException e) {
             throw new ServiceException("Database error while deleting template: " + e.getMessage(), e);
         }

@@ -6,6 +6,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.scene.image.Image;
 
 import java.io.IOException;
 
@@ -22,6 +23,7 @@ public class App extends Application {
 
         primaryStage.setTitle("Gatling Testing System");
         primaryStage.setScene(new Scene(root, 1440, 900));
+        primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/icon/favicon.ico")));
         primaryStage.show();
     }
 

@@ -10,7 +10,7 @@ import java.util.List;
 
 public class BodyTemplateDaoImpl implements IBodyTemplateDao {
     @Override
-    public void addTemplate(BodyTemplate template) throws SQLException {
+    public void addBodyTemplate(BodyTemplate template) throws SQLException {
         String sql = "INSERT INTO body_templates (name, content) VALUES (?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -26,7 +26,7 @@ public class BodyTemplateDaoImpl implements IBodyTemplateDao {
     }
 
     @Override
-    public void updateTemplate(BodyTemplate template) throws SQLException {
+    public void updateBodyTemplate(BodyTemplate template) throws SQLException {
         String sql = "UPDATE body_templates SET name = ?, content = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -38,7 +38,7 @@ public class BodyTemplateDaoImpl implements IBodyTemplateDao {
     }
 
     @Override
-    public void deleteTemplate(int id) throws SQLException {
+    public void deleteBodyTemplate(int id) throws SQLException {
         String sql = "DELETE FROM body_templates WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -48,7 +48,7 @@ public class BodyTemplateDaoImpl implements IBodyTemplateDao {
     }
 
     @Override
-    public BodyTemplate getTemplateById(int id) throws SQLException {
+    public BodyTemplate getBodyTemplateById(int id) throws SQLException {
         String sql = "SELECT * FROM body_templates WHERE id = ?";
         BodyTemplate template = null;
         try (Connection conn = DBUtil.getConnection();
@@ -64,7 +64,7 @@ public class BodyTemplateDaoImpl implements IBodyTemplateDao {
     }
 
     @Override
-    public BodyTemplate getTemplateByName(String name) throws SQLException {
+    public BodyTemplate getBodyTemplateByName(String name) throws SQLException {
         String sql = "SELECT * FROM body_templates WHERE name = ?";
         BodyTemplate template = null;
         try (Connection conn = DBUtil.getConnection();
@@ -80,7 +80,7 @@ public class BodyTemplateDaoImpl implements IBodyTemplateDao {
     }
 
     @Override
-    public List<BodyTemplate> getAllTemplates() throws SQLException {
+    public List<BodyTemplate> getAllBodyTemplates() throws SQLException {
         String sql = "SELECT * FROM body_templates ORDER BY name";
         List<BodyTemplate> templates = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection();

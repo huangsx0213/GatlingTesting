@@ -18,9 +18,9 @@ import org.yaml.snakeyaml.DumperOptions;
 
 public class HeadersTemplateViewModel implements Initializable {
     @FXML
-    private TextField templateNameField;
+    private TextField headersTemplateNameField;
     @FXML
-    private TextArea headersContentArea;
+    private TextArea headersTemplateContentArea;
     @FXML
     private Button addButton;
     @FXML
@@ -34,49 +34,49 @@ public class HeadersTemplateViewModel implements Initializable {
     @FXML
     private Button validateButton;
     @FXML
-    private TableView<TemplateItem> templateTable;
+    private TableView<HeadersTemplateItem> headersTemplateTable;
     @FXML
-    private TableColumn<TemplateItem, String> nameColumn;
+    private TableColumn<HeadersTemplateItem, String> headersTemplateNameColumn;
     @FXML
-    private TableColumn<TemplateItem, String> contentColumn;
+    private TableColumn<HeadersTemplateItem, String> headersTemplateContentColumn;
 
-    private final ObservableList<TemplateItem> templateList = FXCollections.observableArrayList();
+    private final ObservableList<HeadersTemplateItem> headersTemplateList = FXCollections.observableArrayList();
     private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
     private MainViewModel mainViewModel;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        nameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
-        contentColumn.setCellValueFactory(cellData -> cellData.getValue().contentProperty());
-        templateTable.setItems(templateList);
-        templateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showTemplateDetails(newSel));
-        loadTemplates();
+        headersTemplateNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
+        headersTemplateContentColumn.setCellValueFactory(cellData -> cellData.getValue().contentProperty());
+        headersTemplateTable.setItems(headersTemplateList);
+        headersTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showHeadersTemplateDetails(newSel));
+        loadHeadersTemplates();
     }
 
-    private void loadTemplates() {
-        templateList.clear();
+    private void loadHeadersTemplates() {
+        headersTemplateList.clear();
         try {
-            for (HeadersTemplate t : headersTemplateService.getAllTemplates()) {
-                templateList.add(new TemplateItem(t.getId(), t.getName(), t.getContent()));
+            for (HeadersTemplate t : headersTemplateService.getAllHeadersTemplates()) {
+                headersTemplateList.add(new HeadersTemplateItem(t.getId(), t.getName(), t.getContent()));
             }
         } catch (ServiceException e) {
             // 可加错误提示
         }
     }
 
-    private void showTemplateDetails(TemplateItem item) {
+    private void showHeadersTemplateDetails(HeadersTemplateItem item) {
         if (item != null) {
-            templateNameField.setText(item.getName());
-            headersContentArea.setText(item.getContent());
+            headersTemplateNameField.setText(item.getName());
+            headersTemplateContentArea.setText(item.getContent());
         } else {
             clearFields();
         }
     }
 
     @FXML
-    private void handleAddTemplate() {
-        String name = templateNameField.getText().trim();
-        String content = headersContentArea.getText().trim();
+    private void handleAddHeadersTemplate() {
+        String name = headersTemplateNameField.getText().trim();
+        String content = headersTemplateContentArea.getText().trim();
         if (name.isEmpty() || content.isEmpty()) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: Name and Content are required.", MainViewModel.StatusType.ERROR);
@@ -85,8 +85,8 @@ public class HeadersTemplateViewModel implements Initializable {
         }
         try {
             HeadersTemplate t = new HeadersTemplate(name, content);
-            headersTemplateService.addTemplate(t);
-            loadTemplates();
+            headersTemplateService.addHeadersTemplate(t);
+            loadHeadersTemplates();
             clearFields();
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Template added successfully.", MainViewModel.StatusType.SUCCESS);
@@ -99,8 +99,8 @@ public class HeadersTemplateViewModel implements Initializable {
     }
 
     @FXML
-    private void handleUpdateTemplate() {
-        TemplateItem selected = templateTable.getSelectionModel().getSelectedItem();
+    private void handleUpdateHeadersTemplate() {
+        HeadersTemplateItem selected = headersTemplateTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Selection Error: Please select a template to update.", MainViewModel.StatusType.ERROR);
@@ -108,13 +108,12 @@ public class HeadersTemplateViewModel implements Initializable {
             return;
         }
         try {
-            HeadersTemplate t = new HeadersTemplate(selected.getId(), templateNameField.getText().trim(), headersContentArea.getText().trim());
-            headersTemplateService.updateTemplate(t);
-            loadTemplates();
-            // 重新选中当前行
-            for (TemplateItem item : templateList) {
+            HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), headersTemplateContentArea.getText().trim());
+            headersTemplateService.updateHeadersTemplate(t);
+            loadHeadersTemplates();
+            for (HeadersTemplateItem item : headersTemplateList) {
                 if (item.getId() == t.getId()) {
-                    templateTable.getSelectionModel().select(item);
+                    headersTemplateTable.getSelectionModel().select(item);
                     break;
                 }
             }
@@ -129,12 +128,12 @@ public class HeadersTemplateViewModel implements Initializable {
     }
 
     @FXML
-    private void handleDeleteTemplate() {
-        TemplateItem selected = templateTable.getSelectionModel().getSelectedItem();
+    private void handleDeleteHeadersTemplate() {
+        HeadersTemplateItem selected = headersTemplateTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             try {
-                headersTemplateService.deleteTemplate(selected.getId());
-                loadTemplates();
+                headersTemplateService.deleteHeadersTemplate(selected.getId());
+                loadHeadersTemplates();
                 clearFields();
                 if (mainViewModel != null) {
                     mainViewModel.updateStatus("Template deleted successfully.", MainViewModel.StatusType.SUCCESS);
@@ -152,18 +151,18 @@ public class HeadersTemplateViewModel implements Initializable {
     }
 
     @FXML
-    private void handleClearForm() {
+    private void handleClearHeadersTemplateForm() {
         clearFields();
-        templateTable.getSelectionModel().clearSelection();
+        headersTemplateTable.getSelectionModel().clearSelection();
     }
 
     @FXML
     private void handleFormatTemplate() {
-        String content = headersContentArea.getText();
+        String content = headersTemplateContentArea.getText();
         if (content == null || content.isEmpty()) return;
         try {
             String formatted = formatYaml(content);
-            headersContentArea.setText(formatted);
+            headersTemplateContentArea.setText(formatted);
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Format Success: Content formatted as YAML.", MainViewModel.StatusType.SUCCESS);
             } else {
@@ -179,7 +178,7 @@ public class HeadersTemplateViewModel implements Initializable {
 
     @FXML
     private void handleValidateTemplate() {
-        String content = headersContentArea.getText();
+        String content = headersTemplateContentArea.getText();
         if (content == null || content.isEmpty()) return;
         try {
             validateYaml(content);
@@ -223,8 +222,8 @@ public class HeadersTemplateViewModel implements Initializable {
     }
 
     private void clearFields() {
-        templateNameField.clear();
-        headersContentArea.clear();
+        headersTemplateNameField.clear();
+        headersTemplateContentArea.clear();
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -232,21 +231,21 @@ public class HeadersTemplateViewModel implements Initializable {
     }
 
     public void refresh() {
-        loadTemplates();
+        loadHeadersTemplates();
         clearFields();
     }
 
     // 内部类用于表格项
-    public static class TemplateItem {
+    public static class HeadersTemplateItem {
         private final int id;
         private final javafx.beans.property.SimpleStringProperty name;
         private final javafx.beans.property.SimpleStringProperty content;
-        public TemplateItem(int id, String name, String content) {
+        public HeadersTemplateItem(int id, String name, String content) {
             this.id = id;
             this.name = new javafx.beans.property.SimpleStringProperty(name);
             this.content = new javafx.beans.property.SimpleStringProperty(content);
         }
-        public TemplateItem(String name, String content) {
+        public HeadersTemplateItem(String name, String content) {
             this(0, name, content);
         }
         public int getId() { return id; }

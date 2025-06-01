@@ -133,7 +133,7 @@ public class GatlingTest {
     public void setHttpMethod(String httpMethod) { this.httpMethod.set(httpMethod); }
     public StringProperty httpMethodProperty() { return httpMethod; }
 
-    public Map<String, String> getDynamicVariables() { return dynamicVariables; }
+    public Map<String, String> getBodyDynamicVariables() { return dynamicVariables; }
     public void setDynamicVariables(Map<String, String> dynamicVariables) { this.dynamicVariables = dynamicVariables; }
 
     public Map<String, String> getHeadersDynamicVariables() { return headersDynamicVariables; }
