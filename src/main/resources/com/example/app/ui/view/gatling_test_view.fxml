@@ -27,10 +27,10 @@
                                         <!-- First Row: Is Run, Test Suite, Test Case ID, Tags, Wait Time -->
                                         <HBox spacing="15.0" alignment="CENTER_LEFT">
                                             <children>
-                                                <VBox spacing="5.0" minWidth="50.0" maxWidth="50.0">
+                                                <VBox spacing="5.0" minWidth="60.0" maxWidth="60.0">
                                                     <children>
-                                                        <Label text="Is Run:" style="-fx-font-weight: bold;" />
-                                                        <CheckBox fx:id="isRunCheckBox" />
+                                                        <Label text="Enabled:" style="-fx-font-weight: bold;" />
+                                                        <CheckBox fx:id="isEnabledCheckBox" />
                                                     </children>
                                                 </VBox>
                                                 <VBox spacing="5.0" minWidth="300.0" maxWidth="300.0">
@@ -67,16 +67,31 @@
                                         <!-- Second Row: Test Conditions and Test Descriptions -->
                                         <HBox spacing="15.0" alignment="TOP_LEFT">
                                             <children>
-                                                <VBox spacing="5.0" minWidth="365.0" maxWidth="350.0">
+                                                <VBox spacing="5.0" minWidth="350.0" maxWidth="350.0">
                                                     <children>
                                                         <Label text="Test Conditions:" style="-fx-font-weight: bold;" />
-                                                        <TextArea fx:id="conditionsArea" promptText="Describe test prerequisites and environment requirements" prefRowCount="3" />
+                                                        <HBox spacing="5.0">
+                                                            <children>
+                                                                <TableView fx:id="conditionsTable" prefHeight="90.0" editable="true">
+                                                                    <columns>
+                                                                        <TableColumn fx:id="prefixColumn" text="Prefix" prefWidth="110.0" />
+                                                                        <TableColumn fx:id="conditionTcidColumn" text="TCID" prefWidth="200.0" />
+                                                                    </columns>
+                                                                </TableView>
+                                                                <VBox spacing="5.0" alignment="TOP_CENTER">
+                                                                    <children>
+                                                                        <Button fx:id="addConditionButton" text="+" onAction="#handleAddCondition" prefWidth="30.0" maxWidth="30.0" minWidth="30.0" />
+                                                                        <Button fx:id="removeConditionButton" text="-" onAction="#handleRemoveCondition" prefWidth="30.0" maxWidth="30.0" minWidth="30.0" />
+                                                                    </children>
+                                                                </VBox>
+                                                            </children>
+                                                        </HBox>
                                                     </children>
                                                 </VBox>
                                                 <VBox spacing="5.0" HBox.hgrow="ALWAYS">
                                                     <children>
                                                         <Label text="Test Descriptions:" style="-fx-font-weight: bold;" />
-                                                        <TextArea fx:id="descriptionsArea" promptText="Describe test purpose and expected behavior" prefRowCount="3" />
+                                                        <TextArea fx:id="descriptionsArea" promptText="Describe test purpose and expected behavior" prefRowCount="3" prefHeight="90.0" />
                                                     </children>
                                                 </VBox>
                                             </children>
@@ -228,9 +243,9 @@
                         <Label text="Test Cases List" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
                         <TableView fx:id="testTable" prefHeight="300.0" VBox.vgrow="ALWAYS">
                     <columns>
-                        <TableColumn fx:id="isRunColumn" prefWidth="60.0" text="Run" />
+                        <TableColumn fx:id="isEnabledColumn" prefWidth="70.0" text="Enabled" />
                         <TableColumn fx:id="suiteColumn" prefWidth="120.0" text="Suite" />
-                        <TableColumn fx:id="tcidColumn" prefWidth="120.0" text="TCID" />
+                        <TableColumn fx:id="testTcidColumn" prefWidth="120.0" text="TCID" />
                         <TableColumn fx:id="httpMethodColumn" prefWidth="120.0" text="Method" />
                         <TableColumn fx:id="endpointColumn" prefWidth="280.0" text="Endpoint" />
                         <TableColumn fx:id="headersTemplateNameColumn" prefWidth="120.0" text="Headers" />

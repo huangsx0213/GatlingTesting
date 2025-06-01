@@ -13,5 +13,5 @@ public interface IGatlingTestDao {
     List<GatlingTest> getTestsBySuite(String suite) throws SQLException;
     void updateTest(GatlingTest test) throws SQLException;
     void deleteTest(int id) throws SQLException;
-    void updateTestRunStatus(int id, boolean isRun) throws SQLException;
+    void updateTestRunStatus(int id, boolean isEnabled) throws SQLException;
 }

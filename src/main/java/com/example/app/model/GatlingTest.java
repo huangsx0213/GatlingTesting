@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class GatlingTest {
     private final IntegerProperty id = new SimpleIntegerProperty();
-    private final BooleanProperty isRun = new SimpleBooleanProperty();
+    private final BooleanProperty isEnabled = new SimpleBooleanProperty();
     private final StringProperty suite = new SimpleStringProperty();
     private final StringProperty tcid = new SimpleStringProperty();
     private final StringProperty descriptions = new SimpleStringProperty();
@@ -35,16 +35,16 @@ public class GatlingTest {
         this.descriptions.set(descriptions);
         this.endpoint.set(endpoint);
         this.httpMethod.set(httpMethod);
-        this.isRun.set(false);
+        this.isEnabled.set(false);
         this.waitTime.set(0);
     }
 
-    public GatlingTest(int id, boolean isRun, String suite, String tcid, String descriptions,
+    public GatlingTest(int id, boolean isEnabled, String suite, String tcid, String descriptions,
                       String conditions, String expStatus, String expResult,
                       String saveFields, String endpoint, String httpMethod, String headers, String body,
                       String tags, int waitTime, String bodyTemplateName, String headersTemplateName, Map<String, String> dynamicVariables, Map<String, String> headersDynamicVariables) {
         this.id.set(id);
-        this.isRun.set(isRun);
+        this.isEnabled.set(isEnabled);
         this.suite.set(suite);
         this.tcid.set(tcid);
         this.descriptions.set(descriptions);
@@ -69,9 +69,9 @@ public class GatlingTest {
     public void setId(int id) { this.id.set(id); }
     public IntegerProperty idProperty() { return id; }
 
-    public boolean isRun() { return isRun.get(); }
-    public void setRun(boolean isRun) { this.isRun.set(isRun); }
-    public BooleanProperty isRunProperty() { return isRun; }
+    public boolean isEnabled() { return isEnabled.get(); }
+    public void setEnabled(boolean isEnabled) { this.isEnabled.set(isEnabled); }
+    public BooleanProperty isEnabledProperty() { return isEnabled; }
 
     public String getSuite() { return suite.get(); }
     public void setSuite(String suite) { this.suite.set(suite); }
@@ -143,7 +143,7 @@ public class GatlingTest {
     public String toString() {
         return "GatlingTest{" +
                 "id=" + getId() +
-                ", isRun=" + isRun() +
+                ", isEnabled=" + isEnabled() +
                 ", suite='" + getSuite() + '\'' +
                 ", tcid='" + getTcid() + '\'' +
                 ", descriptions='" + getDescriptions() + '\'' +

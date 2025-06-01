@@ -4,6 +4,7 @@ import com.example.app.model.BodyTemplate;
 import com.example.app.model.HeadersTemplate;
 import com.example.app.model.DynamicVariable;
 import com.example.app.model.GatlingTest;
+import com.example.app.model.ConditionRow;
 import com.example.app.service.impl.BodyTemplateServiceImpl;
 import com.example.app.service.impl.GatlingTestServiceImpl;
 import com.example.app.service.api.IBodyTemplateService;
@@ -22,6 +23,10 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.cell.ComboBoxTableCell;
+import javafx.util.StringConverter;
+import org.controlsfx.control.CheckComboBox;
+import javafx.scene.input.MouseEvent;
 
 import java.net.URL;
 import java.util.HashMap;
@@ -35,7 +40,7 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private TextField testIdField;
     @FXML
-    private CheckBox isRunCheckBox;
+    private CheckBox isEnabledCheckBox;
     @FXML
     private TextField suiteField;
     @FXML
@@ -43,7 +48,15 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private TextArea descriptionsArea;
     @FXML
-    private TextArea conditionsArea;
+    private TableView<ConditionRow> conditionsTable;
+    @FXML
+    private TableColumn<ConditionRow, String> prefixColumn;
+    @FXML
+    private TableColumn<ConditionRow, String> conditionTcidColumn;
+    @FXML
+    private Button addConditionButton;
+    @FXML
+    private Button removeConditionButton;
     @FXML
     private TextArea expResultArea;
     @FXML
@@ -78,11 +91,11 @@ public class GatlingTestViewModel implements Initializable {
     private TableView<GatlingTest> testTable;
 
     @FXML
-    private TableColumn<GatlingTest, Boolean> isRunColumn;
+    private TableColumn<GatlingTest, Boolean> isEnabledColumn;
     @FXML
     private TableColumn<GatlingTest, String> suiteColumn;
     @FXML
-    private TableColumn<GatlingTest, String> tcidColumn;
+    private TableColumn<GatlingTest, String> testTcidColumn;
     @FXML
     private TableColumn<GatlingTest, String> descriptionsColumn;
     @FXML
@@ -126,6 +139,9 @@ public class GatlingTestViewModel implements Initializable {
 
     private MainViewModel mainViewModel;
     private final ObservableList<String> tags = FXCollections.observableArrayList();
+    private final ObservableList<ConditionRow> conditionRows = FXCollections.observableArrayList();
+    private final ObservableList<String> allTcids = FXCollections.observableArrayList();
+    private final ObservableList<String> prefixOptions = FXCollections.observableArrayList("Setup", "Teardown", "SuiteSetup", "SuiteTeardown", "CheckWith");
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -235,6 +251,49 @@ public class GatlingTestViewModel implements Initializable {
             "200", "400", "401", "403", "404", "408", "500","501", "503","504"
         ));
         expStatusComboBox.setValue("200");
+
+        // --- Test Conditions Table ---
+        conditionsTable.setItems(conditionRows);
+        prefixColumn.setCellValueFactory(cellData -> cellData.getValue().prefixProperty());
+        conditionTcidColumn.setCellValueFactory(cellData -> {
+            String joined = String.join(",", cellData.getValue().getTcids());
+            return new javafx.beans.property.SimpleStringProperty(joined);
+        });
+        conditionTcidColumn.setCellFactory(col -> new TableCell<ConditionRow, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                    setText(null);
+                } else {
+                    ConditionRow row = getTableView().getItems().get(getIndex());
+                    CheckComboBox<String> checkComboBox = new CheckComboBox<>(allTcids);
+                    checkComboBox.setPrefWidth(180);
+                    checkComboBox.setMaxWidth(180);
+                    checkComboBox.setMinWidth(120);
+                    checkComboBox.setStyle("-fx-alignment: CENTER_LEFT;");
+                    checkComboBox.getCheckModel().clearChecks();
+                    for (String t : row.getTcids()) {
+                        checkComboBox.getCheckModel().check(t);
+                    }
+                    checkComboBox.getCheckModel().getCheckedItems().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                        row.setTcids(FXCollections.observableArrayList(checkComboBox.getCheckModel().getCheckedItems()));
+                    });
+                    setGraphic(checkComboBox);
+                    setText(null);
+                }
+            }
+        });
+        conditionTcidColumn.setStyle("-fx-alignment: CENTER_LEFT;");
+        // Prefix ComboBox
+        prefixColumn.setCellFactory(col -> {
+            TableCell<ConditionRow, String> cell = new ComboBoxTableCell<>(prefixOptions);
+            return cell;
+        });
+        // Add/Remove button actions
+        addConditionButton.setOnAction(e -> handleAddCondition());
+        removeConditionButton.setOnAction(e -> handleRemoveCondition());
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -242,10 +301,10 @@ public class GatlingTestViewModel implements Initializable {
 
         // Initialize table columns
   
-        isRunColumn.setCellValueFactory(new PropertyValueFactory<>("isRun"));
-        isRunColumn.setCellFactory(CheckBoxTableCell.forTableColumn(isRunColumn));
+        isEnabledColumn.setCellValueFactory(new PropertyValueFactory<>("isEnabled"));
+        isEnabledColumn.setCellFactory(CheckBoxTableCell.forTableColumn(isEnabledColumn));
         suiteColumn.setCellValueFactory(new PropertyValueFactory<>("suite"));
-        tcidColumn.setCellValueFactory(new PropertyValueFactory<>("tcid"));
+        testTcidColumn.setCellValueFactory(new PropertyValueFactory<>("tcid"));
         descriptionsColumn.setCellValueFactory(new PropertyValueFactory<>("descriptions"));
         endpointColumn.setCellValueFactory(new PropertyValueFactory<>("endpoint"));
         tagsColumn.setCellValueFactory(new PropertyValueFactory<>("tags"));
@@ -265,6 +324,7 @@ public class GatlingTestViewModel implements Initializable {
         loadTests();
         loadTemplates();
         loadHeadersTemplates();
+        loadAllTcids();
     }
 
     private void loadTemplates() {
@@ -329,14 +389,27 @@ public class GatlingTestViewModel implements Initializable {
         }
     }
 
+    private void loadAllTcids() {
+        try {
+            allTcids.clear();
+            for (GatlingTest t : testService.findAllTests()) {
+                allTcids.add(t.getTcid());
+            }
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to load TCIDs: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+        }
+    }
+
     private void showTestDetails(GatlingTest test) {
         if (test != null) {
             testIdField.setText(String.valueOf(test.getId()));
-            isRunCheckBox.setSelected(test.isRun());
+            isEnabledCheckBox.setSelected(test.isEnabled());
             suiteField.setText(test.getSuite());
             tcidField.setText(test.getTcid());
             descriptionsArea.setText(test.getDescriptions());
-            conditionsArea.setText(test.getConditions());
+            deserializeConditions(test.getConditions());
             expResultArea.setText(test.getExpResult());
             saveFieldsArea.setText(test.getSaveFields());
             endpointField.setText(test.getEndpoint());
@@ -369,11 +442,10 @@ public class GatlingTestViewModel implements Initializable {
 
     private void clearFields() {
         testIdField.clear();
-        isRunCheckBox.setSelected(false);
+        isEnabledCheckBox.setSelected(false);
         suiteField.clear();
         tcidField.clear();
         descriptionsArea.clear();
-        conditionsArea.clear();
         expResultArea.clear();
         saveFieldsArea.clear();
         endpointField.clear();
@@ -388,6 +460,7 @@ public class GatlingTestViewModel implements Initializable {
         waitTimeSpinner.getValueFactory().setValue(0);
         httpMethodComboBox.setValue("GET");
         expStatusComboBox.setValue("200");
+        conditionRows.clear();
     }
 
     private String buildRequestBody() {
@@ -433,8 +506,8 @@ public class GatlingTestViewModel implements Initializable {
         }
 
         GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpoint, httpMethod);
-        newTest.setRun(isRunCheckBox.isSelected());
-        newTest.setConditions(conditionsArea.getText());
+        newTest.setEnabled(isEnabledCheckBox.isSelected());
+        newTest.setConditions(serializeConditions());
         newTest.setExpResult(expResultArea.getText());
         newTest.setSaveFields(saveFieldsArea.getText());
         newTest.setHeaders(headersTemplateComboBox.getSelectionModel().getSelectedItem());
@@ -493,11 +566,11 @@ public class GatlingTestViewModel implements Initializable {
             return;
         }
 
-        selectedTest.setRun(isRunCheckBox.isSelected());
+        selectedTest.setEnabled(isEnabledCheckBox.isSelected());
         selectedTest.setSuite(suite);
         selectedTest.setTcid(tcid);
         selectedTest.setDescriptions(descriptionsArea.getText());
-        selectedTest.setConditions(conditionsArea.getText());
+        selectedTest.setConditions(serializeConditions());
         selectedTest.setExpResult(expResultArea.getText());
         selectedTest.setSaveFields(saveFieldsArea.getText());
         selectedTest.setEndpoint(endpoint);
@@ -653,6 +726,57 @@ public class GatlingTestViewModel implements Initializable {
 
     private String getTagsString() {
         return String.join(",", tags);
+    }
+
+    private String serializeConditions() {
+        // [prefix]TC01,TC02;[prefix]TC01
+        StringBuilder sb = new StringBuilder();
+        for (ConditionRow row : conditionRows) {
+            if (row.getPrefix() != null && row.getTcids() != null && !row.getPrefix().isEmpty() && !row.getTcids().isEmpty()) {
+                sb.append("[")
+                  .append(row.getPrefix())
+                  .append("]")
+                  .append(String.join(",", row.getTcids()))
+                  .append(";");
+            }
+        }
+        if (sb.length() > 0) sb.setLength(sb.length() - 1); // remove last semicolon
+        return sb.toString();
+    }
+
+    private void deserializeConditions(String conditions) {
+        conditionRows.clear();
+        if (conditions != null && !conditions.isEmpty()) {
+            String[] items = conditions.split(";");
+            for (String item : items) {
+                int openIdx = item.indexOf("[");
+                int closeIdx = item.indexOf("]");
+                if (openIdx == 0 && closeIdx > openIdx) {
+                    String prefix = item.substring(openIdx + 1, closeIdx);
+                    String tcidStr = item.substring(closeIdx + 1);
+                    ObservableList<String> tcidList = FXCollections.observableArrayList();
+                    if (!tcidStr.isEmpty()) {
+                        for (String t : tcidStr.split(",")) {
+                            if (!t.isEmpty()) tcidList.add(t);
+                        }
+                    }
+                    conditionRows.add(new ConditionRow(prefix, tcidList));
+                }
+            }
+        }
+    }
+
+    @FXML
+    private void handleAddCondition() {
+        conditionRows.add(new ConditionRow("Setup", FXCollections.observableArrayList()));
+    }
+
+    @FXML
+    private void handleRemoveCondition() {
+        int idx = conditionsTable.getSelectionModel().getSelectedIndex();
+        if (idx >= 0) {
+            conditionRows.remove(idx);
+        }
     }
 
     public void refresh() {

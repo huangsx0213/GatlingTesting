@@ -42,7 +42,7 @@ public class DBUtil {
             // Create gatling_tests table if it doesn't exist with the new schema
             String testsSql = "CREATE TABLE IF NOT EXISTS gatling_tests ("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                    + " is_run BOOLEAN NOT NULL DEFAULT 0,"
+                    + " is_enabled BOOLEAN NOT NULL DEFAULT 0,"
                     + " suite TEXT NOT NULL,"
                     + " tcid TEXT NOT NULL UNIQUE,"
                     + " descriptions TEXT,"

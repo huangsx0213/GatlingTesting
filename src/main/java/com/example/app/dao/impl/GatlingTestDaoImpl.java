@@ -16,13 +16,13 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
 
     @Override
     public void addTest(GatlingTest test) throws SQLException {
-        String sql = "INSERT INTO gatling_tests (is_run, suite, tcid, descriptions, conditions, " +
+        String sql = "INSERT INTO gatling_tests (is_enabled, suite, tcid, descriptions, conditions, " +
                     "exp_status, exp_result, save_fields, endpoint, http_method, headers, " +
                     "body, tags, wait_time, body_template_name, body_dynamic_variables, headers_dynamic_variables) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            pstmt.setBoolean(1, test.isRun());
+            pstmt.setBoolean(1, test.isEnabled());
             pstmt.setString(2, test.getSuite());
             pstmt.setString(3, test.getTcid());
             pstmt.setString(4, test.getDescriptions());
@@ -114,13 +114,13 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
 
     @Override
     public void updateTest(GatlingTest test) throws SQLException {
-        String sql = "UPDATE gatling_tests SET is_run = ?, suite = ?, tcid = ?, descriptions = ?, " +
+        String sql = "UPDATE gatling_tests SET is_enabled = ?, suite = ?, tcid = ?, descriptions = ?, " +
                     "conditions = ?, exp_status = ?, exp_result = ?, save_fields = ?, " +
                     "endpoint = ?, http_method = ?, headers = ?, body = ?, tags = ?, wait_time = ?, headers_template_name = ?, " +
                     "body_template_name = ?, body_dynamic_variables = ?, headers_dynamic_variables = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setBoolean(1, test.isRun());
+            pstmt.setBoolean(1, test.isEnabled());
             pstmt.setString(2, test.getSuite());
             pstmt.setString(3, test.getTcid());
             pstmt.setString(4, test.getDescriptions());
@@ -154,11 +154,11 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     }
 
     @Override
-    public void updateTestRunStatus(int id, boolean isRun) throws SQLException {
-        String sql = "UPDATE gatling_tests SET is_run = ? WHERE id = ?";
+    public void updateTestRunStatus(int id, boolean isEnabled) throws SQLException {
+        String sql = "UPDATE gatling_tests SET is_enabled = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setBoolean(1, isRun);
+            pstmt.setBoolean(1, isEnabled);
             pstmt.setInt(2, id);
             pstmt.executeUpdate();
         }
@@ -167,7 +167,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     private GatlingTest createTestFromResultSet(ResultSet rs) throws SQLException {
         GatlingTest test = new GatlingTest();
         test.setId(rs.getInt("id"));
-        test.setRun(rs.getBoolean("is_run"));
+        test.setEnabled(rs.getBoolean("is_enabled"));
         test.setSuite(rs.getString("suite"));
         test.setTcid(rs.getString("tcid"));
         test.setDescriptions(rs.getString("descriptions"));

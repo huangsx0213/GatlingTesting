@@ -124,7 +124,7 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             if (test == null) {
                 throw new ServiceException("Test with ID " + id + " not found.");
             }
-            testDao.updateTestRunStatus(id, !test.isRun());
+            testDao.updateTestRunStatus(id, !test.isEnabled());
         } catch (SQLException e) {
             throw new ServiceException("Database error while toggling test run status: " + e.getMessage(), e);
         }
@@ -168,7 +168,7 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             }
 
             for (GatlingTest test : tests) {
-                if (test.isRun()) {
+                if (test.isEnabled()) {
                     runTest(test);
                 }
             }
