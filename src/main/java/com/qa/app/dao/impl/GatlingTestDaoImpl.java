@@ -20,8 +20,8 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     public void addTest(GatlingTest test) throws SQLException {
         String sql = "INSERT INTO gatling_tests (is_enabled, suite, tcid, descriptions, conditions, " +
                     "exp_status, exp_result, save_fields, endpoint, http_method, headers, " +
-                    "body, tags, wait_time, body_template_name, body_dynamic_variables, headers_dynamic_variables) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "body, tags, wait_time, headers_template_name, body_template_name, body_dynamic_variables, headers_dynamic_variables) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setBoolean(1, test.isEnabled());
@@ -38,9 +38,10 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             pstmt.setString(12, test.getBody());
             pstmt.setString(13, test.getTags());
             pstmt.setInt(14, test.getWaitTime());
-            pstmt.setString(15, test.getBodyTemplateName());
-            pstmt.setString(16, convertMapToJson(test.getBodyDynamicVariables()));
-            pstmt.setString(17, convertMapToJson(test.getHeadersDynamicVariables()));
+            pstmt.setString(15, test.getHeadersTemplateName());
+            pstmt.setString(16, test.getBodyTemplateName());
+            pstmt.setString(17, convertMapToJson(test.getBodyDynamicVariables()));
+            pstmt.setString(18, convertMapToJson(test.getHeadersDynamicVariables()));
             pstmt.executeUpdate();
 
             // Get the generated ID and set it to the test object
