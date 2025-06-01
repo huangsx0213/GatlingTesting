@@ -48,7 +48,11 @@
                                                 <VBox spacing="5.0" HBox.hgrow="ALWAYS">
                                                     <children>
                                                         <Label text="Tags:" style="-fx-font-weight: bold;" />
-                                                        <TextField fx:id="tagsField" promptText="Enter tags, separated by commas" />
+                                                        <FlowPane fx:id="tagsFlowPane" hgap="5" vgap="5" prefWidth="300.0">
+                                                            <children>
+                                                                <TextField fx:id="tagsInputField" promptText="Press Enter to add tag" onAction="#handleTagInput" prefWidth="120.0" />
+                                                            </children>
+                                                        </FlowPane>
                                                     </children>
                                                 </VBox>
                                                 <VBox spacing="5.0" minWidth="100.0" maxWidth="100.0">
@@ -168,7 +172,7 @@
                                         <VBox spacing="5.0">
                                             <children>
                                                 <Label text="Expected Status:" style="-fx-font-weight: bold;" />
-                                                <TextField fx:id="expStatusField" promptText="e.g: 200, 201, 404" prefWidth="200.0" />
+                                                <ComboBox fx:id="expStatusComboBox" promptText="Select status code" prefWidth="200.0" />
                                             </children>
                                         </VBox>
                                         

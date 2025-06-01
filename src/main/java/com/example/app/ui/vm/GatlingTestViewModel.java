@@ -19,6 +19,12 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.HBox;
+import javafx.scene.control.Label;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 
 import java.net.URL;
 import java.util.HashMap;
@@ -42,8 +48,6 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private TextArea conditionsArea;
     @FXML
-    private TextField expStatusField;
-    @FXML
     private TextArea expResultArea;
     @FXML
     private TextArea saveFieldsArea;
@@ -58,7 +62,7 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private TableColumn<DynamicVariable, String> bodyDynamicValueColumn;
     @FXML
-    private TextField tagsField;
+    private TextField tagsInputField;
     @FXML
     private Spinner<Integer> waitTimeSpinner;
     @FXML
@@ -108,6 +112,12 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private TableColumn<GatlingTest, String> bodyTemplateNameColumn;
 
+    @FXML
+    private FlowPane tagsFlowPane;
+
+    @FXML
+    private ComboBox<String> expStatusComboBox;
+
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
     private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
@@ -118,11 +128,30 @@ public class GatlingTestViewModel implements Initializable {
     private Map<String, String> headersTemplates = new HashMap<>();
 
     private MainViewModel mainViewModel;
+    private final ObservableList<String> tags = FXCollections.observableArrayList();
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Initialize spinner
         waitTimeSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 3600, 0));
+        waitTimeSpinner.setEditable(true);
+        // 只允许输入数字
+        waitTimeSpinner.getEditor().textProperty().addListener((obs, oldValue, newValue) -> {
+            if (!newValue.matches("\\d*")) {
+                waitTimeSpinner.getEditor().setText(newValue.replaceAll("[^\\d]", ""));
+            }
+        });
+        // 失去焦点时同步 Spinner 值
+        waitTimeSpinner.getEditor().focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
+            if (!isNowFocused) {
+                try {
+                    int value = Integer.parseInt(waitTimeSpinner.getEditor().getText());
+                    waitTimeSpinner.getValueFactory().setValue(value);
+                } catch (NumberFormatException e) {
+                    waitTimeSpinner.getValueFactory().setValue(0);
+                }
+            }
+        });
 
         // testIdField is hidden but used internally
         testIdField.setVisible(false);
@@ -202,6 +231,13 @@ public class GatlingTestViewModel implements Initializable {
 
         httpMethodComboBox.setItems(FXCollections.observableArrayList("GET", "POST", "PUT", "DELETE"));
         httpMethodComboBox.setValue("GET");
+
+        tagsInputField.setOnAction(e -> handleTagInput());
+
+        expStatusComboBox.setItems(FXCollections.observableArrayList(
+            "200", "400", "401", "403", "404", "408", "500","501", "503","504"
+        ));
+        expStatusComboBox.setValue("200");
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -304,7 +340,6 @@ public class GatlingTestViewModel implements Initializable {
             tcidField.setText(test.getTcid());
             descriptionsArea.setText(test.getDescriptions());
             conditionsArea.setText(test.getConditions());
-            expStatusField.setText(test.getExpStatus());
             expResultArea.setText(test.getExpResult());
             saveFieldsArea.setText(test.getSaveFields());
             endpointField.setText(test.getEndpoint());
@@ -320,9 +355,16 @@ public class GatlingTestViewModel implements Initializable {
                 test.getHeadersDynamicVariables()
                         .forEach((key, value) -> headersTemplateVariables.add(new DynamicVariable(key, value)));
             }
-            tagsField.setText(test.getTags());
+            tags.clear();
+            if (test.getTags() != null && !test.getTags().isEmpty()) {
+                for (String tag : test.getTags().split(",")) {
+                    if (!tag.trim().isEmpty()) tags.add(tag.trim());
+                }
+            }
+            updateTagsFlowPane();
             waitTimeSpinner.getValueFactory().setValue(test.getWaitTime());
             httpMethodComboBox.setValue(test.getHttpMethod());
+            expStatusComboBox.setValue(test.getExpStatus() == null || test.getExpStatus().isEmpty() ? "200" : test.getExpStatus());
         } else {
             clearFields();
         }
@@ -335,7 +377,6 @@ public class GatlingTestViewModel implements Initializable {
         tcidField.clear();
         descriptionsArea.clear();
         conditionsArea.clear();
-        expStatusField.clear();
         expResultArea.clear();
         saveFieldsArea.clear();
         endpointField.clear();
@@ -345,9 +386,11 @@ public class GatlingTestViewModel implements Initializable {
         headersTemplateComboBox.getSelectionModel().clearSelection();
         headersTemplateComboBox.setValue(null);
         headersTemplateVariables.clear();
-        tagsField.clear();
+        tags.clear();
+        updateTagsFlowPane();
         waitTimeSpinner.getValueFactory().setValue(0);
         httpMethodComboBox.setValue("GET");
+        expStatusComboBox.setValue("200");
     }
 
     private String buildRequestBody() {
@@ -395,7 +438,6 @@ public class GatlingTestViewModel implements Initializable {
         GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpoint, httpMethod);
         newTest.setRun(isRunCheckBox.isSelected());
         newTest.setConditions(conditionsArea.getText());
-        newTest.setExpStatus(expStatusField.getText());
         newTest.setExpResult(expResultArea.getText());
         newTest.setSaveFields(saveFieldsArea.getText());
         newTest.setHeaders(headersTemplateComboBox.getSelectionModel().getSelectedItem());
@@ -406,9 +448,10 @@ public class GatlingTestViewModel implements Initializable {
         newTest.setHeaders(buildHeaders());
         newTest.setBodyTemplateName(bodyTemplateComboBox.getSelectionModel().getSelectedItem());
         newTest.setHeadersTemplateName(headersTemplateComboBox.getSelectionModel().getSelectedItem());
-        newTest.setTags(tagsField.getText());
+        newTest.setTags(getTagsString());
         newTest.setWaitTime(waitTimeSpinner.getValue());
         newTest.setHttpMethod(httpMethod);
+        newTest.setExpStatus(expStatusComboBox.getValue());
         Map<String, String> headersVars = new HashMap<>();
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         newTest.setHeadersDynamicVariables(headersVars);
@@ -458,7 +501,6 @@ public class GatlingTestViewModel implements Initializable {
         selectedTest.setTcid(tcid);
         selectedTest.setDescriptions(descriptionsArea.getText());
         selectedTest.setConditions(conditionsArea.getText());
-        selectedTest.setExpStatus(expStatusField.getText());
         selectedTest.setExpResult(expResultArea.getText());
         selectedTest.setSaveFields(saveFieldsArea.getText());
         selectedTest.setEndpoint(endpoint);
@@ -470,9 +512,10 @@ public class GatlingTestViewModel implements Initializable {
         selectedTest.setBodyTemplateName(bodyTemplateComboBox.getSelectionModel().getSelectedItem());
         selectedTest.setHeaders(buildHeaders());
         selectedTest.setHeadersTemplateName(headersTemplateComboBox.getSelectionModel().getSelectedItem());
-        selectedTest.setTags(tagsField.getText());
+        selectedTest.setTags(getTagsString());
         selectedTest.setWaitTime(waitTimeSpinner.getValue());
         selectedTest.setHttpMethod(httpMethod);
+        selectedTest.setExpStatus(expStatusComboBox.getValue());
         Map<String, String> headersVars = new HashMap<>();
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         selectedTest.setHeadersDynamicVariables(headersVars);
@@ -576,6 +619,43 @@ public class GatlingTestViewModel implements Initializable {
                         MainViewModel.StatusType.ERROR);
             }
         }
+    }
+
+    @FXML
+    private void handleTagInput() {
+        String tag = tagsInputField.getText().trim();
+        if (!tag.isEmpty() && !tags.contains(tag)) {
+            tags.add(tag);
+            updateTagsFlowPane();
+            tagsInputField.clear();
+        }
+    }
+
+    private void addTagChip(String tag) {
+        HBox chip = new HBox();
+        chip.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 4 8; -fx-border-radius: 4; -fx-background-radius: 4; -fx-alignment: center;");
+        Label label = new Label(tag);
+        label.setStyle("-fx-font-size: 12px;");
+        Label close = new Label("  ×");
+        close.setStyle("-fx-text-fill: #888; -fx-cursor: hand; -fx-font-size: 14px;");
+        close.setOnMouseClicked(e -> {
+            tags.remove(tag);
+            updateTagsFlowPane();
+        });
+        chip.getChildren().addAll(label, close);
+        tagsFlowPane.getChildren().add(chip);
+    }
+
+    private void updateTagsFlowPane() {
+        tagsFlowPane.getChildren().clear();
+        for (String tag : tags) {
+            addTagChip(tag);
+        }
+        tagsFlowPane.getChildren().add(tagsInputField);
+    }
+
+    private String getTagsString() {
+        return String.join(",", tags);
     }
 
     public void refresh() {
