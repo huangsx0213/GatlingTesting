@@ -37,7 +37,8 @@ public class MainViewModel implements Initializable {
     private final ObservableList<String> navItems = FXCollections.observableArrayList(
         "Gatling Test Management",
         "Body Template Management",
-        "Headers Template Management"
+        "Headers Template Management",
+        "Environment Management"
     );
     private final Map<String, String> fxmlMapping = new HashMap<>();
     private final Map<String, Node> loadedTabs = new HashMap<>();
@@ -55,6 +56,7 @@ public class MainViewModel implements Initializable {
         fxmlMapping.put("Gatling Test Management", "/com/qa/app/ui/view/gatling_test_view.fxml");
         fxmlMapping.put("Body Template Management", "/com/qa/app/ui/view/body_template_view.fxml");
         fxmlMapping.put("Headers Template Management", "/com/qa/app/ui/view/headers_template_view.fxml");
+        fxmlMapping.put("Environment Management", "/com/qa/app/ui/view/environment_view.fxml");
         // Removed System Settings mapping
 
         navigationList.setItems(navItems); // navItems is already initialized with "Gatling Test Management", "Body Template Management", "Headers Template Management"
@@ -109,6 +111,16 @@ public class MainViewModel implements Initializable {
                     ((BodyTemplateViewModel) controller).refresh();
                 } else if (controller instanceof HeadersTemplateViewModel) {
                     ((HeadersTemplateViewModel) controller).refresh();
+                } else if (controller instanceof EnvironmentViewModel) {
+                    ((EnvironmentViewModel) controller).refresh();
+                }
+                // Gatling tab不可关闭且始终在第一个位置
+                if (tabName.equals("Gatling Test Management")) {
+                    tab.setClosable(false);
+                    if (contentTabPane.getTabs().indexOf(tab) != 0) {
+                        contentTabPane.getTabs().remove(tab);
+                        contentTabPane.getTabs().add(0, tab);
+                    }
                 }
                 return;
             }
@@ -130,6 +142,8 @@ public class MainViewModel implements Initializable {
                         ((BodyTemplateViewModel) controller).setMainViewModel(this);
                     } else if (controller instanceof HeadersTemplateViewModel) {
                         ((HeadersTemplateViewModel) controller).setMainViewModel(this);
+                    } else if (controller instanceof EnvironmentViewModel) {
+                        ((EnvironmentViewModel) controller).setMainViewModel(this);
                     }
                     // 让Node能找到controller
                     contentNode.getProperties().put("controller", controller);
@@ -138,10 +152,16 @@ public class MainViewModel implements Initializable {
 
                 Tab newTab = new Tab(tabName);
                 newTab.setContent(contentNode);
-                newTab.setClosable(true);
+                // Gatling tab不可关闭且始终在第一个位置
+                if (tabName.equals("Gatling Test Management")) {
+                    newTab.setClosable(false);
+                    contentTabPane.getTabs().add(0, newTab);
+                } else {
+                    newTab.setClosable(true);
+                    contentTabPane.getTabs().add(newTab);
+                }
                 newTab.setOnClosed(event -> loadedTabs.remove(tabName)); // Remove from cache on close
 
-                contentTabPane.getTabs().add(newTab);
                 contentTabPane.getSelectionModel().select(newTab);
                 if (currentFeatureLabel != null) {
                     currentFeatureLabel.setText(tabName);
@@ -157,6 +177,8 @@ public class MainViewModel implements Initializable {
                     ((BodyTemplateViewModel) controller).refresh();
                 } else if (controller instanceof HeadersTemplateViewModel) {
                     ((HeadersTemplateViewModel) controller).refresh();
+                } else if (controller instanceof EnvironmentViewModel) {
+                    ((EnvironmentViewModel) controller).refresh();
                 }
 
             } catch (IOException e) {

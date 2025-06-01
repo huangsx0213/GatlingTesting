@@ -72,6 +72,14 @@ public class DBUtil {
                     + " content TEXT NOT NULL"
                     + ");";
             stmt.execute(headersTemplateSql);
+
+            // Create environments table if it doesn't exist
+            String environmentSql = "CREATE TABLE IF NOT EXISTS environments ("
+                    + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + " name TEXT NOT NULL UNIQUE,"
+                    + " description TEXT"
+                    + ");";
+            stmt.execute(environmentSql);
             
             System.out.println("Database initialized with gatling_tests, body_templates, and headers_templates tables created (if not exists).");
         } catch (SQLException e) {
