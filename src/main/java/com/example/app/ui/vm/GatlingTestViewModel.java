@@ -103,6 +103,8 @@ public class GatlingTestViewModel implements Initializable {
     private TableColumn<DynamicVariable, String> headersDynamicKeyColumn;
     @FXML
     private TableColumn<DynamicVariable, String> headersDynamicValueColumn;
+    @FXML
+    private ComboBox<String> httpMethodComboBox;
 
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
@@ -199,6 +201,9 @@ public class GatlingTestViewModel implements Initializable {
                 }
             }
         });
+
+        httpMethodComboBox.setItems(FXCollections.observableArrayList("GET", "POST", "PUT", "DELETE"));
+        httpMethodComboBox.setValue("GET");
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -317,6 +322,7 @@ public class GatlingTestViewModel implements Initializable {
             }
             tagsField.setText(test.getTags());
             waitTimeSpinner.getValueFactory().setValue(test.getWaitTime());
+            httpMethodComboBox.setValue(test.getHttpMethod());
         } else {
             clearFields();
         }
@@ -341,6 +347,7 @@ public class GatlingTestViewModel implements Initializable {
         headersDynamicVariables.clear();
         tagsField.clear();
         waitTimeSpinner.getValueFactory().setValue(0);
+        httpMethodComboBox.setValue("GET");
     }
 
     private String buildRequestBody() {
@@ -375,6 +382,7 @@ public class GatlingTestViewModel implements Initializable {
         String tcid = tcidField.getText().trim();
         String descriptions = descriptionsArea.getText().trim();
         String endpoint = endpointField.getText().trim();
+        String httpMethod = httpMethodComboBox.getValue();
 
         if (suite.isEmpty() || tcid.isEmpty() || endpoint.isEmpty()) {
             if (mainViewModel != null) {
@@ -384,7 +392,7 @@ public class GatlingTestViewModel implements Initializable {
             return;
         }
 
-        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpoint);
+        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpoint, httpMethod);
         newTest.setRun(isRunCheckBox.isSelected());
         newTest.setConditions(conditionsArea.getText());
         newTest.setExpStatus(expStatusField.getText());
@@ -400,6 +408,7 @@ public class GatlingTestViewModel implements Initializable {
         newTest.setHeadersTemplateName(headersTemplateComboBox.getSelectionModel().getSelectedItem());
         newTest.setTags(tagsField.getText());
         newTest.setWaitTime(waitTimeSpinner.getValue());
+        newTest.setHttpMethod(httpMethod);
         Map<String, String> headersVars = new HashMap<>();
         headersDynamicVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         newTest.setHeadersDynamicVariables(headersVars);
@@ -434,6 +443,7 @@ public class GatlingTestViewModel implements Initializable {
         String suite = suiteField.getText().trim();
         String tcid = tcidField.getText().trim();
         String endpoint = endpointField.getText().trim();
+        String httpMethod = httpMethodComboBox.getValue();
 
         if (suite.isEmpty() || tcid.isEmpty() || endpoint.isEmpty()) {
             if (mainViewModel != null) {
@@ -462,6 +472,7 @@ public class GatlingTestViewModel implements Initializable {
         selectedTest.setHeadersTemplateName(headersTemplateComboBox.getSelectionModel().getSelectedItem());
         selectedTest.setTags(tagsField.getText());
         selectedTest.setWaitTime(waitTimeSpinner.getValue());
+        selectedTest.setHttpMethod(httpMethod);
         Map<String, String> headersVars = new HashMap<>();
         headersDynamicVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         selectedTest.setHeadersDynamicVariables(headersVars);

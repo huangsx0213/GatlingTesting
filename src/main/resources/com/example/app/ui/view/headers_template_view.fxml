@@ -6,57 +6,44 @@
 
 <AnchorPane prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.app.ui.vm.HeadersTemplateViewModel">
     <children>
-        <VBox layoutX="10.0" layoutY="10.0" prefHeight="780.0" prefWidth="1180.0" spacing="10.0" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="10.0">
-            <children>
-                <!-- Form Section -->
-                <VBox spacing="10.0" style="-fx-border-color: #cccccc; -fx-border-radius: 6; -fx-border-width: 1; -fx-padding: 15;">
-                    <children>
-                        <GridPane hgap="10.0" vgap="10.0">
-                            <columnConstraints>
-                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="50.0" />
-                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="470.0" />
-                            </columnConstraints>
-                            <rowConstraints>
-                                <RowConstraints minHeight="10.0" prefHeight="40.0" vgrow="SOMETIMES" />
-                                <RowConstraints minHeight="10.0" prefHeight="120.0" vgrow="SOMETIMES" />
-                            </rowConstraints>
-                            <children>
-                                <Label text="Template Name:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                                <TextField fx:id="templateNameField" promptText="Template Name" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-                                <Label text="Headers Content:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                                <HBox spacing="10.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
-                                    <children>
-                                        <TextArea fx:id="headersContentArea" promptText="Headers Template Content (YAML)" prefRowCount="6" HBox.hgrow="ALWAYS" />
-                                    </children>
-                                </HBox>
-                            </children>
-                        </GridPane>
-                    </children>
-                </VBox>
-                <!-- Action Buttons -->
-                <HBox alignment="CENTER_LEFT" spacing="10.0">
-                    <children>
-                        <Button fx:id="addButton" text="Add Template" onAction="#handleAddTemplate" />
-                        <Button fx:id="updateButton" text="Update Template" onAction="#handleUpdateTemplate" />
-                        <Button fx:id="deleteButton" text="Delete Template" onAction="#handleDeleteTemplate" />
-                        <Button fx:id="clearButton" text="Clear Form" onAction="#handleClearForm" />
-                        <Separator orientation="VERTICAL" />
-                        <Button fx:id="formatButton" text="Format" onAction="#handleFormatTemplate" />
-                        <Button fx:id="validateButton" text="Validate" onAction="#handleValidateTemplate" />
-                    </children>
-                    <padding>
-                        <Insets bottom="10.0" top="10.0" />
-                    </padding>
-                </HBox>
-                <!-- Table Section -->
-                <TableView fx:id="templateTable" prefHeight="400.0" VBox.vgrow="ALWAYS">
-                    <columns>
-                        <TableColumn fx:id="nameColumn" prefWidth="200.0" text="Template Name" />
-                        <TableColumn fx:id="contentColumn" prefWidth="800.0" text="Headers Content" />
-                    </columns>
-                </TableView>
-
-            </children>
+        <VBox spacing="15.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" VBox.vgrow="ALWAYS">
+            <padding>
+                <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
+            </padding>
+            <Label text="Headers Template Management" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
+            <Separator />
+            <GridPane hgap="15.0" vgap="10.0" VBox.vgrow="NEVER" maxWidth="Infinity">
+                <columnConstraints>
+                    <ColumnConstraints prefWidth="120.0"/>
+                    <ColumnConstraints prefWidth="500.0" hgrow="ALWAYS"/>
+                </columnConstraints>
+                <rowConstraints>
+                    <RowConstraints minHeight="40.0"/>
+                    <RowConstraints minHeight="120.0"/>
+                </rowConstraints>
+                <children>
+                    <Label text="Template Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                    <TextField fx:id="templateNameField" promptText="Template Name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                    <Label text="Headers Content:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                    <TextArea fx:id="headersContentArea" promptText="Headers Template Content (YAML)" prefRowCount="6" GridPane.rowIndex="1" GridPane.columnIndex="1" VBox.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"/>
+                </children>
+            </GridPane>
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                <Button fx:id="addButton" text="Add Template" onAction="#handleAddTemplate"/>
+                <Button fx:id="updateButton" text="Update Template" onAction="#handleUpdateTemplate"/>
+                <Button fx:id="deleteButton" text="Delete Template" onAction="#handleDeleteTemplate"/>
+                <Button fx:id="clearButton" text="Clear Form" onAction="#handleClearForm"/>
+                <Separator orientation="VERTICAL"/>
+                <Button fx:id="formatButton" text="Format" onAction="#handleFormatTemplate"/>
+                <Button fx:id="validateButton" text="Validate" onAction="#handleValidateTemplate"/>
+            </HBox>
+            <Label text="Template List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+            <TableView fx:id="templateTable" prefHeight="0" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="nameColumn" prefWidth="200.0" text="Template Name"/>
+                    <TableColumn fx:id="contentColumn" prefWidth="800.0" text="Headers Content"/>
+                </columns>
+            </TableView>
         </VBox>
     </children>
 </AnchorPane> 

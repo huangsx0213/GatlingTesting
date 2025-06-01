@@ -51,6 +51,7 @@ public class DBUtil {
                     + " exp_result TEXT,"
                     + " save_fields TEXT,"
                     + " endpoint TEXT NOT NULL,"
+                    + " http_method TEXT NOT NULL DEFAULT 'GET',"
                     + " tags TEXT,"
                     + " wait_time INTEGER DEFAULT 0,"
                     + " headers TEXT,"

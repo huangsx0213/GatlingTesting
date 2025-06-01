@@ -17,9 +17,9 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     @Override
     public void addTest(GatlingTest test) throws SQLException {
         String sql = "INSERT INTO gatling_tests (is_run, suite, tcid, descriptions, conditions, " +
-                    "exp_status, exp_result, save_fields, endpoint, headers, " +
+                    "exp_status, exp_result, save_fields, endpoint, http_method, headers, " +
                     "body, tags, wait_time, body_template_name, dynamic_variables, headers_dynamic_variables) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setBoolean(1, test.isRun());
@@ -31,13 +31,14 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             pstmt.setString(7, test.getExpResult());
             pstmt.setString(8, test.getSaveFields());
             pstmt.setString(9, test.getEndpoint());
-            pstmt.setString(10, test.getHeaders());
-            pstmt.setString(11, test.getBody());
-            pstmt.setString(12, test.getTags());
-            pstmt.setInt(13, test.getWaitTime());
-            pstmt.setString(14, test.getBodyTemplateName());
-            pstmt.setString(15, convertMapToJson(test.getDynamicVariables()));
-            pstmt.setString(16, convertMapToJson(test.getHeadersDynamicVariables()));
+            pstmt.setString(10, test.getHttpMethod());
+            pstmt.setString(11, test.getHeaders());
+            pstmt.setString(12, test.getBody());
+            pstmt.setString(13, test.getTags());
+            pstmt.setInt(14, test.getWaitTime());
+            pstmt.setString(15, test.getBodyTemplateName());
+            pstmt.setString(16, convertMapToJson(test.getDynamicVariables()));
+            pstmt.setString(17, convertMapToJson(test.getHeadersDynamicVariables()));
             pstmt.executeUpdate();
 
             // Get the generated ID and set it to the test object
@@ -115,7 +116,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     public void updateTest(GatlingTest test) throws SQLException {
         String sql = "UPDATE gatling_tests SET is_run = ?, suite = ?, tcid = ?, descriptions = ?, " +
                     "conditions = ?, exp_status = ?, exp_result = ?, save_fields = ?, " +
-                    "endpoint = ?, headers = ?, body = ?, tags = ?, wait_time = ?, headers_template_name = ?, " +
+                    "endpoint = ?, http_method = ?, headers = ?, body = ?, tags = ?, wait_time = ?, headers_template_name = ?, " +
                     "body_template_name = ?, dynamic_variables = ?, headers_dynamic_variables = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -128,15 +129,16 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             pstmt.setString(7, test.getExpResult());
             pstmt.setString(8, test.getSaveFields());
             pstmt.setString(9, test.getEndpoint());
-            pstmt.setString(10, test.getHeaders());
-            pstmt.setString(11, test.getBody());
-            pstmt.setString(12, test.getTags());
-            pstmt.setInt(13, test.getWaitTime());
-            pstmt.setString(14, test.getHeadersTemplateName());
-            pstmt.setString(15, test.getBodyTemplateName());
-            pstmt.setString(16, convertMapToJson(test.getDynamicVariables()));
-            pstmt.setString(17, convertMapToJson(test.getHeadersDynamicVariables()));
-            pstmt.setInt(18, test.getId());
+            pstmt.setString(10, test.getHttpMethod());
+            pstmt.setString(11, test.getHeaders());
+            pstmt.setString(12, test.getBody());
+            pstmt.setString(13, test.getTags());
+            pstmt.setInt(14, test.getWaitTime());
+            pstmt.setString(15, test.getHeadersTemplateName());
+            pstmt.setString(16, test.getBodyTemplateName());
+            pstmt.setString(17, convertMapToJson(test.getDynamicVariables()));
+            pstmt.setString(18, convertMapToJson(test.getHeadersDynamicVariables()));
+            pstmt.setInt(19, test.getId());
             pstmt.executeUpdate();
         }
     }
@@ -174,6 +176,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
         test.setExpResult(rs.getString("exp_result"));
         test.setSaveFields(rs.getString("save_fields"));
         test.setEndpoint(rs.getString("endpoint"));
+        test.setHttpMethod(rs.getString("http_method"));
         test.setHeaders(rs.getString("headers"));
         test.setBody(rs.getString("body") == null ? "" : rs.getString("body"));
         test.setTags(rs.getString("tags"));

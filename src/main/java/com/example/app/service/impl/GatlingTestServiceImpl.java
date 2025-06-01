@@ -19,8 +19,9 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             // Basic validation
             if (test == null || test.getTcid() == null || test.getTcid().trim().isEmpty() ||
                 test.getSuite() == null || test.getSuite().trim().isEmpty() ||
-                test.getEndpoint() == null || test.getEndpoint().trim().isEmpty()) {
-                throw new ServiceException("Test validation failed: TCID, Suite, and Endpoint are required.");
+                test.getEndpoint() == null || test.getEndpoint().trim().isEmpty() ||
+                test.getHttpMethod() == null || test.getHttpMethod().trim().isEmpty()) {
+                throw new ServiceException("Test validation failed: TCID, Suite, Endpoint, and HTTP Method are required.");
             }
 
             // Check if TCID already exists
@@ -78,8 +79,9 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             if (test == null || test.getId() <= 0 ||
                 test.getTcid() == null || test.getTcid().trim().isEmpty() ||
                 test.getSuite() == null || test.getSuite().trim().isEmpty() ||
-                test.getEndpoint() == null || test.getEndpoint().trim().isEmpty()) {
-                throw new ServiceException("Test validation failed: ID, TCID, Suite, and Endpoint are required.");
+                test.getEndpoint() == null || test.getEndpoint().trim().isEmpty() ||
+                test.getHttpMethod() == null || test.getHttpMethod().trim().isEmpty()) {
+                throw new ServiceException("Test validation failed: ID, TCID, Suite, Endpoint, and HTTP Method are required.");
             }
 
             // Check if test exists

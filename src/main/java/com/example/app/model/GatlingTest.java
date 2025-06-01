@@ -22,24 +22,26 @@ public class GatlingTest {
     private final IntegerProperty waitTime = new SimpleIntegerProperty();
     private final StringProperty bodyTemplateName = new SimpleStringProperty();
     private final StringProperty headersTemplateName = new SimpleStringProperty();
+    private final StringProperty httpMethod = new SimpleStringProperty("GET");
     private Map<String, String> dynamicVariables = new HashMap<>();
     private Map<String, String> headersDynamicVariables = new HashMap<>();
 
     public GatlingTest() {
     }
 
-    public GatlingTest(String suite, String tcid, String descriptions, String endpoint) {
+    public GatlingTest(String suite, String tcid, String descriptions, String endpoint, String httpMethod) {
         this.suite.set(suite);
         this.tcid.set(tcid);
         this.descriptions.set(descriptions);
         this.endpoint.set(endpoint);
+        this.httpMethod.set(httpMethod);
         this.isRun.set(false);
         this.waitTime.set(0);
     }
 
     public GatlingTest(int id, boolean isRun, String suite, String tcid, String descriptions,
                       String conditions, String expStatus, String expResult,
-                      String saveFields, String endpoint, String headers, String body,
+                      String saveFields, String endpoint, String httpMethod, String headers, String body,
                       String tags, int waitTime, String bodyTemplateName, String headersTemplateName, Map<String, String> dynamicVariables, Map<String, String> headersDynamicVariables) {
         this.id.set(id);
         this.isRun.set(isRun);
@@ -51,6 +53,7 @@ public class GatlingTest {
         this.expResult.set(expResult);
         this.saveFields.set(saveFields);
         this.endpoint.set(endpoint);
+        this.httpMethod.set(httpMethod);
         this.headers.set(headers);
         this.body.set(body);
         this.tags.set(tags);
@@ -126,6 +129,10 @@ public class GatlingTest {
     public void setHeadersTemplateName(String headersTemplateName) { this.headersTemplateName.set(headersTemplateName); }
     public StringProperty headersTemplateNameProperty() { return headersTemplateName; }
 
+    public String getHttpMethod() { return httpMethod.get(); }
+    public void setHttpMethod(String httpMethod) { this.httpMethod.set(httpMethod); }
+    public StringProperty httpMethodProperty() { return httpMethod; }
+
     public Map<String, String> getDynamicVariables() { return dynamicVariables; }
     public void setDynamicVariables(Map<String, String> dynamicVariables) { this.dynamicVariables = dynamicVariables; }
 
@@ -141,6 +148,7 @@ public class GatlingTest {
                 ", tcid='" + getTcid() + '\'' +
                 ", descriptions='" + getDescriptions() + '\'' +
                 ", endpoint='" + getEndpoint() + '\'' +
+                ", httpMethod='" + getHttpMethod() + '\'' +
                 '}';
     }
 }
