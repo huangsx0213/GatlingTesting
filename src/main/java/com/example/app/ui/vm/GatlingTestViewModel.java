@@ -20,11 +20,8 @@ import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.FlowPane;
-import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.control.Label;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
 
 import java.net.URL;
 import java.util.HashMap;
