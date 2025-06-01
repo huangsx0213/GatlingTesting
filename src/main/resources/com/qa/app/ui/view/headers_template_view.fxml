@@ -26,6 +26,8 @@
                     <TextField fx:id="headersTemplateNameField" promptText="Template Name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
                     <Label text="Headers Content:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
                     <TextArea fx:id="headersTemplateContentArea" promptText="Headers Template Content" prefRowCount="6" GridPane.rowIndex="1" GridPane.columnIndex="1" VBox.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"/>
+                    <Label text="Environment:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                    <ComboBox fx:id="environmentComboBox" promptText="Select Environment" GridPane.rowIndex="2" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
                 </children>
             </GridPane>
             <HBox alignment="CENTER_LEFT" spacing="10.0">

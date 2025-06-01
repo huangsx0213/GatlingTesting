@@ -9,6 +9,7 @@ public class BodyTemplate {
     private final IntegerProperty id = new SimpleIntegerProperty();
     private final StringProperty name = new SimpleStringProperty();
     private final StringProperty content = new SimpleStringProperty();
+    private final IntegerProperty environmentId = new SimpleIntegerProperty();
 
     public BodyTemplate() {
     }
@@ -22,6 +23,19 @@ public class BodyTemplate {
         this.id.set(id);
         this.name.set(name);
         this.content.set(content);
+    }
+
+    public BodyTemplate(String name, String content, int environmentId) {
+        this.name.set(name);
+        this.content.set(content);
+        this.environmentId.set(environmentId);
+    }
+
+    public BodyTemplate(int id, String name, String content, int environmentId) {
+        this.id.set(id);
+        this.name.set(name);
+        this.content.set(content);
+        this.environmentId.set(environmentId);
     }
 
     public int getId() {
@@ -58,6 +72,18 @@ public class BodyTemplate {
 
     public StringProperty contentProperty() {
         return content;
+    }
+
+    public int getEnvironmentId() {
+        return environmentId.get();
+    }
+
+    public void setEnvironmentId(int environmentId) {
+        this.environmentId.set(environmentId);
+    }
+
+    public IntegerProperty environmentIdProperty() {
+        return environmentId;
     }
 
     @Override

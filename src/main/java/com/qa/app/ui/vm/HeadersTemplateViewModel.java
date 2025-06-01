@@ -12,9 +12,12 @@ import java.util.ResourceBundle;
 import org.yaml.snakeyaml.Yaml;
 
 import com.qa.app.model.HeadersTemplate;
+import com.qa.app.model.Environment;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IHeadersTemplateService;
+import com.qa.app.service.api.IEnvironmentService;
 import com.qa.app.service.impl.HeadersTemplateServiceImpl;
+import com.qa.app.service.impl.EnvironmentServiceImpl;
 
 import org.yaml.snakeyaml.DumperOptions;
 
@@ -41,10 +44,14 @@ public class HeadersTemplateViewModel implements Initializable {
     private TableColumn<HeadersTemplateItem, String> headersTemplateNameColumn;
     @FXML
     private TableColumn<HeadersTemplateItem, String> headersTemplateContentColumn;
+    @FXML
+    private ComboBox<Environment> environmentComboBox;
 
     private final ObservableList<HeadersTemplateItem> headersTemplateList = FXCollections.observableArrayList();
     private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
+    private final IEnvironmentService environmentService = new EnvironmentServiceImpl();
     private MainViewModel mainViewModel;
+    private ObservableList<Environment> environmentList = FXCollections.observableArrayList();
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -53,13 +60,30 @@ public class HeadersTemplateViewModel implements Initializable {
         headersTemplateTable.setItems(headersTemplateList);
         headersTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showHeadersTemplateDetails(newSel));
         loadHeadersTemplates();
+        try {
+            environmentList.setAll(environmentService.findAllEnvironments());
+        } catch (ServiceException e) {
+            environmentList.clear();
+        }
+        environmentComboBox.setItems(environmentList);
+        environmentComboBox.setConverter(new javafx.util.StringConverter<Environment>() {
+            @Override
+            public String toString(Environment env) {
+                return env == null ? "" : env.getName();
+            }
+            @Override
+            public Environment fromString(String s) {
+                return environmentList.stream().filter(e -> e.getName().equals(s)).findFirst().orElse(null);
+            }
+        });
+        environmentComboBox.getSelectionModel().clearSelection();
     }
 
     private void loadHeadersTemplates() {
         headersTemplateList.clear();
         try {
             for (HeadersTemplate t : headersTemplateService.getAllHeadersTemplates()) {
-                headersTemplateList.add(new HeadersTemplateItem(t.getId(), t.getName(), t.getContent()));
+                headersTemplateList.add(new HeadersTemplateItem(t.getId(), t.getName(), t.getContent(), t.getEnvironmentId()));
             }
         } catch (ServiceException e) {
             // 可加错误提示
@@ -70,6 +94,12 @@ public class HeadersTemplateViewModel implements Initializable {
         if (item != null) {
             headersTemplateNameField.setText(item.getName());
             headersTemplateContentArea.setText(item.getContent());
+            Integer envId = item.getEnvironmentId();
+            Environment env = null;
+            if (envId != null) {
+                env = environmentList.stream().filter(e -> e.getId() == envId).findFirst().orElse(null);
+            }
+            environmentComboBox.setValue(env);
         } else {
             clearFields();
         }
@@ -79,6 +109,8 @@ public class HeadersTemplateViewModel implements Initializable {
     private void handleAddHeadersTemplate() {
         String name = headersTemplateNameField.getText().trim();
         String content = headersTemplateContentArea.getText().trim();
+        Environment env = environmentComboBox.getValue();
+        Integer envId = env != null ? env.getId() : null;
         if (name.isEmpty() || content.isEmpty()) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: Name and Content are required.", MainViewModel.StatusType.ERROR);
@@ -86,7 +118,7 @@ public class HeadersTemplateViewModel implements Initializable {
             return;
         }
         try {
-            HeadersTemplate t = new HeadersTemplate(name, content);
+            HeadersTemplate t = new HeadersTemplate(name, content, envId);
             headersTemplateService.addHeadersTemplate(t);
             loadHeadersTemplates();
             clearFields();
@@ -110,7 +142,9 @@ public class HeadersTemplateViewModel implements Initializable {
             return;
         }
         try {
-            HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), headersTemplateContentArea.getText().trim());
+            Environment env = environmentComboBox.getValue();
+            Integer envId = env != null ? env.getId() : null;
+            HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), headersTemplateContentArea.getText().trim(), envId);
             headersTemplateService.updateHeadersTemplate(t);
             loadHeadersTemplates();
             for (HeadersTemplateItem item : headersTemplateList) {
@@ -242,13 +276,15 @@ public class HeadersTemplateViewModel implements Initializable {
         private final int id;
         private final javafx.beans.property.SimpleStringProperty name;
         private final javafx.beans.property.SimpleStringProperty content;
-        public HeadersTemplateItem(int id, String name, String content) {
+        private final Integer environmentId;
+        public HeadersTemplateItem(int id, String name, String content, Integer environmentId) {
             this.id = id;
             this.name = new javafx.beans.property.SimpleStringProperty(name);
             this.content = new javafx.beans.property.SimpleStringProperty(content);
+            this.environmentId = environmentId;
         }
-        public HeadersTemplateItem(String name, String content) {
-            this(0, name, content);
+        public HeadersTemplateItem(String name, String content, Integer environmentId) {
+            this(0, name, content, environmentId);
         }
         public int getId() { return id; }
         public String getName() { return name.get(); }
@@ -257,5 +293,6 @@ public class HeadersTemplateViewModel implements Initializable {
         public String getContent() { return content.get(); }
         public void setContent(String c) { content.set(c); }
         public javafx.beans.property.StringProperty contentProperty() { return content; }
+        public Integer getEnvironmentId() { return environmentId; }
     }
 } 
