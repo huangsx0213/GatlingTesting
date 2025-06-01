@@ -20,17 +20,18 @@
                 <rowConstraints>
                     <RowConstraints minHeight="40.0"/>
                     <RowConstraints minHeight="40.0"/>
+                    <RowConstraints minHeight="40.0"/>
                     <RowConstraints minHeight="120.0"/>
                 </rowConstraints>
                 <children>
                     <Label text="Template Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
                     <TextField fx:id="bodyTemplateNameField" promptText="Template Name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
-                    <Label text="Body Format:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                    <ComboBox fx:id="bodyFormatComboBox" promptText="Select Format" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
-                    <Label text="Body Content:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                    <TextArea fx:id="bodyTemplateContentArea" promptText="Body Template Content" prefRowCount="6" GridPane.rowIndex="2" GridPane.columnIndex="1" VBox.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"/>
-                    <Label text="Environment:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-                    <ComboBox fx:id="environmentComboBox" promptText="Select Environment" GridPane.rowIndex="3" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                    <Label text="Environment:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                    <ComboBox fx:id="environmentComboBox" promptText="Select Environment" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                    <Label text="Body Format:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                    <ComboBox fx:id="bodyFormatComboBox" promptText="Select Format" GridPane.rowIndex="2" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                    <Label text="Body Content:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                    <TextArea fx:id="bodyTemplateContentArea" promptText="Body Template Content" prefRowCount="3" GridPane.rowIndex="3" GridPane.columnIndex="1" VBox.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"/>
                 </children>
             </GridPane>
             <HBox alignment="CENTER_LEFT" spacing="10.0">
