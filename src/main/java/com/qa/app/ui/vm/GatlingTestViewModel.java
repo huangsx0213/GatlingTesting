@@ -46,7 +46,7 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private CheckBox isEnabledCheckBox;
     @FXML
-    private TextField suiteField;
+    private ComboBox<String> suiteComboBox;
     @FXML
     private TextField tcidField;
     @FXML
@@ -341,6 +341,10 @@ public class GatlingTestViewModel implements Initializable {
             }
         });
         loadEndpoints();
+
+        // 初始化suiteComboBox
+        loadAllSuites();
+        suiteComboBox.setEditable(true);
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -404,6 +408,13 @@ public class GatlingTestViewModel implements Initializable {
         testList.addListener((javafx.collections.ListChangeListener<GatlingTest>) c -> {
             updateGeneratedBody();
             updateGeneratedHeaders();
+        });
+
+        // suiteComboBox自动补全和回填
+        testTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                suiteComboBox.setValue(newVal.getSuite());
+            }
         });
 
         // Load initial data and templates
@@ -502,7 +513,7 @@ public class GatlingTestViewModel implements Initializable {
         if (test != null) {
             testIdField.setText(String.valueOf(test.getId()));
             isEnabledCheckBox.setSelected(test.isEnabled());
-            suiteField.setText(test.getSuite());
+            suiteComboBox.setValue(test.getSuite());
             tcidField.setText(test.getTcid());
             descriptionsArea.setText(test.getDescriptions());
             deserializeConditions(test.getConditions());
@@ -549,7 +560,7 @@ public class GatlingTestViewModel implements Initializable {
     private void clearFields() {
         testIdField.clear();
         isEnabledCheckBox.setSelected(false);
-        suiteField.clear();
+        suiteComboBox.setValue("");
         tcidField.clear();
         descriptionsArea.clear();
         expResultArea.clear();
@@ -600,7 +611,7 @@ public class GatlingTestViewModel implements Initializable {
 
     @FXML
     private void handleAddTest() {
-        String suite = suiteField.getText().trim();
+        String suite = suiteComboBox.getEditor().getText().trim();
         String tcid = tcidField.getText().trim();
         String descriptions = descriptionsArea.getText().trim();
         Endpoint endpoint = endpointComboBox.getValue();
@@ -632,6 +643,11 @@ public class GatlingTestViewModel implements Initializable {
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         newTest.setHeadersDynamicVariables(headersVars);
 
+        // 新suite自动加入下拉
+        if (suite != null && !suite.isEmpty() && !suiteComboBox.getItems().contains(suite)) {
+            suiteComboBox.getItems().add(suite);
+        }
+
         try {
             testService.createTest(newTest);
             testList.add(newTest);
@@ -661,7 +677,7 @@ public class GatlingTestViewModel implements Initializable {
             }
             return;
         }
-        String suite = suiteField.getText().trim();
+        String suite = suiteComboBox.getEditor().getText().trim();
         String tcid = tcidField.getText().trim();
         Endpoint endpoint = endpointComboBox.getValue();
         if (suite.isEmpty() || tcid.isEmpty() || endpoint == null) {
@@ -693,6 +709,11 @@ public class GatlingTestViewModel implements Initializable {
         Map<String, String> headersVars = new HashMap<>();
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         selectedTest.setHeadersDynamicVariables(headersVars);
+
+        // 新suite自动加入下拉
+        if (suite != null && !suite.isEmpty() && !suiteComboBox.getItems().contains(suite)) {
+            suiteComboBox.getItems().add(suite);
+        }
 
         try {
             testService.updateTest(selectedTest);
@@ -777,7 +798,7 @@ public class GatlingTestViewModel implements Initializable {
 
     @FXML
     private void handleRunSuite() {
-        String suite = suiteField.getText().trim();
+        String suite = suiteComboBox.getEditor().getText().trim();
         if (suite.isEmpty()) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: Please enter a suite name to run.",
@@ -934,5 +955,21 @@ public class GatlingTestViewModel implements Initializable {
     private void updateGeneratedHeaders() {
         String headers = buildHeaders();
         generatedHeadersArea.setText(headers == null ? "" : headers);
+    }
+
+    private void loadAllSuites() {
+        // 从testService获取所有suite去重后加入ComboBox
+        try {
+            List<GatlingTest> allTests = testService.findAllTests();
+            List<String> suites = new ArrayList<>();
+            for (GatlingTest t : allTests) {
+                if (t.getSuite() != null && !t.getSuite().isEmpty() && !suites.contains(t.getSuite())) {
+                    suites.add(t.getSuite());
+                }
+            }
+            suiteComboBox.getItems().setAll(suites);
+        } catch (Exception e) {
+            // ignore
+        }
     }
 }

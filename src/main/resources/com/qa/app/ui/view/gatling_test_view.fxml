@@ -36,7 +36,7 @@
                                                 <VBox spacing="5.0" minWidth="300.0" maxWidth="300.0">
                                                     <children>
                                                         <Label text="Test Suite:" style="-fx-font-weight: bold;" />
-                                                        <TextField fx:id="suiteField" promptText="Enter test suite name" />
+                                                        <ComboBox fx:id="suiteComboBox" promptText="Enter test suite name" editable="true" prefWidth="238.0"/>
                                                     </children>
                                                 </VBox>
                                                 <VBox spacing="5.0" HBox.hgrow="ALWAYS">
@@ -183,7 +183,7 @@
                                                 <VBox spacing="5.0">
                                                     <children>
                                                         <Label text="Expected Status:" style="-fx-font-weight: bold;" />
-                                                        <ComboBox fx:id="expStatusComboBox" promptText="Select status code" prefWidth="150.0" />
+                                                        <ComboBox fx:id="expStatusComboBox" promptText="Select status code" prefWidth="150.0" editable="true" />
                                                     </children>
                                                 </VBox>
                                                 <VBox spacing="5.0" HBox.hgrow="ALWAYS">
