@@ -44,6 +44,8 @@ public class BodyTemplateViewModel implements Initializable {
     private Button validateButton;
     @FXML
     private ComboBox<Environment> environmentComboBox;
+    @FXML
+    private TableColumn<BodyTemplateItem, String> environmentColumn;
 
     private final ObservableList<BodyTemplateItem> bodyTemplateList = FXCollections.observableArrayList();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
@@ -90,6 +92,13 @@ public class BodyTemplateViewModel implements Initializable {
             }
         });
         environmentComboBox.getSelectionModel().clearSelection();
+        environmentColumn.setCellValueFactory(cellData -> {
+            int envId = cellData.getValue().getEnvironmentId();
+            String envName = "";
+            Environment env = environmentList.stream().filter(e -> e.getId() == envId).findFirst().orElse(null);
+            if (env != null) envName = env.getName();
+            return new javafx.beans.property.SimpleStringProperty(envName);
+        });
     }
 
     private void loadBodyTemplates() {

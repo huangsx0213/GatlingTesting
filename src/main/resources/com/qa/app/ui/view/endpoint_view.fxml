@@ -43,6 +43,7 @@
             <Label text="Endpoint List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
             <TableView fx:id="endpointTable" prefHeight="0" VBox.vgrow="ALWAYS" styleClass="table-view">
                 <columns>
+                    <TableColumn fx:id="environmentColumn" prefWidth="180.0" text="Environment"/>
                     <TableColumn fx:id="endpointNameColumn" prefWidth="200.0" text="Endpoint Name"/>
                     <TableColumn fx:id="methodColumn" prefWidth="120.0" text="Method"/>
                     <TableColumn fx:id="urlColumn" prefWidth="600.0" text="URL"/>

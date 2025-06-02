@@ -45,6 +45,8 @@ public class HeadersTemplateViewModel implements Initializable {
     @FXML
     private TableColumn<HeadersTemplateItem, String> headersTemplateContentColumn;
     @FXML
+    private TableColumn<HeadersTemplateItem, String> environmentColumn;
+    @FXML
     private ComboBox<Environment> environmentComboBox;
 
     private final ObservableList<HeadersTemplateItem> headersTemplateList = FXCollections.observableArrayList();
@@ -57,6 +59,15 @@ public class HeadersTemplateViewModel implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         headersTemplateNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
         headersTemplateContentColumn.setCellValueFactory(cellData -> cellData.getValue().contentProperty());
+        environmentColumn.setCellValueFactory(cellData -> {
+            Integer envId = cellData.getValue().getEnvironmentId();
+            String envName = "";
+            if (envId != null) {
+                Environment env = environmentList.stream().filter(e -> e.getId() == envId).findFirst().orElse(null);
+                if (env != null) envName = env.getName();
+            }
+            return new javafx.beans.property.SimpleStringProperty(envName);
+        });
         headersTemplateTable.setItems(headersTemplateList);
         headersTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showHeadersTemplateDetails(newSel));
         loadHeadersTemplates();

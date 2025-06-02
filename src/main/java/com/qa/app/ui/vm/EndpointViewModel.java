@@ -42,6 +42,8 @@ public class EndpointViewModel implements Initializable {
     private TableColumn<EndpointItem, String> methodColumn;
     @FXML
     private TableColumn<EndpointItem, String> urlColumn;
+    @FXML
+    private TableColumn<EndpointItem, String> environmentColumn;
 
     private final ObservableList<EndpointItem> endpointList = FXCollections.observableArrayList();
     private final IEndpointService endpointService = new EndpointServiceImpl();
@@ -54,6 +56,15 @@ public class EndpointViewModel implements Initializable {
         endpointNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
         methodColumn.setCellValueFactory(cellData -> cellData.getValue().methodProperty());
         urlColumn.setCellValueFactory(cellData -> cellData.getValue().urlProperty());
+        environmentColumn.setCellValueFactory(cellData -> {
+            Integer envId = cellData.getValue().getEnvironmentId();
+            String envName = "";
+            if (envId != null) {
+                Environment env = environmentList.stream().filter(e -> e.getId() == envId).findFirst().orElse(null);
+                if (env != null) envName = env.getName();
+            }
+            return new javafx.beans.property.SimpleStringProperty(envName);
+        });
         endpointTable.setItems(endpointList);
         endpointTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showEndpointDetails(newSel));
         methodComboBox.setItems(FXCollections.observableArrayList("GET", "POST", "PUT", "DELETE"));

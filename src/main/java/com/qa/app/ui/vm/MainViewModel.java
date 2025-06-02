@@ -97,14 +97,14 @@ public class MainViewModel implements Initializable {
                 if (currentFeatureLabel != null) {
                     currentFeatureLabel.setText(tabName);
                 }
-                // 切换到已打开tab时刷新内容
+                // refresh content when switch to opened tab
                 Node contentNode = tab.getContent();
                 Object controller = null;
                 if (contentNode != null) {
                     controller = contentNode.getProperties().get("controller");
                 }
                 if (controller == null && contentNode != null) {
-                    // 尝试通过UserData获取
+                    // try to get controller by UserData
                     controller = contentNode.getUserData();
                 }
                 if (controller instanceof GatlingTestViewModel) {
@@ -118,7 +118,7 @@ public class MainViewModel implements Initializable {
                 } else if (controller instanceof EndpointViewModel) {
                     ((EndpointViewModel) controller).refresh();
                 }
-                // Gatling tab不可关闭且始终在第一个位置
+                // Gatling tab is not closable and always in the first position
                 if (tabName.equals("Gatling Test Management")) {
                     tab.setClosable(false);
                     if (contentTabPane.getTabs().indexOf(tab) != 0) {
@@ -151,14 +151,14 @@ public class MainViewModel implements Initializable {
                     } else if (controller instanceof EndpointViewModel) {
                         ((EndpointViewModel) controller).setMainViewModel(this);
                     }
-                    // 让Node能找到controller
+                    // let Node find controller
                     contentNode.getProperties().put("controller", controller);
                     loadedTabs.put(tabName, contentNode);
                 }
 
                 Tab newTab = new Tab(tabName);
                 newTab.setContent(contentNode);
-                // Gatling tab不可关闭且始终在第一个位置
+                // Gatling tab is not closable and always in the first position
                 if (tabName.equals("Gatling Test Management")) {
                     newTab.setClosable(false);
                     contentTabPane.getTabs().add(0, newTab);
@@ -172,7 +172,7 @@ public class MainViewModel implements Initializable {
                 if (currentFeatureLabel != null) {
                     currentFeatureLabel.setText(tabName);
                 }
-                // 新打开tab时也刷新内容
+                // refresh content when open new tab
                 Object controller = contentNode.getProperties().get("controller");
                 if (controller == null) {
                     controller = contentNode.getUserData();
