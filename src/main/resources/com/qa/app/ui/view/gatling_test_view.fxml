@@ -116,50 +116,54 @@
                                         <!-- Headers Configuration -->
                                         <HBox spacing="15.0" alignment="TOP_LEFT">
                                             <children>
-                                                <VBox spacing="5.0" prefWidth="350.0">
+                                                <VBox spacing="5.0" prefWidth="350.0" VBox.vgrow="ALWAYS" maxHeight="170.0">
                                                     <children>
                                                         <Label text="Headers Template:" style="-fx-font-weight: bold;" />
-                                                        <ComboBox fx:id="headersTemplateComboBox" prefWidth="350.0" promptText="Select headers template" />
-                                                    </children>
-                                                </VBox>
-                                                <VBox spacing="5.0" HBox.hgrow="ALWAYS">
-                                                    <children>
+                                                        <ComboBox fx:id="headersTemplateComboBox" promptText="Select headers template" />
                                                         <Label text="Headers Dynamic Variables:" style="-fx-font-weight: bold;" />
-                                                        <TableView fx:id="headersTemplateVarsTable" prefHeight="100.0">
-                                            <columns>
-                                                <TableColumn fx:id="headersTemplateKeyColumn" prefWidth="175.0" text="Variable Name" />
-                                                <TableColumn fx:id="headersTemplateValueColumn" prefWidth="175.0" text="Variable Value" />
-                                            </columns>
-                                            <columnResizePolicy>
-                                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                            </columnResizePolicy>
-                                        </TableView>
+                                                        <TableView fx:id="headersTemplateVarsTable" VBox.vgrow="ALWAYS" prefHeight="120.0">
+                                                            <columns>
+                                                                <TableColumn fx:id="headersTemplateKeyColumn" prefWidth="175.0" text="Variable Name" />
+                                                                <TableColumn fx:id="headersTemplateValueColumn" prefWidth="175.0" text="Variable Value" />
+                                                            </columns>
+                                                            <columnResizePolicy>
+                                                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                            </columnResizePolicy>
+                                                        </TableView>
                                                     </children>
                                                 </VBox>
-                                    </children>
+                                                <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" maxHeight="170.0">
+                                                    <children>
+                                                        <Label text="Generated Headers:" style="-fx-font-weight: bold;" />
+                                                        <TextArea fx:id="generatedHeadersArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" prefHeight="120.0" />
+                                                    </children>
+                                                </VBox>
+                                            </children>
                                         </HBox>
                                         
                                         <!-- Body Configuration -->
                                         <HBox spacing="15.0" alignment="TOP_LEFT">
                                             <children>
-                                                <VBox spacing="5.0" prefWidth="350.0">
+                                                <VBox spacing="5.0" prefWidth="350.0" VBox.vgrow="ALWAYS" maxHeight="170.0">
                                                     <children>
                                                         <Label text="Body Template:" style="-fx-font-weight: bold;" />
-                                                        <ComboBox fx:id="bodyTemplateComboBox" prefWidth="350.0" promptText="Select body template" />
-                                                    </children>
-                                                </VBox>
-                                                <VBox spacing="5.0" HBox.hgrow="ALWAYS">
-                                                    <children>
+                                                        <ComboBox fx:id="bodyTemplateComboBox" promptText="Select body template" />
                                                         <Label text="Body Dynamic Variables:" style="-fx-font-weight: bold;" />
-                                                        <TableView fx:id="bodyDynamicVarsTable" prefHeight="100.0">
-                                            <columns>
+                                                        <TableView fx:id="bodyDynamicVarsTable" VBox.vgrow="ALWAYS" prefHeight="120.0">
+                                                            <columns>
                                                                 <TableColumn fx:id="bodyDynamicKeyColumn" prefWidth="175.0" text="Variable Name" />
                                                                 <TableColumn fx:id="bodyDynamicValueColumn" prefWidth="175.0" text="Variable Value" />
-                                            </columns>
-                                            <columnResizePolicy>
-                                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                            </columnResizePolicy>
-                                        </TableView>
+                                                            </columns>
+                                                            <columnResizePolicy>
+                                                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                            </columnResizePolicy>
+                                                        </TableView>
+                                                    </children>
+                                                </VBox>
+                                                <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" maxHeight="170.0">
+                                                    <children>
+                                                        <Label text="Generated Body:" style="-fx-font-weight: bold;" />
+                                                        <TextArea fx:id="generatedBodyArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" prefHeight="120.0" />
                                                     </children>
                                                 </VBox>
                                             </children>

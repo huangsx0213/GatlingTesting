@@ -128,6 +128,11 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private ComboBox<String> expStatusComboBox;
 
+    @FXML
+    private TextArea generatedHeadersArea;
+    @FXML
+    private TextArea generatedBodyArea;
+
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
     private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
@@ -147,6 +152,10 @@ public class GatlingTestViewModel implements Initializable {
 
     // 用于保存所有TCID下拉的引用
     private final List<CheckComboBox<String>> conditionTcidComboBoxes = new ArrayList<>();
+
+    // 1. 新增 Map<Integer, String> bodyTemplateIdNameMap, headersTemplateIdNameMap
+    private Map<Integer, String> bodyTemplateIdNameMap = new HashMap<>();
+    private Map<Integer, String> headersTemplateIdNameMap = new HashMap<>();
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -200,7 +209,9 @@ public class GatlingTestViewModel implements Initializable {
                     } else {
                         bodyTemplateVariables.clear();
                     }
+                    updateGeneratedBody();
                 });
+        bodyTemplateVariables.addListener((javafx.collections.ListChangeListener<DynamicVariable>) c -> updateGeneratedBody());
 
         // Initialize headers dynamic variables table
         headersTemplateKeyColumn.setCellValueFactory(new PropertyValueFactory<>("key"));
@@ -221,7 +232,9 @@ public class GatlingTestViewModel implements Initializable {
                     } else {
                         headersTemplateVariables.clear();
                     }
+                    updateGeneratedHeaders();
                 });
+        headersTemplateVariables.addListener((javafx.collections.ListChangeListener<DynamicVariable>) c -> updateGeneratedHeaders());
         // set prompt text for templateComboBox
         bodyTemplateComboBox.setButtonCell(new ListCell<>() {
             @Override
@@ -366,15 +379,32 @@ public class GatlingTestViewModel implements Initializable {
         });
         tagsColumn.setCellValueFactory(new PropertyValueFactory<>("tags"));
         waitTimeColumn.setCellValueFactory(new PropertyValueFactory<>("waitTime"));
-        headersTemplateNameColumn.setCellValueFactory(new PropertyValueFactory<>("headersTemplateName"));
-        bodyTemplateNameColumn.setCellValueFactory(new PropertyValueFactory<>("bodyTemplateName"));
+        headersTemplateNameColumn.setCellValueFactory(cellData -> {
+            int id = cellData.getValue().getHeadersTemplateId();
+            String name = headersTemplateIdNameMap.getOrDefault(id, "");
+            return new javafx.beans.property.SimpleStringProperty(name);
+        });
+        bodyTemplateNameColumn.setCellValueFactory(cellData -> {
+            int id = cellData.getValue().getBodyTemplateId();
+            String name = bodyTemplateIdNameMap.getOrDefault(id, "");
+            return new javafx.beans.property.SimpleStringProperty(name);
+        });
 
         testTable.setItems(testList);
         testTable.setEditable(true);
 
         // Add listener for table selection
         testTable.getSelectionModel().selectedItemProperty().addListener(
-                (observable, oldValue, newValue) -> showTestDetails(newValue));
+                (observable, oldValue, newValue) -> {
+                    showTestDetails(newValue);
+                    updateGeneratedBody();
+                    updateGeneratedHeaders();
+                });
+        // Add listener for testList变动时刷新
+        testList.addListener((javafx.collections.ListChangeListener<GatlingTest>) c -> {
+            updateGeneratedBody();
+            updateGeneratedHeaders();
+        });
 
         // Load initial data and templates
         loadTests();
@@ -386,10 +416,13 @@ public class GatlingTestViewModel implements Initializable {
     private void loadTemplates() {
         try {
             bodyTemplates.clear();
-            for (BodyTemplate template : bodyTemplateService.findAllBodyTemplates()) {
+            bodyTemplateIdNameMap.clear();
+            List<BodyTemplate> templates = bodyTemplateService.findAllBodyTemplates();
+            for (BodyTemplate template : templates) {
                 bodyTemplates.put(template.getName(), template.getContent());
+                bodyTemplateIdNameMap.put(template.getId(), template.getName());
             }
-            bodyTemplateComboBox.setItems(FXCollections.observableArrayList(bodyTemplates.keySet()));
+            bodyTemplateComboBox.setItems(FXCollections.observableArrayList(bodyTemplateIdNameMap.values()));
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to load body templates: " + e.getMessage(),
@@ -401,10 +434,13 @@ public class GatlingTestViewModel implements Initializable {
     private void loadHeadersTemplates() {
         try {
             headersTemplates.clear();
-            for (HeadersTemplate template : headersTemplateService.getAllHeadersTemplates()) {
+            headersTemplateIdNameMap.clear();
+            List<HeadersTemplate> templates = headersTemplateService.getAllHeadersTemplates();
+            for (HeadersTemplate template : templates) {
                 headersTemplates.put(template.getName(), template.getContent());
+                headersTemplateIdNameMap.put(template.getId(), template.getName());
             }
-            headersTemplateComboBox.setItems(FXCollections.observableArrayList(headersTemplates.keySet()));
+            headersTemplateComboBox.setItems(FXCollections.observableArrayList(headersTemplateIdNameMap.values()));
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to load headers templates: " + e.getMessage(),
@@ -474,13 +510,21 @@ public class GatlingTestViewModel implements Initializable {
             saveFieldsArea.setText(test.getSaveFields());
             Endpoint selectedEp = endpointList.stream().filter(e -> e.getId() == test.getEndpointId()).findFirst().orElse(null);
             endpointComboBox.setValue(selectedEp);
-            bodyTemplateComboBox.setValue(test.getBodyTemplateName());
+            if (bodyTemplateIdNameMap.containsKey(test.getBodyTemplateId())) {
+                bodyTemplateComboBox.setValue(bodyTemplateIdNameMap.get(test.getBodyTemplateId()));
+            } else {
+                bodyTemplateComboBox.setValue(null);
+            }
             bodyTemplateVariables.clear();
             if (test.getBodyDynamicVariables() != null) {
                 test.getBodyDynamicVariables()
                         .forEach((key, value) -> bodyTemplateVariables.add(new DynamicVariable(key, value)));
             }
-            headersTemplateComboBox.setValue(test.getHeadersTemplateName());
+            if (headersTemplateIdNameMap.containsKey(test.getHeadersTemplateId())) {
+                headersTemplateComboBox.setValue(headersTemplateIdNameMap.get(test.getHeadersTemplateId()));
+            } else {
+                headersTemplateComboBox.setValue(null);
+            }
             headersTemplateVariables.clear();
             if (test.getHeadersDynamicVariables() != null) {
                 test.getHeadersDynamicVariables()
@@ -495,6 +539,8 @@ public class GatlingTestViewModel implements Initializable {
             updateTagsFlowPane();
             waitTimeSpinner.getValueFactory().setValue(test.getWaitTime());
             expStatusComboBox.setValue(test.getExpStatus() == null || test.getExpStatus().isEmpty() ? "200" : test.getExpStatus());
+            updateGeneratedBody();
+            updateGeneratedHeaders();
         } else {
             clearFields();
         }
@@ -522,6 +568,8 @@ public class GatlingTestViewModel implements Initializable {
         waitTimeSpinner.getValueFactory().setValue(0);
         expStatusComboBox.setValue("200");
         conditionRows.clear();
+        updateGeneratedBody();
+        updateGeneratedHeaders();
     }
 
     private String buildRequestBody() {
@@ -574,8 +622,8 @@ public class GatlingTestViewModel implements Initializable {
         newTest.setDynamicVariables(vars);
         newTest.setBody(buildRequestBody());
         newTest.setHeaders(buildHeaders());
-        newTest.setBodyTemplateName(bodyTemplateComboBox.getSelectionModel().getSelectedItem());
-        newTest.setHeadersTemplateName(headersTemplateComboBox.getSelectionModel().getSelectedItem());
+        newTest.setBodyTemplateId(getBodyTemplateIdByName(bodyTemplateComboBox.getSelectionModel().getSelectedItem()));
+        newTest.setHeadersTemplateId(getHeadersTemplateIdByName(headersTemplateComboBox.getSelectionModel().getSelectedItem()));
         newTest.setTags(getTagsString());
         newTest.setWaitTime(waitTimeSpinner.getValue());
         newTest.setExpStatus(expStatusComboBox.getValue());
@@ -594,6 +642,8 @@ public class GatlingTestViewModel implements Initializable {
             }
             loadAllTcids();
             conditionsTable.refresh();
+            updateGeneratedBody();
+            updateGeneratedHeaders();
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to add test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
@@ -634,9 +684,9 @@ public class GatlingTestViewModel implements Initializable {
         bodyTemplateVariables.forEach(dv -> vars.put(dv.getKey(), dv.getValue()));
         selectedTest.setDynamicVariables(vars);
         selectedTest.setBody(buildRequestBody());
-        selectedTest.setBodyTemplateName(bodyTemplateComboBox.getSelectionModel().getSelectedItem());
+        selectedTest.setBodyTemplateId(getBodyTemplateIdByName(bodyTemplateComboBox.getSelectionModel().getSelectedItem()));
         selectedTest.setHeaders(buildHeaders());
-        selectedTest.setHeadersTemplateName(headersTemplateComboBox.getSelectionModel().getSelectedItem());
+        selectedTest.setHeadersTemplateId(getHeadersTemplateIdByName(headersTemplateComboBox.getSelectionModel().getSelectedItem()));
         selectedTest.setTags(getTagsString());
         selectedTest.setWaitTime(waitTimeSpinner.getValue());
         selectedTest.setExpStatus(expStatusComboBox.getValue());
@@ -653,6 +703,8 @@ public class GatlingTestViewModel implements Initializable {
             }
             loadAllTcids();
             conditionsTable.refresh();
+            updateGeneratedBody();
+            updateGeneratedHeaders();
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to update test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
@@ -680,6 +732,8 @@ public class GatlingTestViewModel implements Initializable {
             }
             loadAllTcids();
             conditionsTable.refresh();
+            updateGeneratedBody();
+            updateGeneratedHeaders();
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to delete test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
@@ -856,5 +910,29 @@ public class GatlingTestViewModel implements Initializable {
         loadHeadersTemplates();
         clearFields();
         conditionsTable.refresh();
+    }
+
+    private int getBodyTemplateIdByName(String name) {
+        for (Map.Entry<Integer, String> entry : bodyTemplateIdNameMap.entrySet()) {
+            if (entry.getValue().equals(name)) return entry.getKey();
+        }
+        return 0;
+    }
+
+    private int getHeadersTemplateIdByName(String name) {
+        for (Map.Entry<Integer, String> entry : headersTemplateIdNameMap.entrySet()) {
+            if (entry.getValue().equals(name)) return entry.getKey();
+        }
+        return 0;
+    }
+
+    private void updateGeneratedBody() {
+        String body = buildRequestBody();
+        generatedBodyArea.setText(body == null ? "" : body);
+    }
+
+    private void updateGeneratedHeaders() {
+        String headers = buildHeaders();
+        generatedHeadersArea.setText(headers == null ? "" : headers);
     }
 }

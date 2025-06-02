@@ -9,7 +9,6 @@ import com.qa.app.model.GatlingTest;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IEndpointService;
-import com.qa.app.service.impl.EndpointServiceImpl;
 import com.qa.app.model.Endpoint;
 
 public class GatlingTestServiceImpl implements IGatlingTestService {
