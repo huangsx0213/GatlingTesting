@@ -8,28 +8,27 @@ import com.qa.app.dao.impl.GatlingTestDaoImpl;
 import com.qa.app.model.GatlingTest;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IGatlingTestService;
+import com.qa.app.service.api.IEndpointService;
+import com.qa.app.service.impl.EndpointServiceImpl;
+import com.qa.app.model.Endpoint;
 
 public class GatlingTestServiceImpl implements IGatlingTestService {
 
     private final IGatlingTestDao testDao = new GatlingTestDaoImpl(); // In a real app, use dependency injection
+    private final IEndpointService endpointService = new EndpointServiceImpl();
 
     @Override
     public void createTest(GatlingTest test) throws ServiceException {
         try {
-            // Basic validation
             if (test == null || test.getTcid() == null || test.getTcid().trim().isEmpty() ||
                 test.getSuite() == null || test.getSuite().trim().isEmpty() ||
-                test.getEndpoint() == null || test.getEndpoint().trim().isEmpty() ||
-                test.getHttpMethod() == null || test.getHttpMethod().trim().isEmpty()) {
-                throw new ServiceException("Test validation failed: TCID, Suite, Endpoint, and HTTP Method are required.");
+                test.getEndpointId() <= 0) {
+                throw new ServiceException("Test validation failed: TCID, Suite, and Endpoint are required.");
             }
-
-            // Check if TCID already exists
             GatlingTest existingTest = testDao.getTestByTcid(test.getTcid());
             if (existingTest != null) {
                 throw new ServiceException("Test with TCID '" + test.getTcid() + "' already exists.");
             }
-
             testDao.addTest(test);
         } catch (SQLException e) {
             throw new ServiceException("Database error while creating test: " + e.getMessage(), e);
@@ -75,29 +74,22 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     @Override
     public void updateTest(GatlingTest test) throws ServiceException {
         try {
-            // Basic validation
             if (test == null || test.getId() <= 0 ||
                 test.getTcid() == null || test.getTcid().trim().isEmpty() ||
                 test.getSuite() == null || test.getSuite().trim().isEmpty() ||
-                test.getEndpoint() == null || test.getEndpoint().trim().isEmpty() ||
-                test.getHttpMethod() == null || test.getHttpMethod().trim().isEmpty()) {
-                throw new ServiceException("Test validation failed: ID, TCID, Suite, Endpoint, and HTTP Method are required.");
+                test.getEndpointId() <= 0) {
+                throw new ServiceException("Test validation failed: ID, TCID, Suite, and Endpoint are required.");
             }
-
-            // Check if test exists
             GatlingTest existingTest = testDao.getTestById(test.getId());
             if (existingTest == null) {
                 throw new ServiceException("Test with ID " + test.getId() + " not found.");
             }
-
-            // Check if TCID is being changed to an existing one
             if (!existingTest.getTcid().equals(test.getTcid())) {
                 GatlingTest testWithSameTcid = testDao.getTestByTcid(test.getTcid());
                 if (testWithSameTcid != null && testWithSameTcid.getId() != test.getId()) {
                     throw new ServiceException("Test with TCID '" + test.getTcid() + "' already exists.");
                 }
             }
-
             testDao.updateTest(test);
         } catch (SQLException e) {
             throw new ServiceException("Database error while updating test: " + e.getMessage(), e);
@@ -132,25 +124,18 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
 
     @Override
     public void runTest(GatlingTest test) throws ServiceException {
-        // This is a placeholder for actual test execution logic
-        // In a real implementation, this would integrate with Gatling or HTTP client
         try {
             if (test == null) {
                 throw new ServiceException("Test cannot be null.");
             }
-
-            // Mark test as running
+            Endpoint endpoint = endpointService.getEndpointById(test.getEndpointId());
+            if (endpoint == null) {
+                throw new ServiceException("Endpoint not found for test.");
+            }
             testDao.updateTestRunStatus(test.getId(), true);
-
-            // For now, just simulate test execution
-            System.out.println("Executing test: " + test.getTcid() + " on endpoint: " + test.getEndpoint());
-            
-            // Simulate some processing time
+            System.out.println("Executing test: " + test.getTcid() + " on endpoint: " + endpoint.getName() + " [" + endpoint.getUrl() + "]");
             Thread.sleep(test.getWaitTime() * 1000L);
-            
-            // Mark test as completed (not running)
             testDao.updateTestRunStatus(test.getId(), false);
-            
         } catch (SQLException e) {
             throw new ServiceException("Database error while running test: " + e.getMessage(), e);
         } catch (InterruptedException e) {

@@ -105,23 +105,13 @@
                                         <Label text="API Configuration" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
                                         <Separator />
                                         
-                                        <!-- HTTP Method and API Endpoint URL on same row -->
-                                        <HBox spacing="15.0" alignment="CENTER_LEFT">
+                                        <!-- Endpoint 独占一行 -->
+                                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
                                             <children>
-                                                <VBox spacing="5.0" prefWidth="350.0">
-                                                    <children>
-                                                        <Label text="HTTP Method:" style="-fx-font-weight: bold;" />
-                                                        <ComboBox fx:id="httpMethodComboBox" promptText="Select HTTP Method" prefWidth="350.0"/>
-                                                    </children>
-                                                </VBox>
-                                                <VBox spacing="5.0" HBox.hgrow="ALWAYS">
-                                                    <children>
-                                                        <Label text="Endpoint:" style="-fx-font-weight: bold;" />
-                                                        <TextField fx:id="endpointField" promptText="Enter complete API endpoint URL" />
-                                                    </children>
-                                                </VBox>
+                                                <Label text="Endpoint:" style="-fx-font-weight: bold;" />
+                                                <ComboBox fx:id="endpointComboBox" promptText="Select Endpoint" maxWidth="Infinity" VBox.vgrow="NEVER" />
                                             </children>
-                                        </HBox>
+                                        </VBox>
                                         
                                         <!-- Headers Configuration -->
                                         <HBox spacing="15.0" alignment="TOP_LEFT">
@@ -246,8 +236,7 @@
                         <TableColumn fx:id="isEnabledColumn" prefWidth="70.0" text="Enabled" />
                         <TableColumn fx:id="suiteColumn" prefWidth="120.0" text="Suite" />
                         <TableColumn fx:id="testTcidColumn" prefWidth="120.0" text="TCID" />
-                        <TableColumn fx:id="httpMethodColumn" prefWidth="120.0" text="Method" />
-                        <TableColumn fx:id="endpointColumn" prefWidth="280.0" text="Endpoint" />
+                        <TableColumn fx:id="endpointColumn" prefWidth="120.0" text="Endpoint" />
                         <TableColumn fx:id="headersTemplateNameColumn" prefWidth="120.0" text="Headers" />
                         <TableColumn fx:id="bodyTemplateNameColumn" prefWidth="120.0" text="Body" />
                         <TableColumn fx:id="tagsColumn" prefWidth="120.0" text="Tags" />

@@ -15,33 +15,31 @@ public class GatlingTest {
     private final StringProperty expStatus = new SimpleStringProperty();
     private final StringProperty expResult = new SimpleStringProperty();
     private final StringProperty saveFields = new SimpleStringProperty();
-    private final StringProperty endpoint = new SimpleStringProperty();
+    private final IntegerProperty endpointId = new SimpleIntegerProperty();
     private final StringProperty headers = new SimpleStringProperty();
     private final StringProperty body = new SimpleStringProperty();
     private final StringProperty tags = new SimpleStringProperty();
     private final IntegerProperty waitTime = new SimpleIntegerProperty();
     private final StringProperty bodyTemplateName = new SimpleStringProperty();
     private final StringProperty headersTemplateName = new SimpleStringProperty();
-    private final StringProperty httpMethod = new SimpleStringProperty("GET");
     private Map<String, String> dynamicVariables = new HashMap<>();
     private Map<String, String> headersDynamicVariables = new HashMap<>();
 
     public GatlingTest() {
     }
 
-    public GatlingTest(String suite, String tcid, String descriptions, String endpoint, String httpMethod) {
+    public GatlingTest(String suite, String tcid, String descriptions, int endpointId) {
         this.suite.set(suite);
         this.tcid.set(tcid);
         this.descriptions.set(descriptions);
-        this.endpoint.set(endpoint);
-        this.httpMethod.set(httpMethod);
+        this.endpointId.set(endpointId);
         this.isEnabled.set(false);
         this.waitTime.set(0);
     }
 
     public GatlingTest(int id, boolean isEnabled, String suite, String tcid, String descriptions,
                       String conditions, String expStatus, String expResult,
-                      String saveFields, String endpoint, String httpMethod, String headers, String body,
+                      String saveFields, int endpointId, String headers, String body,
                       String tags, int waitTime, String bodyTemplateName, String headersTemplateName, Map<String, String> dynamicVariables, Map<String, String> headersDynamicVariables) {
         this.id.set(id);
         this.isEnabled.set(isEnabled);
@@ -52,8 +50,7 @@ public class GatlingTest {
         this.expStatus.set(expStatus);
         this.expResult.set(expResult);
         this.saveFields.set(saveFields);
-        this.endpoint.set(endpoint);
-        this.httpMethod.set(httpMethod);
+        this.endpointId.set(endpointId);
         this.headers.set(headers);
         this.body.set(body);
         this.tags.set(tags);
@@ -101,9 +98,9 @@ public class GatlingTest {
     public void setSaveFields(String saveFields) { this.saveFields.set(saveFields); }
     public StringProperty saveFieldsProperty() { return saveFields; }
 
-    public String getEndpoint() { return endpoint.get(); }
-    public void setEndpoint(String endpoint) { this.endpoint.set(endpoint); }
-    public StringProperty endpointProperty() { return endpoint; }
+    public int getEndpointId() { return endpointId.get(); }
+    public void setEndpointId(int endpointId) { this.endpointId.set(endpointId); }
+    public IntegerProperty endpointIdProperty() { return endpointId; }
 
     public String getHeaders() { return headers.get(); }
     public void setHeaders(String headers) { this.headers.set(headers); }
@@ -129,10 +126,6 @@ public class GatlingTest {
     public void setHeadersTemplateName(String headersTemplateName) { this.headersTemplateName.set(headersTemplateName); }
     public StringProperty headersTemplateNameProperty() { return headersTemplateName; }
 
-    public String getHttpMethod() { return httpMethod.get(); }
-    public void setHttpMethod(String httpMethod) { this.httpMethod.set(httpMethod); }
-    public StringProperty httpMethodProperty() { return httpMethod; }
-
     public Map<String, String> getBodyDynamicVariables() { return dynamicVariables; }
     public void setDynamicVariables(Map<String, String> dynamicVariables) { this.dynamicVariables = dynamicVariables; }
 
@@ -147,8 +140,7 @@ public class GatlingTest {
                 ", suite='" + getSuite() + '\'' +
                 ", tcid='" + getTcid() + '\'' +
                 ", descriptions='" + getDescriptions() + '\'' +
-                ", endpoint='" + getEndpoint() + '\'' +
-                ", httpMethod='" + getHttpMethod() + '\'' +
+                ", endpointId=" + getEndpointId() +
                 '}';
     }
 }

@@ -19,13 +19,16 @@ import com.qa.app.model.ConditionRow;
 import com.qa.app.model.DynamicVariable;
 import com.qa.app.model.GatlingTest;
 import com.qa.app.model.HeadersTemplate;
+import com.qa.app.model.Endpoint;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IHeadersTemplateService;
+import com.qa.app.service.api.IEndpointService;
 import com.qa.app.service.impl.BodyTemplateServiceImpl;
 import com.qa.app.service.impl.GatlingTestServiceImpl;
 import com.qa.app.service.impl.HeadersTemplateServiceImpl;
+import com.qa.app.service.impl.EndpointServiceImpl;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -63,7 +66,7 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private TextArea saveFieldsArea;
     @FXML
-    private TextField endpointField;
+    private ComboBox<Endpoint> endpointComboBox;
     @FXML
     private ComboBox<String> bodyTemplateComboBox;
     @FXML
@@ -113,11 +116,7 @@ public class GatlingTestViewModel implements Initializable {
     private TableColumn<DynamicVariable, String> headersTemplateKeyColumn;
     @FXML
     private TableColumn<DynamicVariable, String> headersTemplateValueColumn;
-    @FXML
-    private ComboBox<String> httpMethodComboBox;
 
-    @FXML
-    private TableColumn<GatlingTest, String> httpMethodColumn;
     @FXML
     private TableColumn<GatlingTest, String> headersTemplateNameColumn;
     @FXML
@@ -132,11 +131,13 @@ public class GatlingTestViewModel implements Initializable {
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
     private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
+    private final IEndpointService endpointService = new EndpointServiceImpl();
     private final ObservableList<GatlingTest> testList = FXCollections.observableArrayList();
     private final ObservableList<DynamicVariable> bodyTemplateVariables = FXCollections.observableArrayList();
     private Map<String, String> bodyTemplates = new HashMap<>();
     private final ObservableList<DynamicVariable> headersTemplateVariables = FXCollections.observableArrayList();
     private Map<String, String> headersTemplates = new HashMap<>();
+    private final ObservableList<Endpoint> endpointList = FXCollections.observableArrayList();
 
     private MainViewModel mainViewModel;
     private final ObservableList<String> tags = FXCollections.observableArrayList();
@@ -246,11 +247,6 @@ public class GatlingTestViewModel implements Initializable {
             }
         });
 
-        httpMethodComboBox.setItems(FXCollections.observableArrayList("GET", "POST", "PUT", "DELETE"));
-        httpMethodComboBox.setValue("GET");
-
-        tagsInputField.setOnAction(e -> handleTagInput());
-
         expStatusComboBox.setItems(FXCollections.observableArrayList(
             "200", "400", "401", "403", "404", "408", "500","501", "503","504"
         ));
@@ -308,6 +304,30 @@ public class GatlingTestViewModel implements Initializable {
         // Add/Remove button actions
         addConditionButton.setOnAction(e -> handleAddCondition());
         removeConditionButton.setOnAction(e -> handleRemoveCondition());
+
+        endpointComboBox.setItems(endpointList);
+        endpointComboBox.setConverter(new javafx.util.StringConverter<Endpoint>() {
+            @Override
+            public String toString(Endpoint endpoint) {
+                return endpoint == null ? "" : endpoint.getName() + " [ " + endpoint.getMethod() + " " + endpoint.getUrl() + " ]";
+            }
+            @Override
+            public Endpoint fromString(String s) {
+                return endpointList.stream().filter(e -> (e.getName() + " [ " + e.getMethod() + " " + e.getUrl() + " ]").equals(s)).findFirst().orElse(null);
+            }
+        });
+        endpointComboBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(Endpoint item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(endpointComboBox.getPromptText());
+                } else {
+                    setText(item.getName() + " [ " + item.getMethod() + " " + item.getUrl() + " ]");
+                }
+            }
+        });
+        loadEndpoints();
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -320,10 +340,32 @@ public class GatlingTestViewModel implements Initializable {
         suiteColumn.setCellValueFactory(new PropertyValueFactory<>("suite"));
         testTcidColumn.setCellValueFactory(new PropertyValueFactory<>("tcid"));
         descriptionsColumn.setCellValueFactory(new PropertyValueFactory<>("descriptions"));
-        endpointColumn.setCellValueFactory(new PropertyValueFactory<>("endpoint"));
+        descriptionsColumn.setCellFactory(col -> new TableCell<GatlingTest, String>() {
+            private Tooltip tooltip = new Tooltip();
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setTooltip(null);
+                } else {
+                    setText(item);
+                    if (item.length() > 20) { // 超过20字符才显示tooltip，可根据需要调整
+                        tooltip.setText(item);
+                        setTooltip(tooltip);
+                    } else {
+                        setTooltip(null);
+                    }
+                }
+            }
+        });
+        endpointColumn.setCellValueFactory(cellData -> {
+            int endpointId = cellData.getValue().getEndpointId();
+            Endpoint ep = endpointList.stream().filter(e -> e.getId() == endpointId).findFirst().orElse(null);
+            return new javafx.beans.property.SimpleStringProperty(ep == null ? "" : ep.getName());
+        });
         tagsColumn.setCellValueFactory(new PropertyValueFactory<>("tags"));
         waitTimeColumn.setCellValueFactory(new PropertyValueFactory<>("waitTime"));
-        httpMethodColumn.setCellValueFactory(new PropertyValueFactory<>("httpMethod"));
         headersTemplateNameColumn.setCellValueFactory(new PropertyValueFactory<>("headersTemplateName"));
         bodyTemplateNameColumn.setCellValueFactory(new PropertyValueFactory<>("bodyTemplateName"));
 
@@ -430,7 +472,8 @@ public class GatlingTestViewModel implements Initializable {
             deserializeConditions(test.getConditions());
             expResultArea.setText(test.getExpResult());
             saveFieldsArea.setText(test.getSaveFields());
-            endpointField.setText(test.getEndpoint());
+            Endpoint selectedEp = endpointList.stream().filter(e -> e.getId() == test.getEndpointId()).findFirst().orElse(null);
+            endpointComboBox.setValue(selectedEp);
             bodyTemplateComboBox.setValue(test.getBodyTemplateName());
             bodyTemplateVariables.clear();
             if (test.getBodyDynamicVariables() != null) {
@@ -451,7 +494,6 @@ public class GatlingTestViewModel implements Initializable {
             }
             updateTagsFlowPane();
             waitTimeSpinner.getValueFactory().setValue(test.getWaitTime());
-            httpMethodComboBox.setValue(test.getHttpMethod());
             expStatusComboBox.setValue(test.getExpStatus() == null || test.getExpStatus().isEmpty() ? "200" : test.getExpStatus());
         } else {
             clearFields();
@@ -466,7 +508,9 @@ public class GatlingTestViewModel implements Initializable {
         descriptionsArea.clear();
         expResultArea.clear();
         saveFieldsArea.clear();
-        endpointField.clear();
+        endpointComboBox.getSelectionModel().clearSelection();
+        endpointComboBox.setValue(null);
+        endpointComboBox.setPromptText("Select Endpoint");
         bodyTemplateComboBox.getSelectionModel().clearSelection();
         bodyTemplateComboBox.setValue(null);
         bodyTemplateVariables.clear();
@@ -476,7 +520,6 @@ public class GatlingTestViewModel implements Initializable {
         tags.clear();
         updateTagsFlowPane();
         waitTimeSpinner.getValueFactory().setValue(0);
-        httpMethodComboBox.setValue("GET");
         expStatusComboBox.setValue("200");
         conditionRows.clear();
     }
@@ -512,18 +555,15 @@ public class GatlingTestViewModel implements Initializable {
         String suite = suiteField.getText().trim();
         String tcid = tcidField.getText().trim();
         String descriptions = descriptionsArea.getText().trim();
-        String endpoint = endpointField.getText().trim();
-        String httpMethod = httpMethodComboBox.getValue();
-
-        if (suite.isEmpty() || tcid.isEmpty() || endpoint.isEmpty()) {
+        Endpoint endpoint = endpointComboBox.getValue();
+        if (suite.isEmpty() || tcid.isEmpty() || endpoint == null) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: Suite, TCID, and Endpoint are required.",
                         MainViewModel.StatusType.ERROR);
             }
             return;
         }
-
-        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpoint, httpMethod);
+        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpoint.getId());
         newTest.setEnabled(isEnabledCheckBox.isSelected());
         newTest.setConditions(serializeConditions());
         newTest.setExpResult(expResultArea.getText());
@@ -538,8 +578,8 @@ public class GatlingTestViewModel implements Initializable {
         newTest.setHeadersTemplateName(headersTemplateComboBox.getSelectionModel().getSelectedItem());
         newTest.setTags(getTagsString());
         newTest.setWaitTime(waitTimeSpinner.getValue());
-        newTest.setHttpMethod(httpMethod);
         newTest.setExpStatus(expStatusComboBox.getValue());
+        newTest.setEndpointId(endpoint.getId());
         Map<String, String> headersVars = new HashMap<>();
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         newTest.setHeadersDynamicVariables(headersVars);
@@ -564,7 +604,6 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private void handleUpdateTest() {
         GatlingTest selectedTest = testTable.getSelectionModel().getSelectedItem();
-
         if (selectedTest == null) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Selection Error: Please select a test from the table to update.",
@@ -572,20 +611,16 @@ public class GatlingTestViewModel implements Initializable {
             }
             return;
         }
-
         String suite = suiteField.getText().trim();
         String tcid = tcidField.getText().trim();
-        String endpoint = endpointField.getText().trim();
-        String httpMethod = httpMethodComboBox.getValue();
-
-        if (suite.isEmpty() || tcid.isEmpty() || endpoint.isEmpty()) {
+        Endpoint endpoint = endpointComboBox.getValue();
+        if (suite.isEmpty() || tcid.isEmpty() || endpoint == null) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: Suite, TCID, and Endpoint are required.",
                         MainViewModel.StatusType.ERROR);
             }
             return;
         }
-
         selectedTest.setEnabled(isEnabledCheckBox.isSelected());
         selectedTest.setSuite(suite);
         selectedTest.setTcid(tcid);
@@ -593,7 +628,7 @@ public class GatlingTestViewModel implements Initializable {
         selectedTest.setConditions(serializeConditions());
         selectedTest.setExpResult(expResultArea.getText());
         selectedTest.setSaveFields(saveFieldsArea.getText());
-        selectedTest.setEndpoint(endpoint);
+        selectedTest.setEndpointId(endpoint.getId());
         selectedTest.setHeaders(headersTemplateComboBox.getSelectionModel().getSelectedItem());
         Map<String, String> vars = new HashMap<>();
         bodyTemplateVariables.forEach(dv -> vars.put(dv.getKey(), dv.getValue()));
@@ -604,7 +639,6 @@ public class GatlingTestViewModel implements Initializable {
         selectedTest.setHeadersTemplateName(headersTemplateComboBox.getSelectionModel().getSelectedItem());
         selectedTest.setTags(getTagsString());
         selectedTest.setWaitTime(waitTimeSpinner.getValue());
-        selectedTest.setHttpMethod(httpMethod);
         selectedTest.setExpStatus(expStatusComboBox.getValue());
         Map<String, String> headersVars = new HashMap<>();
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
@@ -803,7 +837,19 @@ public class GatlingTestViewModel implements Initializable {
         }
     }
 
+    private void loadEndpoints() {
+        endpointList.clear();
+        try {
+            endpointList.addAll(endpointService.getAllEndpoints());
+        } catch (Exception e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to load endpoints: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+        }
+    }
+
     public void refresh() {
+        loadEndpoints();
         loadAllTcids();
         loadTests();
         loadTemplates();
