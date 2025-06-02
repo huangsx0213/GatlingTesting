@@ -84,6 +84,17 @@ public class DBUtil {
                     + " description TEXT"
                     + ");";
             stmt.execute(environmentSql);
+
+            // Create endpoints table if it doesn't exist
+            String endpointSql = "CREATE TABLE IF NOT EXISTS endpoints ("
+                    + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + " name TEXT NOT NULL UNIQUE,"
+                    + " method TEXT NOT NULL,"
+                    + " url TEXT NOT NULL,"
+                    + " environment_id INTEGER,"
+                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE SET NULL ON UPDATE CASCADE"
+                    + ");";
+            stmt.execute(endpointSql);
             
             System.out.println("Database initialized with gatling_tests, body_templates, and headers_templates tables created (if not exists).");
         } catch (SQLException e) {

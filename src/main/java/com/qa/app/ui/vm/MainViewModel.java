@@ -36,8 +36,9 @@ public class MainViewModel implements Initializable {
 
     private final ObservableList<String> navItems = FXCollections.observableArrayList(
         "Gatling Test Management",
-        "Body Template Management",
+        "Endpoint Management",
         "Headers Template Management",
+        "Body Template Management",
         "Environment Management"
     );
     private final Map<String, String> fxmlMapping = new HashMap<>();
@@ -54,8 +55,9 @@ public class MainViewModel implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         // Initialize FXML mapping
         fxmlMapping.put("Gatling Test Management", "/com/qa/app/ui/view/gatling_test_view.fxml");
-        fxmlMapping.put("Body Template Management", "/com/qa/app/ui/view/body_template_view.fxml");
+        fxmlMapping.put("Endpoint Management", "/com/qa/app/ui/view/endpoint_view.fxml");
         fxmlMapping.put("Headers Template Management", "/com/qa/app/ui/view/headers_template_view.fxml");
+        fxmlMapping.put("Body Template Management", "/com/qa/app/ui/view/body_template_view.fxml");
         fxmlMapping.put("Environment Management", "/com/qa/app/ui/view/environment_view.fxml");
         // Removed System Settings mapping
 
@@ -113,6 +115,8 @@ public class MainViewModel implements Initializable {
                     ((HeadersTemplateViewModel) controller).refresh();
                 } else if (controller instanceof EnvironmentViewModel) {
                     ((EnvironmentViewModel) controller).refresh();
+                } else if (controller instanceof EndpointViewModel) {
+                    ((EndpointViewModel) controller).refresh();
                 }
                 // Gatling tab不可关闭且始终在第一个位置
                 if (tabName.equals("Gatling Test Management")) {
@@ -144,6 +148,8 @@ public class MainViewModel implements Initializable {
                         ((HeadersTemplateViewModel) controller).setMainViewModel(this);
                     } else if (controller instanceof EnvironmentViewModel) {
                         ((EnvironmentViewModel) controller).setMainViewModel(this);
+                    } else if (controller instanceof EndpointViewModel) {
+                        ((EndpointViewModel) controller).setMainViewModel(this);
                     }
                     // 让Node能找到controller
                     contentNode.getProperties().put("controller", controller);
@@ -179,6 +185,8 @@ public class MainViewModel implements Initializable {
                     ((HeadersTemplateViewModel) controller).refresh();
                 } else if (controller instanceof EnvironmentViewModel) {
                     ((EnvironmentViewModel) controller).refresh();
+                } else if (controller instanceof EndpointViewModel) {
+                    ((EndpointViewModel) controller).refresh();
                 }
 
             } catch (IOException e) {
