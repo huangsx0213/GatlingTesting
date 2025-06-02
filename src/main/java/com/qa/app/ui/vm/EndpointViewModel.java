@@ -57,6 +57,18 @@ public class EndpointViewModel implements Initializable {
         endpointTable.setItems(endpointList);
         endpointTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showEndpointDetails(newSel));
         methodComboBox.setItems(FXCollections.observableArrayList("GET", "POST", "PUT", "DELETE"));
+        methodComboBox.setPromptText("Select Method");
+        methodComboBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(methodComboBox.getPromptText());
+                } else {
+                    setText(item);
+                }
+            }
+        });
         loadEndpoints();
         try {
             environmentList.setAll(environmentService.findAllEnvironments());
@@ -72,6 +84,18 @@ public class EndpointViewModel implements Initializable {
             @Override
             public Environment fromString(String s) {
                 return environmentList.stream().filter(e -> e.getName().equals(s)).findFirst().orElse(null);
+            }
+        });
+        environmentComboBox.setPromptText("Select Environment");
+        environmentComboBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(Environment item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(environmentComboBox.getPromptText());
+                } else {
+                    setText(item.getName());
+                }
             }
         });
         environmentComboBox.getSelectionModel().clearSelection();
@@ -195,7 +219,10 @@ public class EndpointViewModel implements Initializable {
     private void clearFields() {
         endpointNameField.clear();
         methodComboBox.getSelectionModel().clearSelection();
+        methodComboBox.setValue(null);
         urlField.clear();
+        environmentComboBox.getSelectionModel().clearSelection();
+        environmentComboBox.setValue(null);
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {

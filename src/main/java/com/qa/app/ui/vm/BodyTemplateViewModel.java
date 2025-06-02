@@ -77,6 +77,18 @@ public class BodyTemplateViewModel implements Initializable {
                 return environmentList.stream().filter(e -> e.getName().equals(s)).findFirst().orElse(null);
             }
         });
+        environmentComboBox.setPromptText("Select Environment");
+        environmentComboBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(Environment item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(environmentComboBox.getPromptText());
+                } else {
+                    setText(item.getName());
+                }
+            }
+        });
         environmentComboBox.getSelectionModel().clearSelection();
     }
 
@@ -282,6 +294,8 @@ public class BodyTemplateViewModel implements Initializable {
     private void clearFields() {
         bodyTemplateNameField.clear();
         bodyTemplateContentArea.clear();
+        environmentComboBox.getSelectionModel().clearSelection();
+        environmentComboBox.setValue(null);
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
