@@ -134,7 +134,7 @@
                                                 </VBox>
                                                 <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" maxHeight="170.0">
                                                     <children>
-                                                        <Label text="Generated Headers:" style="-fx-font-weight: bold;" />
+                                                        <Label text="Generated Headers Preview:" style="-fx-font-weight: bold;" />
                                                         <TextArea fx:id="generatedHeadersArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" prefHeight="120.0" />
                                                     </children>
                                                 </VBox>
@@ -162,7 +162,7 @@
                                                 </VBox>
                                                 <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" maxHeight="170.0">
                                                     <children>
-                                                        <Label text="Generated Body:" style="-fx-font-weight: bold;" />
+                                                        <Label text="Generated Body Preview:" style="-fx-font-weight: bold;" />
                                                         <TextArea fx:id="generatedBodyArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" prefHeight="120.0" />
                                                     </children>
                                                 </VBox>

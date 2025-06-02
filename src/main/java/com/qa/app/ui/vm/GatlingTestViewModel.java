@@ -660,6 +660,7 @@ public class GatlingTestViewModel implements Initializable {
             conditionsTable.refresh();
             updateGeneratedBody();
             updateGeneratedHeaders();
+            loadAllSuites();
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to add test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
@@ -726,6 +727,7 @@ public class GatlingTestViewModel implements Initializable {
             conditionsTable.refresh();
             updateGeneratedBody();
             updateGeneratedHeaders();
+            loadAllSuites();
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to update test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
@@ -755,6 +757,7 @@ public class GatlingTestViewModel implements Initializable {
             conditionsTable.refresh();
             updateGeneratedBody();
             updateGeneratedHeaders();
+            loadAllSuites();
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to delete test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
