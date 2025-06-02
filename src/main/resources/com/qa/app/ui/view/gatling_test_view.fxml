@@ -120,11 +120,11 @@
                                                     <children>
                                                         <Label text="Headers Template:" style="-fx-font-weight: bold;" />
                                                         <ComboBox fx:id="headersTemplateComboBox" promptText="Select headers template" />
-                                                        <Label text="Headers Dynamic Variables:" style="-fx-font-weight: bold;" />
+                                                        <Label text="Headers User Defined Variables:" style="-fx-font-weight: bold;" />
                                                         <TableView fx:id="headersTemplateVarsTable" VBox.vgrow="ALWAYS" prefHeight="120.0" styleClass="table-view">
                                                             <columns>
-                                                                <TableColumn fx:id="headersTemplateKeyColumn" prefWidth="175.0" text="Variable Name" />
-                                                                <TableColumn fx:id="headersTemplateValueColumn" prefWidth="175.0" text="Variable Value" />
+                                                                <TableColumn fx:id="headersTemplateKeyColumn" prefWidth="175.0" text="Key" />
+                                                                <TableColumn fx:id="headersTemplateValueColumn" prefWidth="175.0" text="Value" />
                                                             </columns>
                                                             <columnResizePolicy>
                                                                 <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
@@ -148,11 +148,11 @@
                                                     <children>
                                                         <Label text="Body Template:" style="-fx-font-weight: bold;" />
                                                         <ComboBox fx:id="bodyTemplateComboBox" promptText="Select body template" />
-                                                        <Label text="Body Dynamic Variables:" style="-fx-font-weight: bold;" />
+                                                        <Label text="Body User Defined Variables:" style="-fx-font-weight: bold;" />
                                                         <TableView fx:id="bodyDynamicVarsTable" VBox.vgrow="ALWAYS" prefHeight="120.0" styleClass="table-view">
                                                             <columns>
-                                                                <TableColumn fx:id="bodyDynamicKeyColumn" prefWidth="175.0" text="Variable Name" />
-                                                                <TableColumn fx:id="bodyDynamicValueColumn" prefWidth="175.0" text="Variable Value" />
+                                                                <TableColumn fx:id="bodyDynamicKeyColumn" prefWidth="175.0" text="Key" />
+                                                                <TableColumn fx:id="bodyDynamicValueColumn" prefWidth="175.0" text="Value" />
                                                             </columns>
                                                             <columnResizePolicy>
                                                                 <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />

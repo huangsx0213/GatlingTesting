@@ -11,7 +11,12 @@ public class DBUtil {
     public static Connection getConnection() throws SQLException {
         try {
             Class.forName("org.sqlite.JDBC");
-            return DriverManager.getConnection(URL);
+            Connection conn = DriverManager.getConnection(URL);
+            // 启用SQLite外键约束
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("PRAGMA foreign_keys = ON");
+            }
+            return conn;
         } catch (ClassNotFoundException e) {
             System.err.println("SQLite JDBC driver not found: " + e.getMessage());
             throw new SQLException("SQLite JDBC driver not found", e);
@@ -50,9 +55,9 @@ public class DBUtil {
                     + " body_template_id INTEGER,"
                     + " headers_dynamic_variables TEXT,"
                     + " body_dynamic_variables TEXT,"
-                    + " FOREIGN KEY(endpoint_id) REFERENCES endpoints(id),"
-                    + " FOREIGN KEY(headers_template_id) REFERENCES headers_templates(id),"
-                    + " FOREIGN KEY(body_template_id) REFERENCES body_templates(id)"
+                    + " FOREIGN KEY(endpoint_id) REFERENCES endpoints(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
+                    + " FOREIGN KEY(headers_template_id) REFERENCES headers_templates(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
+                    + " FOREIGN KEY(body_template_id) REFERENCES body_templates(id) ON DELETE RESTRICT ON UPDATE CASCADE"
                     + ");";
             stmt.execute(testsSql);
 
@@ -63,7 +68,7 @@ public class DBUtil {
                     + " name TEXT NOT NULL UNIQUE,"
                     + " content TEXT NOT NULL,"
                     + " environment_id INTEGER,"
-                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE SET NULL ON UPDATE CASCADE"
+                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE"
                     + ");";
             stmt.execute(bodyTemplateSql);
 
@@ -73,7 +78,7 @@ public class DBUtil {
                     + " name TEXT NOT NULL UNIQUE,"
                     + " content TEXT NOT NULL,"
                     + " environment_id INTEGER,"
-                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE SET NULL ON UPDATE CASCADE"
+                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE"
                     + ");";
             stmt.execute(headersTemplateSql);
 
@@ -92,11 +97,11 @@ public class DBUtil {
                     + " method TEXT NOT NULL,"
                     + " url TEXT NOT NULL,"
                     + " environment_id INTEGER,"
-                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE SET NULL ON UPDATE CASCADE"
+                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE"
                     + ");";
             stmt.execute(endpointSql);
             
-            System.out.println("Database initialized with gatling_tests, body_templates, and headers_templates tables created (if not exists).");
+            System.out.println("Database schema initialized. All tables are up to date.");
         } catch (SQLException e) {
             System.err.println("Error initializing database: " + e.getMessage());
         }
