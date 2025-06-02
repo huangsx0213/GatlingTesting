@@ -72,7 +72,7 @@
                                                         <Label text="Test Conditions:" style="-fx-font-weight: bold;" />
                                                         <HBox spacing="5.0">
                                                             <children>
-                                                                <TableView fx:id="conditionsTable" prefHeight="90.0" editable="true">
+                                                                <TableView fx:id="conditionsTable" prefHeight="90.0" editable="true" styleClass="table-view">
                                                                     <columns>
                                                                         <TableColumn fx:id="prefixColumn" text="Prefix" prefWidth="110.0" />
                                                                         <TableColumn fx:id="conditionTcidColumn" text="TCID" prefWidth="200.0" />
@@ -121,7 +121,7 @@
                                                         <Label text="Headers Template:" style="-fx-font-weight: bold;" />
                                                         <ComboBox fx:id="headersTemplateComboBox" promptText="Select headers template" />
                                                         <Label text="Headers Dynamic Variables:" style="-fx-font-weight: bold;" />
-                                                        <TableView fx:id="headersTemplateVarsTable" VBox.vgrow="ALWAYS" prefHeight="120.0">
+                                                        <TableView fx:id="headersTemplateVarsTable" VBox.vgrow="ALWAYS" prefHeight="120.0" styleClass="table-view">
                                                             <columns>
                                                                 <TableColumn fx:id="headersTemplateKeyColumn" prefWidth="175.0" text="Variable Name" />
                                                                 <TableColumn fx:id="headersTemplateValueColumn" prefWidth="175.0" text="Variable Value" />
@@ -149,7 +149,7 @@
                                                         <Label text="Body Template:" style="-fx-font-weight: bold;" />
                                                         <ComboBox fx:id="bodyTemplateComboBox" promptText="Select body template" />
                                                         <Label text="Body Dynamic Variables:" style="-fx-font-weight: bold;" />
-                                                        <TableView fx:id="bodyDynamicVarsTable" VBox.vgrow="ALWAYS" prefHeight="120.0">
+                                                        <TableView fx:id="bodyDynamicVarsTable" VBox.vgrow="ALWAYS" prefHeight="120.0" styleClass="table-view">
                                                             <columns>
                                                                 <TableColumn fx:id="bodyDynamicKeyColumn" prefWidth="175.0" text="Variable Name" />
                                                                 <TableColumn fx:id="bodyDynamicValueColumn" prefWidth="175.0" text="Variable Value" />
@@ -235,7 +235,7 @@
                 <VBox spacing="5.0" VBox.vgrow="ALWAYS">
                     <children>
                         <Label text="Test Cases List" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
-                        <TableView fx:id="testTable" prefHeight="300.0" VBox.vgrow="ALWAYS">
+                        <TableView fx:id="testTable" prefHeight="300.0" VBox.vgrow="ALWAYS" styleClass="table-view">
                     <columns>
                         <TableColumn fx:id="isEnabledColumn" prefWidth="70.0" text="Enabled" />
                         <TableColumn fx:id="suiteColumn" prefWidth="120.0" text="Suite" />

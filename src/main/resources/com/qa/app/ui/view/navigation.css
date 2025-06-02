@@ -1,0 +1,49 @@
+.navigation-list {
+    -fx-background-color: #f8fafd;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 8px 0;
+    -fx-font-size: 13px;
+    -fx-font-family: 'Segoe UI', 'Arial', sans-serif;
+}
+
+.navigation-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #333;
+    -fx-padding: 10px 18px;
+    -fx-font-size: 13px;
+    -fx-border-width: 0 0 1px 0;
+    -fx-border-color: #e5e7eb;
+    -fx-cursor: hand;
+    -fx-transition: background-color 0.2s;
+}
+
+.navigation-list .list-cell:hover {
+    -fx-background-color: #e3eafc;
+    -fx-text-fill: #1d4ed8;
+}
+
+.navigation-list .list-cell:selected {
+    -fx-background-color: #6ea8d9;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8px;
+}
+
+.navigation-list .list-cell:filled:selected:focused {
+    -fx-background-color: #6ea8d9;
+    -fx-text-fill: white;
+    -fx-background-radius: 8px;
+}
+
+/* TableView 选中行统一高亮色 */
+.table-row-cell:selected, .table-row-cell:filled:selected, .table-row-cell:focused:selected {
+    -fx-background-color: #6ea8d9;
+    -fx-text-fill: white;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #f4f8fb;
+} 

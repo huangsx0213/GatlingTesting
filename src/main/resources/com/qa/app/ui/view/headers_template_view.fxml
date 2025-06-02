@@ -41,7 +41,7 @@
                 <Button fx:id="validateButton" text="Validate" onAction="#handleValidateTemplate"/>
             </HBox>
             <Label text="Template List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
-            <TableView fx:id="headersTemplateTable" prefHeight="0" VBox.vgrow="ALWAYS">
+            <TableView fx:id="headersTemplateTable" prefHeight="0" VBox.vgrow="ALWAYS" styleClass="table-view">
                 <columns>
                     <TableColumn fx:id="headersTemplateNameColumn" prefWidth="200.0" text="Template Name"/>
                     <TableColumn fx:id="headersTemplateContentColumn" prefWidth="800.0" text="Headers Content"/>

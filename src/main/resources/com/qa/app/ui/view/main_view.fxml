@@ -12,7 +12,8 @@
 <?import javafx.scene.text.Font?>
 
 <BorderPane fx:id="mainPane" prefHeight="768.0" prefWidth="1024.0" xmlns="http://javafx.com/javafx/17"
-            xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.qa.app.ui.vm.MainViewModel">
+            xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.qa.app.ui.vm.MainViewModel"
+            stylesheets="@navigation.css">
     <top>
         <HBox alignment="CENTER_LEFT" prefHeight="50.0" style="-fx-background-color: #4682B4; -fx-padding: 0 0 0 20;" BorderPane.alignment="CENTER">
             <children>
@@ -44,7 +45,7 @@
             <items>
                 <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="150.0" spacing="10.0" maxWidth="250.0">
                     <children>
-                        <ListView fx:id="navigationList" prefWidth="150.0" VBox.vgrow="ALWAYS" />
+                        <ListView fx:id="navigationList" prefWidth="150.0" VBox.vgrow="ALWAYS" styleClass="navigation-list" />
                     </children>
                     <padding>
                         <Insets left="5.0" right="5.0" />

@@ -35,7 +35,7 @@
                 <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearEnvironmentForm" text="Clear Form" />
             </HBox>
             <Label text="Environment List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
-            <TableView fx:id="environmentTable" prefHeight="0" VBox.vgrow="ALWAYS">
+            <TableView fx:id="environmentTable" prefHeight="0" VBox.vgrow="ALWAYS" styleClass="table-view">
                 <columns>
                     <TableColumn fx:id="environmentNameColumn" prefWidth="200.0" text="Environment Name"/>
                     <TableColumn fx:id="environmentDescriptionColumn" prefWidth="600.0" text="Description"/>
