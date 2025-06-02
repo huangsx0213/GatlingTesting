@@ -150,10 +150,10 @@ public class GatlingTestViewModel implements Initializable {
     private final ObservableList<String> allTcids = FXCollections.observableArrayList();
     private final ObservableList<String> prefixOptions = FXCollections.observableArrayList("Setup", "Teardown", "SuiteSetup", "SuiteTeardown", "CheckWith");
 
-    // 用于保存所有TCID下拉的引用
+    // Used to store all TCID dropdown references
     private final List<CheckComboBox<String>> conditionTcidComboBoxes = new ArrayList<>();
 
-    // 1. 新增 Map<Integer, String> bodyTemplateIdNameMap, headersTemplateIdNameMap
+    // Used to store bodyTemplate and headersTemplate name by id
     private Map<Integer, String> bodyTemplateIdNameMap = new HashMap<>();
     private Map<Integer, String> headersTemplateIdNameMap = new HashMap<>();
 
@@ -162,13 +162,13 @@ public class GatlingTestViewModel implements Initializable {
         // Initialize spinner
         waitTimeSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 3600, 0));
         waitTimeSpinner.setEditable(true);
-        // 只允许输入数字
+        // Only allow numeric input
         waitTimeSpinner.getEditor().textProperty().addListener((obs, oldValue, newValue) -> {
             if (!newValue.matches("\\d*")) {
                 waitTimeSpinner.getEditor().setText(newValue.replaceAll("[^\\d]", ""));
             }
         });
-        // 失去焦点时同步 Spinner 值
+        // Sync Spinner value when focus is lost
         waitTimeSpinner.getEditor().focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
             if (!isNowFocused) {
                 try {
@@ -190,8 +190,21 @@ public class GatlingTestViewModel implements Initializable {
         bodyDynamicVarsTable.setItems(bodyTemplateVariables);
         bodyDynamicVarsTable.setEditable(true);
 
-        // Only dynamicValueColumn should be editable
-        bodyDynamicValueColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        // Set cellFactory to custom TextFieldTableCell with focus lost commit
+        bodyDynamicValueColumn.setCellFactory(col -> new TextFieldTableCell<DynamicVariable, String>(new javafx.util.converter.DefaultStringConverter()) {
+            @Override
+            public void startEdit() {
+                super.startEdit();
+                TextField textField = (TextField) getGraphic();
+                if (textField != null) {
+                    textField.focusedProperty().addListener((obs, was, isNow) -> {
+                        if (!isNow && isEditing()) {
+                            commitEdit(textField.getText());
+                        }
+                    });
+                }
+            }
+        });
         bodyDynamicValueColumn.setOnEditCommit(event -> {
             DynamicVariable editedVar = event.getTableView().getItems().get(event.getTablePosition().getRow());
             editedVar.setValue(event.getNewValue());
@@ -199,6 +212,16 @@ public class GatlingTestViewModel implements Initializable {
             if (selectedTest != null) {
                 selectedTest.getBodyDynamicVariables().put(editedVar.getKey(), editedVar.getValue());
             }
+        });
+        // Listen to TableView's editing cell when focus is lost and auto-commit
+        bodyDynamicVarsTable.setRowFactory(tv -> {
+            TableRow<DynamicVariable> row = new TableRow<>();
+            row.focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
+                if (!isNowFocused && tv.getEditingCell() != null) {
+                    tv.edit(-1, null); // 结束编辑，自动commit
+                }
+            });
+            return row;
         });
 
         // Add listener for template selection
@@ -218,7 +241,20 @@ public class GatlingTestViewModel implements Initializable {
         headersTemplateValueColumn.setCellValueFactory(new PropertyValueFactory<>("value"));
         headersTemplateVarsTable.setItems(headersTemplateVariables);
         headersTemplateVarsTable.setEditable(true);
-        headersTemplateValueColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        headersTemplateValueColumn.setCellFactory(col -> new TextFieldTableCell<DynamicVariable, String>(new javafx.util.converter.DefaultStringConverter()) {
+            @Override
+            public void startEdit() {
+                super.startEdit();
+                TextField textField = (TextField) getGraphic();
+                if (textField != null) {
+                    textField.focusedProperty().addListener((obs, was, isNow) -> {
+                        if (!isNow && isEditing()) {
+                            commitEdit(textField.getText());
+                        }
+                    });
+                }
+            }
+        });
         headersTemplateValueColumn.setOnEditCommit(event -> {
             DynamicVariable editedVar = event.getTableView().getItems().get(event.getTablePosition().getRow());
             editedVar.setValue(event.getNewValue());
@@ -290,7 +326,7 @@ public class GatlingTestViewModel implements Initializable {
                         checkComboBox = new CheckComboBox<>();
                         conditionTcidComboBoxes.add(checkComboBox);
                     }
-                    // 先清空再加最新的allTcids
+                    // clear all items and add latest allTcids
                     checkComboBox.getItems().setAll(allTcids);
                     checkComboBox.setPrefWidth(180);
                     checkComboBox.setMaxWidth(180);
@@ -342,7 +378,7 @@ public class GatlingTestViewModel implements Initializable {
         });
         loadEndpoints();
 
-        // 初始化suiteComboBox
+        // initialize suiteComboBox
         loadAllSuites();
         suiteComboBox.setEditable(true);
     }
@@ -410,7 +446,7 @@ public class GatlingTestViewModel implements Initializable {
             updateGeneratedHeaders();
         });
 
-        // suiteComboBox自动补全和回填
+        // suiteComboBox auto-complete and fill
         testTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 suiteComboBox.setValue(newVal.getSuite());
@@ -498,7 +534,7 @@ public class GatlingTestViewModel implements Initializable {
             for (GatlingTest t : testService.findAllTests()) {
                 allTcids.add(t.getTcid());
             }
-            // 通知所有CheckComboBox刷新items
+            // notify all CheckComboBox to refresh items
             for (CheckComboBox<String> cb : conditionTcidComboBoxes) {
                 cb.getItems().setAll(allTcids);
             }
@@ -615,14 +651,14 @@ public class GatlingTestViewModel implements Initializable {
         String tcid = tcidField.getText().trim();
         String descriptions = descriptionsArea.getText().trim();
         Endpoint endpoint = endpointComboBox.getValue();
-        if (suite.isEmpty() || tcid.isEmpty() || endpoint == null) {
+        if (tcid.isEmpty()) {
             if (mainViewModel != null) {
-                mainViewModel.updateStatus("Input Error: Suite, TCID, and Endpoint are required.",
+                mainViewModel.updateStatus("Input Error: TCID is required.",
                         MainViewModel.StatusType.ERROR);
             }
             return;
         }
-        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpoint.getId());
+        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpoint == null ? 0 : endpoint.getId());
         newTest.setEnabled(isEnabledCheckBox.isSelected());
         newTest.setConditions(serializeConditions());
         newTest.setExpResult(expResultArea.getText());
@@ -638,12 +674,12 @@ public class GatlingTestViewModel implements Initializable {
         newTest.setTags(getTagsString());
         newTest.setWaitTime(waitTimeSpinner.getValue());
         newTest.setExpStatus(expStatusComboBox.getValue());
-        newTest.setEndpointId(endpoint.getId());
+        newTest.setEndpointId(endpoint == null ? 0 : endpoint.getId());
         Map<String, String> headersVars = new HashMap<>();
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         newTest.setHeadersDynamicVariables(headersVars);
 
-        // 新suite自动加入下拉
+        // new suite auto-add to dropdown
         if (suite != null && !suite.isEmpty() && !suiteComboBox.getItems().contains(suite)) {
             suiteComboBox.getItems().add(suite);
         }
@@ -681,9 +717,9 @@ public class GatlingTestViewModel implements Initializable {
         String suite = suiteComboBox.getEditor().getText().trim();
         String tcid = tcidField.getText().trim();
         Endpoint endpoint = endpointComboBox.getValue();
-        if (suite.isEmpty() || tcid.isEmpty() || endpoint == null) {
+        if (tcid.isEmpty()) {
             if (mainViewModel != null) {
-                mainViewModel.updateStatus("Input Error: Suite, TCID, and Endpoint are required.",
+                mainViewModel.updateStatus("Input Error: TCID is required.",
                         MainViewModel.StatusType.ERROR);
             }
             return;
@@ -695,7 +731,7 @@ public class GatlingTestViewModel implements Initializable {
         selectedTest.setConditions(serializeConditions());
         selectedTest.setExpResult(expResultArea.getText());
         selectedTest.setSaveFields(saveFieldsArea.getText());
-        selectedTest.setEndpointId(endpoint.getId());
+        selectedTest.setEndpointId(endpoint == null ? 0 : endpoint.getId());
         selectedTest.setHeaders(headersTemplateComboBox.getSelectionModel().getSelectedItem());
         Map<String, String> vars = new HashMap<>();
         bodyTemplateVariables.forEach(dv -> vars.put(dv.getKey(), dv.getValue()));
@@ -711,7 +747,7 @@ public class GatlingTestViewModel implements Initializable {
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         selectedTest.setHeadersDynamicVariables(headersVars);
 
-        // 新suite自动加入下拉
+        // new suite auto-add to dropdown
         if (suite != null && !suite.isEmpty() && !suiteComboBox.getItems().contains(suite)) {
             suiteComboBox.getItems().add(suite);
         }
@@ -961,7 +997,7 @@ public class GatlingTestViewModel implements Initializable {
     }
 
     private void loadAllSuites() {
-        // 从testService获取所有suite去重后加入ComboBox
+        // get all suite from testService and add to ComboBox
         try {
             List<GatlingTest> allTests = testService.findAllTests();
             List<String> suites = new ArrayList<>();

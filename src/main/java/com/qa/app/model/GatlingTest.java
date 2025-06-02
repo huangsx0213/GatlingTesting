@@ -29,7 +29,7 @@ public class GatlingTest {
     }
 
     public GatlingTest(String suite, String tcid, String descriptions, int endpointId) {
-        this.suite.set(suite);
+        this.suite.set(suite == null ? "" : suite);
         this.tcid.set(tcid);
         this.descriptions.set(descriptions);
         this.endpointId.set(endpointId);
@@ -71,7 +71,7 @@ public class GatlingTest {
     public BooleanProperty isEnabledProperty() { return isEnabled; }
 
     public String getSuite() { return suite.get(); }
-    public void setSuite(String suite) { this.suite.set(suite); }
+    public void setSuite(String suite) { this.suite.set(suite == null ? "" : suite); }
     public StringProperty suiteProperty() { return suite; }
 
     public String getTcid() { return tcid.get(); }
