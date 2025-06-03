@@ -22,17 +22,18 @@ public class GatlingTest {
     private final IntegerProperty waitTime = new SimpleIntegerProperty();
     private final IntegerProperty bodyTemplateId = new SimpleIntegerProperty();
     private final IntegerProperty headersTemplateId = new SimpleIntegerProperty();
+    private final StringProperty endpointName = new SimpleStringProperty();
     private Map<String, String> dynamicVariables = new HashMap<>();
     private Map<String, String> headersDynamicVariables = new HashMap<>();
 
     public GatlingTest() {
     }
 
-    public GatlingTest(String suite, String tcid, String descriptions, int endpointId) {
+    public GatlingTest(String suite, String tcid, String descriptions, String endpointName) {
         this.suite.set(suite == null ? "" : suite);
         this.tcid.set(tcid);
         this.descriptions.set(descriptions);
-        this.endpointId.set(endpointId);
+        this.endpointName.set(endpointName);
         this.isEnabled.set(false);
         this.waitTime.set(0);
     }
@@ -132,6 +133,10 @@ public class GatlingTest {
     public Map<String, String> getHeadersDynamicVariables() { return headersDynamicVariables; }
     public void setHeadersDynamicVariables(Map<String, String> headersDynamicVariables) { this.headersDynamicVariables = headersDynamicVariables; }
 
+    public String getEndpointName() { return endpointName.get(); }
+    public void setEndpointName(String endpointName) { this.endpointName.set(endpointName); }
+    public StringProperty endpointNameProperty() { return endpointName; }
+
     @Override
     public String toString() {
         return "GatlingTest{" +
@@ -140,7 +145,7 @@ public class GatlingTest {
                 ", suite='" + getSuite() + '\'' +
                 ", tcid='" + getTcid() + '\'' +
                 ", descriptions='" + getDescriptions() + '\'' +
-                ", endpointId=" + getEndpointId() +
+                ", endpointName='" + getEndpointName() + '\'' +
                 '}';
     }
 }

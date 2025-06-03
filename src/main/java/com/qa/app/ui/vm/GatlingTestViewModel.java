@@ -363,9 +363,8 @@ public class GatlingTestViewModel implements Initializable {
             }
         });
         endpointColumn.setCellValueFactory(cellData -> {
-            int endpointId = cellData.getValue().getEndpointId();
-            Endpoint ep = endpointList.stream().filter(e -> e.getId() == endpointId).findFirst().orElse(null);
-            return new javafx.beans.property.SimpleStringProperty(ep == null ? "" : ep.getName());
+            String endpointName = cellData.getValue().getEndpointName();
+            return new javafx.beans.property.SimpleStringProperty(endpointName == null ? "" : endpointName);
         });
         tagsColumn.setCellValueFactory(new PropertyValueFactory<>("tags"));
         waitTimeColumn.setCellValueFactory(new PropertyValueFactory<>("waitTime"));
@@ -569,8 +568,7 @@ public class GatlingTestViewModel implements Initializable {
             conditionHandler.deserializeConditions(test.getConditions());
             expResultArea.setText(test.getExpResult());
             saveFieldsArea.setText(test.getSaveFields());
-            Endpoint selectedEp = endpointList.stream().filter(e -> e.getId() == test.getEndpointId()).findFirst()
-                    .orElse(null);
+            Endpoint selectedEp = endpointList.stream().filter(e -> e.getName().equals(test.getEndpointName())).findFirst().orElse(null);
             endpointComboBox.setValue(selectedEp);
             if (bodyTemplateIdNameMap.containsKey(test.getBodyTemplateId())) {
                 bodyTemplateComboBox.setValue(bodyTemplateIdNameMap.get(test.getBodyTemplateId()));
@@ -619,7 +617,7 @@ public class GatlingTestViewModel implements Initializable {
             }
             return;
         }
-        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpoint == null ? 0 : endpoint.getId());
+        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpoint == null ? "" : endpoint.getName());
         newTest.setEnabled(isEnabledCheckBox.isSelected());
         newTest.setConditions(serializeConditions());
         newTest.setExpResult(expResultArea.getText());
@@ -636,16 +634,13 @@ public class GatlingTestViewModel implements Initializable {
         newTest.setTags(getTagsString());
         newTest.setWaitTime(waitTimeSpinner.getValue());
         newTest.setExpStatus(expStatusComboBox.getValue());
-        newTest.setEndpointId(endpoint == null ? 0 : endpoint.getId());
         Map<String, String> headersVars = new HashMap<>();
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         newTest.setHeadersDynamicVariables(headersVars);
-
         // new suite auto-add to dropdown
         if (suite != null && !suite.isEmpty() && !suiteComboBox.getItems().contains(suite)) {
             suiteComboBox.getItems().add(suite);
         }
-
         try {
             testService.createTest(newTest);
             testList.add(newTest);
@@ -689,7 +684,7 @@ public class GatlingTestViewModel implements Initializable {
         selectedTest.setConditions(serializeConditions());
         selectedTest.setExpResult(expResultArea.getText());
         selectedTest.setSaveFields(saveFieldsArea.getText());
-        selectedTest.setEndpointId(endpoint == null ? 0 : endpoint.getId());
+        selectedTest.setEndpointName(endpoint == null ? "" : endpoint.getName());
         selectedTest.setHeaders(headersTemplateComboBox.getSelectionModel().getSelectedItem());
         Map<String, String> vars = new HashMap<>();
         bodyTemplateVariables.forEach(dv -> vars.put(dv.getKey(), dv.getValue()));
@@ -706,12 +701,10 @@ public class GatlingTestViewModel implements Initializable {
         Map<String, String> headersVars = new HashMap<>();
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         selectedTest.setHeadersDynamicVariables(headersVars);
-
         // new suite auto-add to dropdown
         if (suite != null && !suite.isEmpty() && !suiteComboBox.getItems().contains(suite)) {
             suiteComboBox.getItems().add(suite);
         }
-
         try {
             testService.updateTest(selectedTest);
             testTable.refresh();

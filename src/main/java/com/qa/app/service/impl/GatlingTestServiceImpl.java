@@ -21,8 +21,8 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         try {
             if (test == null || test.getTcid() == null || test.getTcid().trim().isEmpty() ||
                 test.getSuite() == null || test.getSuite().trim().isEmpty() ||
-                test.getEndpointId() <= 0) {
-                throw new ServiceException("Test validation failed: TCID, Suite, and Endpoint are required.");
+                test.getEndpointName() == null || test.getEndpointName().trim().isEmpty()) {
+                throw new ServiceException("Test validation failed: TCID, Suite, and Endpoint Name are required.");
             }
             GatlingTest existingTest = testDao.getTestByTcid(test.getTcid());
             if (existingTest != null) {
@@ -76,8 +76,8 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             if (test == null || test.getId() <= 0 ||
                 test.getTcid() == null || test.getTcid().trim().isEmpty() ||
                 test.getSuite() == null || test.getSuite().trim().isEmpty() ||
-                test.getEndpointId() <= 0) {
-                throw new ServiceException("Test validation failed: ID, TCID, Suite, and Endpoint are required.");
+                test.getEndpointName() == null || test.getEndpointName().trim().isEmpty()) {
+                throw new ServiceException("Test validation failed: ID, TCID, Suite, and Endpoint Name are required.");
             }
             GatlingTest existingTest = testDao.getTestById(test.getId());
             if (existingTest == null) {

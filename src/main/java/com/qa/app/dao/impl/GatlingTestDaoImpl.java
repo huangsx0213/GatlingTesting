@@ -19,7 +19,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     @Override
     public void addTest(GatlingTest test) throws SQLException {
         String sql = "INSERT INTO gatling_tests (is_enabled, suite, tcid, descriptions, conditions, " +
-                    "exp_status, exp_result, save_fields, endpoint_id, tags, wait_time, headers_template_id, body_template_id, body_dynamic_variables, headers_dynamic_variables) " +
+                    "exp_status, exp_result, save_fields, endpoint_name, tags, wait_time, headers_template_id, body_template_id, body_dynamic_variables, headers_dynamic_variables) " +
                     "VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -31,7 +31,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             pstmt.setString(6, test.getExpStatus());
             pstmt.setString(7, test.getExpResult());
             pstmt.setString(8, test.getSaveFields());
-            pstmt.setInt(9, test.getEndpointId());
+            pstmt.setString(9, test.getEndpointName());
             pstmt.setString(10, test.getTags());
             pstmt.setInt(11, test.getWaitTime());
             pstmt.setInt(12, test.getHeadersTemplateId());
@@ -113,7 +113,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     public void updateTest(GatlingTest test) throws SQLException {
         String sql = "UPDATE gatling_tests SET is_enabled = ?, suite = ?, tcid = ?, descriptions = ?, " +
                     "conditions = ?, exp_status = ?, exp_result = ?, save_fields = ?, " +
-                    "endpoint_id = ?, tags = ?, wait_time = ?, headers_template_id = ?, " +
+                    "endpoint_name = ?, tags = ?, wait_time = ?, headers_template_id = ?, " +
                     "body_template_id = ?, body_dynamic_variables = ?, headers_dynamic_variables = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -125,7 +125,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             pstmt.setString(6, test.getExpStatus());
             pstmt.setString(7, test.getExpResult());
             pstmt.setString(8, test.getSaveFields());
-            pstmt.setInt(9, test.getEndpointId());
+            pstmt.setString(9, test.getEndpointName());
             pstmt.setString(10, test.getTags());
             pstmt.setInt(11, test.getWaitTime());
             pstmt.setInt(12, test.getHeadersTemplateId());
@@ -169,7 +169,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
         test.setExpStatus(rs.getString("exp_status"));
         test.setExpResult(rs.getString("exp_result"));
         test.setSaveFields(rs.getString("save_fields"));
-        test.setEndpointId(rs.getInt("endpoint_id"));
+        test.setEndpointName(rs.getString("endpoint_name"));
         test.setTags(rs.getString("tags"));
         test.setWaitTime(rs.getInt("wait_time"));
         test.setHeadersTemplateId(rs.getInt("headers_template_id"));

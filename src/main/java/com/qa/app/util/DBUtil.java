@@ -50,14 +50,11 @@ public class DBUtil {
                     + " exp_status TEXT,"
                     + " exp_result TEXT,"
                     + " save_fields TEXT,"
-                    + " endpoint_id INTEGER NOT NULL,"
+                    + " endpoint_name TEXT NOT NULL,"
                     + " headers_template_id INTEGER,"
                     + " body_template_id INTEGER,"
                     + " headers_dynamic_variables TEXT,"
-                    + " body_dynamic_variables TEXT,"
-                    + " FOREIGN KEY(endpoint_id) REFERENCES endpoints(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
-                    + " FOREIGN KEY(headers_template_id) REFERENCES headers_templates(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
-                    + " FOREIGN KEY(body_template_id) REFERENCES body_templates(id) ON DELETE RESTRICT ON UPDATE CASCADE"
+                    + " body_dynamic_variables TEXT"
                     + ");";
             stmt.execute(testsSql);
 
