@@ -30,6 +30,9 @@ import com.qa.app.ui.vm.gatling.TemplateHandler;
 import com.qa.app.service.impl.EndpointServiceImpl;
 import com.qa.app.ui.vm.gatling.TestCondictionHandler;
 import com.qa.app.ui.vm.gatling.TagHandler;
+import com.qa.app.util.AppConfig;
+import com.qa.app.model.Environment;
+import com.qa.app.service.impl.EnvironmentServiceImpl;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -154,6 +157,8 @@ public class GatlingTestViewModel implements Initializable {
     private TemplateHandler headersTemplateHandler;
     private final TestCondictionHandler conditionHandler = new TestCondictionHandler();
     private TagHandler tagHandler;
+
+    private final EnvironmentServiceImpl environmentService = new EnvironmentServiceImpl();
 
     // =====================
     // 1. Initialize related
@@ -413,20 +418,34 @@ public class GatlingTestViewModel implements Initializable {
         endpointList.clear();
         endpointNameList.clear();
         try {
-            endpointList.addAll(endpointService.getAllEndpoints());
-            // 只保留唯一name
-            endpointNameList.setAll(endpointList.stream().map(Endpoint::getName).distinct().toList());
+            // 获取当前环境
+            String envName = AppConfig.getCurrentEnv();
+            Integer envId = null;
+            for (Environment env : environmentService.findAllEnvironments()) {
+                if (env.getName().equals(envName)) {
+                    envId = env.getId();
+                    break;
+                }
+            }
+            if (envId != null) {
+                // 只加载当前环境下的endpoint
+                for (Endpoint ep : endpointService.getAllEndpoints()) {
+                    if (envId.equals(ep.getEnvironmentId())) {
+                        endpointList.add(ep);
+                    }
+                }
+            }
         } catch (Exception e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to load endpoints: " + e.getMessage(),
                         MainViewModel.StatusType.ERROR);
             }
         }
-        endpointComboBox.setItems(endpointNameList);
+        endpointComboBox.setItems(FXCollections.observableArrayList(endpointList.stream().map(ep -> ep.getName() + " [ " + ep.getMethod() + " " + ep.getUrl() + " ]").toList()));
         endpointComboBox.setConverter(new javafx.util.StringConverter<String>() {
             @Override
-            public String toString(String name) {
-                return name == null ? "" : name;
+            public String toString(String display) {
+                return display == null ? "" : display;
             }
             @Override
             public String fromString(String s) {
@@ -590,7 +609,14 @@ public class GatlingTestViewModel implements Initializable {
             conditionHandler.deserializeConditions(test.getConditions());
             expResultArea.setText(test.getExpResult());
             saveFieldsArea.setText(test.getSaveFields());
-            endpointComboBox.setValue(test.getEndpointName());
+            String display = null;
+            for (Endpoint ep : endpointList) {
+                if (ep.getName().equals(test.getEndpointName())) {
+                    display = ep.getName() + " [ " + ep.getMethod() + " " + ep.getUrl() + " ]";
+                    break;
+                }
+            }
+            endpointComboBox.setValue(display);
             if (bodyTemplateIdNameMap.containsKey(test.getBodyTemplateId())) {
                 bodyTemplateComboBox.setValue(bodyTemplateIdNameMap.get(test.getBodyTemplateId()));
             } else {
@@ -630,7 +656,8 @@ public class GatlingTestViewModel implements Initializable {
         String suite = suiteComboBox.getEditor().getText().trim();
         String tcid = tcidField.getText().trim();
         String descriptions = descriptionsArea.getText().trim();
-        String endpointName = endpointComboBox.getValue();
+        String endpointDisplay = endpointComboBox.getValue();
+        String endpointName = endpointDisplay == null ? "" : endpointDisplay.split(" \\[ \"]")[0];
         if (tcid.isEmpty()) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: TCID is required.",
@@ -638,7 +665,7 @@ public class GatlingTestViewModel implements Initializable {
             }
             return;
         }
-        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpointName == null ? "" : endpointName);
+        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpointName);
         newTest.setEnabled(isEnabledCheckBox.isSelected());
         newTest.setConditions(serializeConditions());
         newTest.setExpResult(expResultArea.getText());
@@ -690,7 +717,8 @@ public class GatlingTestViewModel implements Initializable {
         }
         String suite = suiteComboBox.getEditor().getText().trim();
         String tcid = tcidField.getText().trim();
-        String endpointName = endpointComboBox.getValue();
+        String endpointDisplay = endpointComboBox.getValue();
+        String endpointName = endpointDisplay == null ? "" : endpointDisplay.split(" \\[ \"]")[0];
         if (tcid.isEmpty()) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: TCID is required.",
@@ -705,7 +733,7 @@ public class GatlingTestViewModel implements Initializable {
         selectedTest.setConditions(serializeConditions());
         selectedTest.setExpResult(expResultArea.getText());
         selectedTest.setSaveFields(saveFieldsArea.getText());
-        selectedTest.setEndpointName(endpointName == null ? "" : endpointName);
+        selectedTest.setEndpointName(endpointName);
         selectedTest.setHeaders(headersTemplateComboBox.getSelectionModel().getSelectedItem());
         Map<String, String> vars = new HashMap<>();
         bodyTemplateVariables.forEach(dv -> vars.put(dv.getKey(), dv.getValue()));
