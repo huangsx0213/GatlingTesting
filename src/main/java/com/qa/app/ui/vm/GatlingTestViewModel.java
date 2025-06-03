@@ -390,6 +390,25 @@ public class GatlingTestViewModel implements Initializable {
             }
             return new javafx.beans.property.SimpleStringProperty(display);
         });
+        endpointColumn.setCellFactory(col -> new TableCell<GatlingTest, String>() {
+            private Tooltip tooltip = new Tooltip();
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setTooltip(null);
+                } else {
+                    setText(item);
+                    if (item.length() > 20) { // 超过20字符显示tooltip
+                        tooltip.setText(item);
+                        setTooltip(tooltip);
+                    } else {
+                        setTooltip(null);
+                    }
+                }
+            }
+        });
         tagsColumn.setCellValueFactory(new PropertyValueFactory<>("tags"));
         waitTimeColumn.setCellValueFactory(new PropertyValueFactory<>("waitTime"));
         headersTemplateNameColumn.setCellValueFactory(cellData -> {
