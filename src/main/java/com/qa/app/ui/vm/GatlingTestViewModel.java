@@ -366,7 +366,29 @@ public class GatlingTestViewModel implements Initializable {
         });
         endpointColumn.setCellValueFactory(cellData -> {
             String endpointName = cellData.getValue().getEndpointName();
-            return new javafx.beans.property.SimpleStringProperty(endpointName == null ? "" : endpointName);
+            // 查找当前环境下的endpoint
+            String envName = AppConfig.getCurrentEnv();
+            Integer envId = null;
+            try {
+                for (Environment env : environmentService.findAllEnvironments()) {
+                    if (env.getName().equals(envName)) {
+                        envId = env.getId();
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+            String display = endpointName == null ? "" : endpointName;
+            if (envId != null) {
+                for (Endpoint ep : endpointList) {
+                    if (ep.getName().equals(endpointName) && envId.equals(ep.getEnvironmentId())) {
+                        display = ep.getName() + " [ " + ep.getMethod() + " " + ep.getUrl() + " ]";
+                        break;
+                    }
+                }
+            }
+            return new javafx.beans.property.SimpleStringProperty(display);
         });
         tagsColumn.setCellValueFactory(new PropertyValueFactory<>("tags"));
         waitTimeColumn.setCellValueFactory(new PropertyValueFactory<>("waitTime"));
@@ -657,7 +679,7 @@ public class GatlingTestViewModel implements Initializable {
         String tcid = tcidField.getText().trim();
         String descriptions = descriptionsArea.getText().trim();
         String endpointDisplay = endpointComboBox.getValue();
-        String endpointName = endpointDisplay == null ? "" : endpointDisplay.split(" \\[ \"]")[0];
+        String endpointName = endpointDisplay == null ? "" : endpointDisplay.split(" \\[")[0].trim();
         if (tcid.isEmpty()) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: TCID is required.",
@@ -718,7 +740,7 @@ public class GatlingTestViewModel implements Initializable {
         String suite = suiteComboBox.getEditor().getText().trim();
         String tcid = tcidField.getText().trim();
         String endpointDisplay = endpointComboBox.getValue();
-        String endpointName = endpointDisplay == null ? "" : endpointDisplay.split(" \\[ \"]")[0];
+        String endpointName = endpointDisplay == null ? "" : endpointDisplay.split(" \\[")[0].trim();
         if (tcid.isEmpty()) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: TCID is required.",
