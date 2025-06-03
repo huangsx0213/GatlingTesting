@@ -240,7 +240,17 @@ public class EndpointViewModel implements Initializable {
         this.mainViewModel = mainViewModel;
     }
 
+    public void refreshEnvironmentComboBox() {
+        try {
+            environmentList.setAll(environmentService.findAllEnvironments());
+        } catch (ServiceException e) {
+            environmentList.clear();
+        }
+        environmentComboBox.setItems(environmentList);
+    }
+
     public void refresh() {
+        refreshEnvironmentComboBox();
         loadEndpoints();
         clearFields();
     }
