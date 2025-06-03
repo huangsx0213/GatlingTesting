@@ -11,5 +11,6 @@ public interface IEndpointService {
     void deleteEndpoint(int id) throws ServiceException;
     Endpoint getEndpointById(int id) throws ServiceException;
     Endpoint getEndpointByName(String name) throws ServiceException;
+    Endpoint getEndpointByNameAndEnv(String name, Integer environmentId) throws ServiceException;
     List<Endpoint> getAllEndpoints() throws ServiceException;
 } 

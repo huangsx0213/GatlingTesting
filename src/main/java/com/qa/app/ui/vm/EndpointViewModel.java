@@ -139,6 +139,17 @@ public class EndpointViewModel implements Initializable {
         }
     }
 
+    private boolean isNameEnvDuplicate(String name, Integer envId, Integer excludeId) {
+        for (EndpointItem item : endpointList) {
+            if (item.getName().equals(name)
+                && ((item.getEnvironmentId() == null && envId == null) || (item.getEnvironmentId() != null && item.getEnvironmentId().equals(envId)))
+                && (excludeId == null || item.getId() != excludeId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @FXML
     private void handleAddEndpoint() {
         String name = endpointNameField.getText().trim();
@@ -149,6 +160,12 @@ public class EndpointViewModel implements Initializable {
         if (name.isEmpty() || method == null || url.isEmpty()) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: Name, Method, and URL are required.", MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
+        if (isNameEnvDuplicate(name, envId, null)) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Endpoint name + environment already exists!", MainViewModel.StatusType.ERROR);
             }
             return;
         }
@@ -176,10 +193,25 @@ public class EndpointViewModel implements Initializable {
             }
             return;
         }
+        String name = endpointNameField.getText().trim();
+        String method = methodComboBox.getValue();
+        String url = urlField.getText().trim();
+        Environment env = environmentComboBox.getValue();
+        Integer envId = env != null ? env.getId() : null;
+        if (name.isEmpty() || method == null || url.isEmpty()) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Input Error: Name, Method, and URL are required.", MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
+        if (isNameEnvDuplicate(name, envId, selected.getId())) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Endpoint name + environment already exists!", MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
         try {
-            Environment env = environmentComboBox.getValue();
-            Integer envId = env != null ? env.getId() : null;
-            Endpoint e = new Endpoint(selected.getId(), endpointNameField.getText().trim(), methodComboBox.getValue(), urlField.getText().trim(), envId);
+            Endpoint e = new Endpoint(selected.getId(), name, method, url, envId);
             endpointService.updateEndpoint(e);
             loadEndpoints();
             for (EndpointItem item : endpointList) {
@@ -188,6 +220,7 @@ public class EndpointViewModel implements Initializable {
                     break;
                 }
             }
+            clearFields();
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Endpoint updated successfully.", MainViewModel.StatusType.SUCCESS);
             }

@@ -86,11 +86,12 @@ public class DBUtil {
             // Create endpoints table if it doesn't exist
             String endpointSql = "CREATE TABLE IF NOT EXISTS endpoints ("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                    + " name TEXT NOT NULL UNIQUE,"
+                    + " name TEXT NOT NULL,"
                     + " method TEXT NOT NULL,"
                     + " url TEXT NOT NULL,"
                     + " environment_id INTEGER,"
-                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE"
+                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
+                    + " UNIQUE(name, environment_id)"
                     + ");";
             stmt.execute(endpointSql);
             

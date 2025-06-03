@@ -11,5 +11,6 @@ public interface IEndpointDao {
     void deleteEndpoint(int id) throws SQLException;
     Endpoint getEndpointById(int id) throws SQLException;
     Endpoint getEndpointByName(String name) throws SQLException;
+    Endpoint getEndpointByNameAndEnv(String name, Integer environmentId) throws SQLException;
     List<Endpoint> getAllEndpoints() throws SQLException;
 } 

@@ -90,6 +90,24 @@ public class EndpointDaoImpl implements IEndpointDao {
     }
 
     @Override
+    public Endpoint getEndpointByNameAndEnv(String name, Integer environmentId) throws SQLException {
+        String sql = "SELECT * FROM endpoints WHERE name = ? AND environment_id " + (environmentId == null ? "IS NULL" : "= ?");
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            if (environmentId != null) {
+                pstmt.setInt(2, environmentId);
+            }
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return createFromResultSet(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
     public List<Endpoint> getAllEndpoints() throws SQLException {
         String sql = "SELECT * FROM endpoints ORDER BY id";
         List<Endpoint> list = new ArrayList<>();

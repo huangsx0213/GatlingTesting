@@ -18,8 +18,8 @@ public class EndpointServiceImpl implements IEndpointService {
             if (endpoint == null || endpoint.getName() == null || endpoint.getName().trim().isEmpty()) {
                 throw new ServiceException("Endpoint name is required.");
             }
-            if (dao.getEndpointByName(endpoint.getName()) != null) {
-                throw new ServiceException("Endpoint with this name already exists.");
+            if (dao.getEndpointByNameAndEnv(endpoint.getName(), endpoint.getEnvironmentId()) != null) {
+                throw new ServiceException("Endpoint with this name and environment already exists.");
             }
             dao.addEndpoint(endpoint);
         } catch (SQLException e) {
@@ -32,6 +32,10 @@ public class EndpointServiceImpl implements IEndpointService {
         try {
             if (endpoint == null || endpoint.getId() <= 0) {
                 throw new ServiceException("Endpoint ID is required.");
+            }
+            Endpoint exist = dao.getEndpointByNameAndEnv(endpoint.getName(), endpoint.getEnvironmentId());
+            if (exist != null && exist.getId() != endpoint.getId()) {
+                throw new ServiceException("Endpoint with this name and environment already exists.");
             }
             dao.updateEndpoint(endpoint);
         } catch (SQLException e) {
@@ -70,6 +74,15 @@ public class EndpointServiceImpl implements IEndpointService {
     public List<Endpoint> getAllEndpoints() throws ServiceException {
         try {
             return dao.getAllEndpoints();
+        } catch (SQLException e) {
+            throw new ServiceException("Database error: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public Endpoint getEndpointByNameAndEnv(String name, Integer environmentId) throws ServiceException {
+        try {
+            return dao.getEndpointByNameAndEnv(name, environmentId);
         } catch (SQLException e) {
             throw new ServiceException("Database error: " + e.getMessage(), e);
         }
