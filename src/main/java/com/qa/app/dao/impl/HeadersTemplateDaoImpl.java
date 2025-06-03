@@ -11,16 +11,11 @@ import com.qa.app.util.DBUtil;
 public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
     @Override
     public void addHeadersTemplate(HeadersTemplate template) throws SQLException {
-        String sql = "INSERT INTO headers_templates (name, content, environment_id) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO headers_templates (name, content) VALUES (?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, template.getName());
             pstmt.setString(2, template.getContent());
-            if (template.getEnvironmentId() == null) {
-                pstmt.setNull(3, java.sql.Types.INTEGER);
-            } else {
-                pstmt.setInt(3, template.getEnvironmentId());
-            }
             pstmt.executeUpdate();
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
@@ -32,17 +27,12 @@ public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
 
     @Override
     public void updateHeadersTemplate(HeadersTemplate template) throws SQLException {
-        String sql = "UPDATE headers_templates SET name = ?, content = ?, environment_id = ? WHERE id = ?";
+        String sql = "UPDATE headers_templates SET name = ?, content = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, template.getName());
             pstmt.setString(2, template.getContent());
-            if (template.getEnvironmentId() == null) {
-                pstmt.setNull(3, java.sql.Types.INTEGER);
-            } else {
-                pstmt.setInt(3, template.getEnvironmentId());
-            }
-            pstmt.setInt(4, template.getId());
+            pstmt.setInt(3, template.getId());
             pstmt.executeUpdate();
         }
     }
@@ -105,8 +95,7 @@ public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
         return new HeadersTemplate(
                 rs.getInt("id"),
                 rs.getString("name"),
-                rs.getString("content"),
-                rs.getObject("environment_id") == null ? null : rs.getInt("environment_id")
+                rs.getString("content")
         );
     }
 } 

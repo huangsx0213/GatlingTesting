@@ -66,9 +66,7 @@ public class DBUtil {
             String bodyTemplateSql = "CREATE TABLE IF NOT EXISTS body_templates ("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + " name TEXT NOT NULL UNIQUE,"
-                    + " content TEXT NOT NULL,"
-                    + " environment_id INTEGER,"
-                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE"
+                    + " content TEXT NOT NULL"
                     + ");";
             stmt.execute(bodyTemplateSql);
 
@@ -76,9 +74,7 @@ public class DBUtil {
             String headersTemplateSql = "CREATE TABLE IF NOT EXISTS headers_templates ("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + " name TEXT NOT NULL UNIQUE,"
-                    + " content TEXT NOT NULL,"
-                    + " environment_id INTEGER,"
-                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE"
+                    + " content TEXT NOT NULL"
                     + ");";
             stmt.execute(headersTemplateSql);
 

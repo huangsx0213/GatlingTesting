@@ -11,12 +11,11 @@ import com.qa.app.util.DBUtil;
 public class BodyTemplateDaoImpl implements IBodyTemplateDao {
     @Override
     public void addBodyTemplate(BodyTemplate template) throws SQLException {
-        String sql = "INSERT INTO body_templates (name, content, environment_id) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO body_templates (name, content) VALUES (?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, template.getName());
             pstmt.setString(2, template.getContent());
-            pstmt.setInt(3, template.getEnvironmentId());
             pstmt.executeUpdate();
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
@@ -28,13 +27,12 @@ public class BodyTemplateDaoImpl implements IBodyTemplateDao {
 
     @Override
     public void updateBodyTemplate(BodyTemplate template) throws SQLException {
-        String sql = "UPDATE body_templates SET name = ?, content = ?, environment_id = ? WHERE id = ?";
+        String sql = "UPDATE body_templates SET name = ?, content = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, template.getName());
             pstmt.setString(2, template.getContent());
-            pstmt.setInt(3, template.getEnvironmentId());
-            pstmt.setInt(4, template.getId());
+            pstmt.setInt(3, template.getId());
             pstmt.executeUpdate();
         }
     }
@@ -100,9 +98,6 @@ public class BodyTemplateDaoImpl implements IBodyTemplateDao {
         template.setId(rs.getInt("id"));
         template.setName(rs.getString("name"));
         template.setContent(rs.getString("content"));
-        int envId = 0;
-        try { envId = rs.getInt("environment_id"); } catch (SQLException e) { /* ignore if not exist */ }
-        template.setEnvironmentId(envId);
         return template;
     }
 } 

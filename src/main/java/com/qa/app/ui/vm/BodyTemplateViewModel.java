@@ -10,12 +10,9 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 import com.qa.app.model.BodyTemplate;
-import com.qa.app.model.Environment;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IBodyTemplateService;
-import com.qa.app.service.api.IEnvironmentService;
 import com.qa.app.service.impl.BodyTemplateServiceImpl;
-import com.qa.app.service.impl.EnvironmentServiceImpl;
 
 public class BodyTemplateViewModel implements Initializable {
     @FXML
@@ -42,16 +39,10 @@ public class BodyTemplateViewModel implements Initializable {
     private Button formatButton;
     @FXML
     private Button validateButton;
-    @FXML
-    private ComboBox<Environment> environmentComboBox;
-    @FXML
-    private TableColumn<BodyTemplateItem, String> environmentColumn;
 
     private final ObservableList<BodyTemplateItem> bodyTemplateList = FXCollections.observableArrayList();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
-    private final IEnvironmentService environmentService = new EnvironmentServiceImpl();
     private MainViewModel mainViewModel;
-    private ObservableList<Environment> environmentList = FXCollections.observableArrayList();
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -63,49 +54,13 @@ public class BodyTemplateViewModel implements Initializable {
         // 初始化格式下拉框
         bodyFormatComboBox.getItems().addAll("JSON", "XML", "TEXT");
         bodyFormatComboBox.getSelectionModel().selectFirst();
-        try {
-            environmentList.setAll(environmentService.findAllEnvironments());
-        } catch (ServiceException e) {
-            environmentList.clear();
-        }
-        environmentComboBox.setItems(environmentList);
-        environmentComboBox.setConverter(new javafx.util.StringConverter<Environment>() {
-            @Override
-            public String toString(Environment env) {
-                return env == null ? "" : env.getName();
-            }
-            @Override
-            public Environment fromString(String s) {
-                return environmentList.stream().filter(e -> e.getName().equals(s)).findFirst().orElse(null);
-            }
-        });
-        environmentComboBox.setPromptText("Select Environment");
-        environmentComboBox.setButtonCell(new ListCell<>() {
-            @Override
-            protected void updateItem(Environment item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(environmentComboBox.getPromptText());
-                } else {
-                    setText(item.getName());
-                }
-            }
-        });
-        environmentComboBox.getSelectionModel().clearSelection();
-        environmentColumn.setCellValueFactory(cellData -> {
-            int envId = cellData.getValue().getEnvironmentId();
-            String envName = "";
-            Environment env = environmentList.stream().filter(e -> e.getId() == envId).findFirst().orElse(null);
-            if (env != null) envName = env.getName();
-            return new javafx.beans.property.SimpleStringProperty(envName);
-        });
     }
 
     private void loadBodyTemplates() {
         bodyTemplateList.clear();
         try {
             for (BodyTemplate t : bodyTemplateService.findAllBodyTemplates()) {
-                bodyTemplateList.add(new BodyTemplateItem(t.getId(), t.getName(), t.getContent(), t.getEnvironmentId()));
+                bodyTemplateList.add(new BodyTemplateItem(t.getId(), t.getName(), t.getContent()));
             }
         } catch (ServiceException e) {
             // 可加错误提示
@@ -116,9 +71,6 @@ public class BodyTemplateViewModel implements Initializable {
         if (item != null) {
             bodyTemplateNameField.setText(item.getName());
             bodyTemplateContentArea.setText(item.getContent());
-            // 设置环境下拉
-            Environment env = environmentList.stream().filter(e -> e.getId() == item.getEnvironmentId()).findFirst().orElse(null);
-            environmentComboBox.setValue(env);
         } else {
             clearFields();
         }
@@ -128,8 +80,6 @@ public class BodyTemplateViewModel implements Initializable {
     private void handleAddBodyTemplate() {
         String name = bodyTemplateNameField.getText().trim();
         String content = bodyTemplateContentArea.getText().trim();
-        Environment env = environmentComboBox.getValue();
-        Integer envId = env != null ? env.getId() : null;
         if (name.isEmpty() || content.isEmpty()) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: Name and Content are required.", MainViewModel.StatusType.ERROR);
@@ -137,7 +87,7 @@ public class BodyTemplateViewModel implements Initializable {
             return;
         }
         try {
-            BodyTemplate t = envId != null ? new BodyTemplate(name, content, envId) : new BodyTemplate(name, content);
+            BodyTemplate t = new BodyTemplate(name, content);
             bodyTemplateService.createBodyTemplate(t);
             loadBodyTemplates();
             clearFields();
@@ -161,10 +111,7 @@ public class BodyTemplateViewModel implements Initializable {
             return;
         }
         try {
-            Environment env = environmentComboBox.getValue();
-            Integer envId = env != null ? env.getId() : null;
-            BodyTemplate t = envId != null ? new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), bodyTemplateContentArea.getText().trim(), envId)
-                                           : new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), bodyTemplateContentArea.getText().trim());
+            BodyTemplate t = new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), bodyTemplateContentArea.getText().trim());
             bodyTemplateService.updateBodyTemplate(t);
             loadBodyTemplates();
             for (BodyTemplateItem item : bodyTemplateList) {
@@ -303,8 +250,7 @@ public class BodyTemplateViewModel implements Initializable {
     private void clearFields() {
         bodyTemplateNameField.clear();
         bodyTemplateContentArea.clear();
-        environmentComboBox.getSelectionModel().clearSelection();
-        environmentComboBox.setValue(null);
+        bodyFormatComboBox.getSelectionModel().selectFirst();
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -313,24 +259,25 @@ public class BodyTemplateViewModel implements Initializable {
 
     public void refresh() {
         loadBodyTemplates();
-        clearFields();
     }
 
-    // 内部类用于表格项
     public static class BodyTemplateItem {
         private final int id;
         private final javafx.beans.property.SimpleStringProperty name;
         private final javafx.beans.property.SimpleStringProperty content;
-        private final int environmentId;
-        public BodyTemplateItem(int id, String name, String content, int environmentId) {
+
+        public BodyTemplateItem(int id, String name, String content) {
             this.id = id;
             this.name = new javafx.beans.property.SimpleStringProperty(name);
             this.content = new javafx.beans.property.SimpleStringProperty(content);
-            this.environmentId = environmentId;
         }
-        public BodyTemplateItem(String name, String content, int environmentId) {
-            this(0, name, content, environmentId);
+
+        public BodyTemplateItem(String name, String content) {
+            this.id = 0; // Or handle as needed, maybe throw exception or set a default
+            this.name = new javafx.beans.property.SimpleStringProperty(name);
+            this.content = new javafx.beans.property.SimpleStringProperty(content);
         }
+
         public int getId() { return id; }
         public String getName() { return name.get(); }
         public void setName(String n) { name.set(n); }
@@ -338,6 +285,5 @@ public class BodyTemplateViewModel implements Initializable {
         public String getContent() { return content.get(); }
         public void setContent(String c) { content.set(c); }
         public javafx.beans.property.StringProperty contentProperty() { return content; }
-        public int getEnvironmentId() { return environmentId; }
     }
 } 

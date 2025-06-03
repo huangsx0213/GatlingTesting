@@ -19,16 +19,13 @@
                 </columnConstraints>
                 <rowConstraints>
                     <RowConstraints minHeight="40.0"/>
-                    <RowConstraints minHeight="40.0"/>
                     <RowConstraints minHeight="120.0"/>
                 </rowConstraints>
                 <children>
                     <Label text="Template Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
                     <TextField fx:id="headersTemplateNameField" promptText="Template Name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
-                    <Label text="Environment:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                    <ComboBox fx:id="environmentComboBox" promptText="Select Environment" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
-                    <Label text="Headers Content:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                    <TextArea fx:id="headersTemplateContentArea" promptText="Headers Template Content" prefRowCount="6" GridPane.rowIndex="2" GridPane.columnIndex="1" VBox.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"/>
+                    <Label text="Headers Content:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                    <TextArea fx:id="headersTemplateContentArea" promptText="Headers Template Content" prefRowCount="6" GridPane.rowIndex="1" GridPane.columnIndex="1" VBox.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"/>
                 </children>
             </GridPane>
             <HBox alignment="CENTER_LEFT" spacing="10.0">
@@ -43,7 +40,6 @@
             <Label text="Template List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
             <TableView fx:id="headersTemplateTable" prefHeight="0" VBox.vgrow="ALWAYS" styleClass="table-view">
                 <columns>
-                    <TableColumn fx:id="environmentColumn" prefWidth="180.0" text="Environment"/>
                     <TableColumn fx:id="headersTemplateNameColumn" prefWidth="200.0" text="Template Name"/>
                     <TableColumn fx:id="headersTemplateContentColumn" prefWidth="800.0" text="Headers Content"/>
                 </columns>
