@@ -113,12 +113,7 @@ public class HeadersTemplateViewModel implements Initializable {
             HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), headersTemplateContentArea.getText().trim());
             headersTemplateService.updateHeadersTemplate(t);
             loadHeadersTemplates();
-            for (HeadersTemplateItem item : headersTemplateList) {
-                if (item.getId() == t.getId()) {
-                    headersTemplateTable.getSelectionModel().select(item);
-                    break;
-                }
-            }
+            clearFields();
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Template updated successfully.", MainViewModel.StatusType.SUCCESS);
             }
@@ -155,7 +150,6 @@ public class HeadersTemplateViewModel implements Initializable {
     @FXML
     private void handleClearHeadersTemplateForm() {
         clearFields();
-        headersTemplateTable.getSelectionModel().clearSelection();
     }
 
     @FXML
@@ -226,6 +220,7 @@ public class HeadersTemplateViewModel implements Initializable {
     private void clearFields() {
         headersTemplateNameField.clear();
         headersTemplateContentArea.clear();
+        headersTemplateTable.getSelectionModel().clearSelection();
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {

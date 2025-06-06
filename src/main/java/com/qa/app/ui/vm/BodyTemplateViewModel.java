@@ -114,12 +114,7 @@ public class BodyTemplateViewModel implements Initializable {
             BodyTemplate t = new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), bodyTemplateContentArea.getText().trim());
             bodyTemplateService.updateBodyTemplate(t);
             loadBodyTemplates();
-            for (BodyTemplateItem item : bodyTemplateList) {
-                if (item.getId() == t.getId()) {
-                    bodyTemplateTable.getSelectionModel().select(item);
-                    break;
-                }
-            }
+            clearFields();
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Template updated successfully.", MainViewModel.StatusType.SUCCESS);
             }
@@ -156,7 +151,6 @@ public class BodyTemplateViewModel implements Initializable {
     @FXML
     private void handleClearBodyTemplateForm() {
         clearFields();
-        bodyTemplateTable.getSelectionModel().clearSelection();
     }
 
     @FXML
@@ -251,6 +245,7 @@ public class BodyTemplateViewModel implements Initializable {
         bodyTemplateNameField.clear();
         bodyTemplateContentArea.clear();
         bodyFormatComboBox.getSelectionModel().selectFirst();
+        bodyTemplateTable.getSelectionModel().clearSelection();
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {

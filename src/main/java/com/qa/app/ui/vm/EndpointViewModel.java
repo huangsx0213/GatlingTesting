@@ -257,7 +257,6 @@ public class EndpointViewModel implements Initializable {
     @FXML
     private void handleClearEndpointForm() {
         clearFields();
-        endpointTable.getSelectionModel().clearSelection();
     }
 
     private void clearFields() {
@@ -267,6 +266,7 @@ public class EndpointViewModel implements Initializable {
         urlField.clear();
         environmentComboBox.getSelectionModel().clearSelection();
         environmentComboBox.setValue(null);
+        endpointTable.getSelectionModel().clearSelection();
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
