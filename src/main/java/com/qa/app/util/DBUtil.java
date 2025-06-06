@@ -94,6 +94,14 @@ public class DBUtil {
                     + " UNIQUE(name, environment_id)"
                     + ");";
             stmt.execute(endpointSql);
+
+            // Create project table if it doesn't exist
+            String projectSql = "CREATE TABLE IF NOT EXISTS project ("
+                    + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + " name TEXT NOT NULL UNIQUE,"
+                    + " description TEXT"
+                    + ");";
+            stmt.execute(projectSql);
             
             System.out.println("Database schema initialized. All tables are up to date.");
         } catch (SQLException e) {

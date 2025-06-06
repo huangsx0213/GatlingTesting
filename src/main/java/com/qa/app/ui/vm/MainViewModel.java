@@ -39,7 +39,8 @@ public class MainViewModel implements Initializable {
         "Endpoint Management",
         "Headers Template Management",
         "Body Template Management",
-        "Environment Management"
+        "Environment Management",
+        "Project Management"
     );
     private final Map<String, String> fxmlMapping = new HashMap<>();
     private final Map<String, Node> loadedTabs = new HashMap<>();
@@ -59,6 +60,7 @@ public class MainViewModel implements Initializable {
         fxmlMapping.put("Headers Template Management", "/com/qa/app/ui/view/headers_template_view.fxml");
         fxmlMapping.put("Body Template Management", "/com/qa/app/ui/view/body_template_view.fxml");
         fxmlMapping.put("Environment Management", "/com/qa/app/ui/view/environment_view.fxml");
+        fxmlMapping.put("Project Management", "/com/qa/app/ui/view/project_view.fxml");
         // Removed System Settings mapping
 
         navigationList.setItems(navItems); // navItems is already initialized with "Gatling Test Management", "Body Template Management", "Headers Template Management"
@@ -117,6 +119,8 @@ public class MainViewModel implements Initializable {
                     ((EnvironmentViewModel) controller).refresh();
                 } else if (controller instanceof EndpointViewModel) {
                     ((EndpointViewModel) controller).refresh();
+                } else if (controller instanceof ProjectViewModel) {
+                    ((ProjectViewModel) controller).setMainViewModel(this);
                 }
                 // Gatling tab is not closable and always in the first position
                 if (tabName.equals("Gatling Test Management")) {
@@ -150,6 +154,8 @@ public class MainViewModel implements Initializable {
                         ((EnvironmentViewModel) controller).setMainViewModel(this);
                     } else if (controller instanceof EndpointViewModel) {
                         ((EndpointViewModel) controller).setMainViewModel(this);
+                    } else if (controller instanceof ProjectViewModel) {
+                        ((ProjectViewModel) controller).setMainViewModel(this);
                     }
                     // let Node find controller
                     contentNode.getProperties().put("controller", controller);
@@ -187,6 +193,8 @@ public class MainViewModel implements Initializable {
                     ((EnvironmentViewModel) controller).refresh();
                 } else if (controller instanceof EndpointViewModel) {
                     ((EndpointViewModel) controller).refresh();
+                } else if (controller instanceof ProjectViewModel) {
+                    ((ProjectViewModel) controller).refresh();
                 }
 
             } catch (IOException e) {
