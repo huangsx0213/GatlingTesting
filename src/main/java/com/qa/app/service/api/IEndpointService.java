@@ -13,4 +13,5 @@ public interface IEndpointService {
     Endpoint getEndpointByName(String name) throws ServiceException;
     Endpoint getEndpointByNameAndEnv(String name, Integer environmentId) throws ServiceException;
     List<Endpoint> getAllEndpoints() throws ServiceException;
+    List<Endpoint> getEndpointsByProjectId(Integer projectId) throws ServiceException;
 } 

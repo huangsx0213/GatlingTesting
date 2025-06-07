@@ -13,6 +13,7 @@ import com.qa.app.model.BodyTemplate;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.impl.BodyTemplateServiceImpl;
+import com.qa.app.util.AppConfig;
 
 public class BodyTemplateViewModel implements Initializable {
     @FXML
@@ -43,6 +44,7 @@ public class BodyTemplateViewModel implements Initializable {
     private final ObservableList<BodyTemplateItem> bodyTemplateList = FXCollections.observableArrayList();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
     private MainViewModel mainViewModel;
+    private Integer projectId;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -58,12 +60,15 @@ public class BodyTemplateViewModel implements Initializable {
 
     private void loadBodyTemplates() {
         bodyTemplateList.clear();
-        try {
-            for (BodyTemplate t : bodyTemplateService.findAllBodyTemplates()) {
-                bodyTemplateList.add(new BodyTemplateItem(t.getId(), t.getName(), t.getContent()));
+        Integer projectId = AppConfig.getCurrentProjectId();
+        if (projectId != null) {
+            try {
+                for (BodyTemplate t : bodyTemplateService.findBodyTemplatesByProjectId(projectId)) {
+                    bodyTemplateList.add(new BodyTemplateItem(t.getId(), t.getName(), t.getContent(), t.getProjectId()));
+                }
+            } catch (ServiceException e) {
+                // 可加错误提示
             }
-        } catch (ServiceException e) {
-            // 可加错误提示
         }
     }
 
@@ -87,7 +92,7 @@ public class BodyTemplateViewModel implements Initializable {
             return;
         }
         try {
-            BodyTemplate t = new BodyTemplate(name, content);
+            BodyTemplate t = new BodyTemplate(name, content, AppConfig.getCurrentProjectId());
             bodyTemplateService.createBodyTemplate(t);
             loadBodyTemplates();
             clearFields();
@@ -111,7 +116,7 @@ public class BodyTemplateViewModel implements Initializable {
             return;
         }
         try {
-            BodyTemplate t = new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), bodyTemplateContentArea.getText().trim());
+            BodyTemplate t = new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), bodyTemplateContentArea.getText().trim(), AppConfig.getCurrentProjectId());
             bodyTemplateService.updateBodyTemplate(t);
             loadBodyTemplates();
             clearFields();
@@ -256,21 +261,32 @@ public class BodyTemplateViewModel implements Initializable {
         loadBodyTemplates();
     }
 
+    public Integer getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(Integer projectId) {
+        this.projectId = projectId;
+    }
+
     public static class BodyTemplateItem {
         private final int id;
         private final javafx.beans.property.SimpleStringProperty name;
         private final javafx.beans.property.SimpleStringProperty content;
+        private final Integer projectId;
 
-        public BodyTemplateItem(int id, String name, String content) {
+        public BodyTemplateItem(int id, String name, String content, Integer projectId) {
             this.id = id;
             this.name = new javafx.beans.property.SimpleStringProperty(name);
             this.content = new javafx.beans.property.SimpleStringProperty(content);
+            this.projectId = projectId;
         }
 
         public BodyTemplateItem(String name, String content) {
             this.id = 0; // Or handle as needed, maybe throw exception or set a default
             this.name = new javafx.beans.property.SimpleStringProperty(name);
             this.content = new javafx.beans.property.SimpleStringProperty(content);
+            this.projectId = null;
         }
 
         public int getId() { return id; }
@@ -280,5 +296,6 @@ public class BodyTemplateViewModel implements Initializable {
         public String getContent() { return content.get(); }
         public void setContent(String c) { content.set(c); }
         public javafx.beans.property.StringProperty contentProperty() { return content; }
+        public Integer getProjectId() { return projectId; }
     }
 } 

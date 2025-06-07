@@ -87,4 +87,13 @@ public class BodyTemplateServiceImpl implements IBodyTemplateService {
             throw new ServiceException("Database error while deleting template: " + e.getMessage(), e);
         }
     }
+
+    @Override
+    public List<BodyTemplate> findBodyTemplatesByProjectId(Integer projectId) throws ServiceException {
+        try {
+            return templateDao.getBodyTemplatesByProjectId(projectId);
+        } catch (Exception e) {
+            throw new ServiceException("Database error while retrieving templates by projectId: " + e.getMessage(), e);
+        }
+    }
 } 

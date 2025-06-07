@@ -87,4 +87,13 @@ public class EndpointServiceImpl implements IEndpointService {
             throw new ServiceException("Database error: " + e.getMessage(), e);
         }
     }
+
+    @Override
+    public List<Endpoint> getEndpointsByProjectId(Integer projectId) throws ServiceException {
+        try {
+            return dao.getEndpointsByProjectId(projectId);
+        } catch (SQLException e) {
+            throw new ServiceException("Database error: " + e.getMessage(), e);
+        }
+    }
 } 

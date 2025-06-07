@@ -11,4 +11,5 @@ public interface IEnvironmentDao {
     Environment getEnvironmentById(int id) throws SQLException;
     Environment getEnvironmentByName(String name) throws SQLException;
     List<Environment> getAllEnvironments() throws SQLException;
+    List<Environment> getEnvironmentsByProjectId(Integer projectId) throws SQLException;
 } 

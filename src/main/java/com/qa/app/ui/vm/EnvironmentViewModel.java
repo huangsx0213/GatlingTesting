@@ -72,7 +72,7 @@ public class EnvironmentViewModel implements Initializable {
             }
             return;
         }
-        Environment environment = new Environment(name, description);
+        Environment environment = new Environment(name, description, com.qa.app.util.AppConfig.getCurrentProjectId());
         try {
             environmentService.createEnvironment(environment);
             loadEnvironments();

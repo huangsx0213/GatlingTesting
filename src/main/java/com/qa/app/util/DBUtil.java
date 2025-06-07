@@ -54,7 +54,9 @@ public class DBUtil {
                     + " headers_template_id INTEGER,"
                     + " body_template_id INTEGER,"
                     + " headers_dynamic_variables TEXT,"
-                    + " body_dynamic_variables TEXT"
+                    + " body_dynamic_variables TEXT,"
+                    + " project_id INTEGER,"
+                    + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
             stmt.execute(testsSql);
 
@@ -63,7 +65,9 @@ public class DBUtil {
             String bodyTemplateSql = "CREATE TABLE IF NOT EXISTS body_templates ("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + " name TEXT NOT NULL UNIQUE,"
-                    + " content TEXT NOT NULL"
+                    + " content TEXT NOT NULL,"
+                    + " project_id INTEGER,"
+                    + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
             stmt.execute(bodyTemplateSql);
 
@@ -71,7 +75,9 @@ public class DBUtil {
             String headersTemplateSql = "CREATE TABLE IF NOT EXISTS headers_templates ("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + " name TEXT NOT NULL UNIQUE,"
-                    + " content TEXT NOT NULL"
+                    + " content TEXT NOT NULL,"
+                    + " project_id INTEGER,"
+                    + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
             stmt.execute(headersTemplateSql);
 
@@ -79,7 +85,9 @@ public class DBUtil {
             String environmentSql = "CREATE TABLE IF NOT EXISTS environments ("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + " name TEXT NOT NULL UNIQUE,"
-                    + " description TEXT"
+                    + " description TEXT,"
+                    + " project_id INTEGER,"
+                    + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
             stmt.execute(environmentSql);
 
@@ -90,7 +98,9 @@ public class DBUtil {
                     + " method TEXT NOT NULL,"
                     + " url TEXT NOT NULL,"
                     + " environment_id INTEGER,"
+                    + " project_id INTEGER,"
                     + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
+                    + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
                     + " UNIQUE(name, environment_id)"
                     + ");";
             stmt.execute(endpointSql);

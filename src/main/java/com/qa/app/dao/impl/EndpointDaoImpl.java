@@ -11,7 +11,7 @@ import com.qa.app.util.DBUtil;
 public class EndpointDaoImpl implements IEndpointDao {
     @Override
     public void addEndpoint(Endpoint endpoint) throws SQLException {
-        String sql = "INSERT INTO endpoints (name, method, url, environment_id) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO endpoints (name, method, url, environment_id, project_id) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, endpoint.getName());
@@ -21,6 +21,11 @@ public class EndpointDaoImpl implements IEndpointDao {
                 pstmt.setNull(4, java.sql.Types.INTEGER);
             } else {
                 pstmt.setInt(4, endpoint.getEnvironmentId());
+            }
+            if (endpoint.getProjectId() != null) {
+                pstmt.setInt(5, endpoint.getProjectId());
+            } else {
+                pstmt.setNull(5, java.sql.Types.INTEGER);
             }
             pstmt.executeUpdate();
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
@@ -33,7 +38,7 @@ public class EndpointDaoImpl implements IEndpointDao {
 
     @Override
     public void updateEndpoint(Endpoint endpoint) throws SQLException {
-        String sql = "UPDATE endpoints SET name = ?, method = ?, url = ?, environment_id = ? WHERE id = ?";
+        String sql = "UPDATE endpoints SET name = ?, method = ?, url = ?, environment_id = ?, project_id = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, endpoint.getName());
@@ -44,7 +49,12 @@ public class EndpointDaoImpl implements IEndpointDao {
             } else {
                 pstmt.setInt(4, endpoint.getEnvironmentId());
             }
-            pstmt.setInt(5, endpoint.getId());
+            if (endpoint.getProjectId() != null) {
+                pstmt.setInt(5, endpoint.getProjectId());
+            } else {
+                pstmt.setNull(5, java.sql.Types.INTEGER);
+            }
+            pstmt.setInt(6, endpoint.getId());
             pstmt.executeUpdate();
         }
     }
@@ -91,7 +101,7 @@ public class EndpointDaoImpl implements IEndpointDao {
 
     @Override
     public Endpoint getEndpointByNameAndEnv(String name, Integer environmentId) throws SQLException {
-        String sql = "SELECT * FROM endpoints WHERE name = ? AND environment_id " + (environmentId == null ? "IS NULL" : "= ?");
+        String sql = "SELECT * FROM endpoints WHERE name = ? AND environment_id " + (environmentId == null ? "IS NULL" : "= ?") ;
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, name);
@@ -121,13 +131,29 @@ public class EndpointDaoImpl implements IEndpointDao {
         return list;
     }
 
+    public List<Endpoint> getEndpointsByProjectId(Integer projectId) throws SQLException {
+        String sql = "SELECT * FROM endpoints WHERE project_id = ? ORDER BY id";
+        List<Endpoint> list = new ArrayList<>();
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, projectId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    list.add(createFromResultSet(rs));
+                }
+            }
+        }
+        return list;
+    }
+
     private Endpoint createFromResultSet(ResultSet rs) throws SQLException {
         return new Endpoint(
                 rs.getInt("id"),
                 rs.getString("name"),
                 rs.getString("method"),
                 rs.getString("url"),
-                rs.getObject("environment_id") == null ? null : rs.getInt("environment_id")
+                rs.getObject("environment_id") == null ? null : rs.getInt("environment_id"),
+                rs.getObject("project_id") == null ? null : rs.getInt("project_id")
         );
     }
 } 

@@ -9,19 +9,26 @@ public class BodyTemplate {
     private final IntegerProperty id = new SimpleIntegerProperty();
     private final StringProperty name = new SimpleStringProperty();
     private final StringProperty content = new SimpleStringProperty();
+    private final IntegerProperty projectId = new SimpleIntegerProperty();
 
     public BodyTemplate() {
     }
 
-    public BodyTemplate(String name, String content) {
+    public BodyTemplate(String name, String content, Integer projectId) {
         this.name.set(name);
         this.content.set(content);
+        if (projectId != null) {
+            this.projectId.set(projectId);
+        }
     }
 
-    public BodyTemplate(int id, String name, String content) {
+    public BodyTemplate(int id, String name, String content, Integer projectId) {
         this.id.set(id);
         this.name.set(name);
         this.content.set(content);
+        if (projectId != null) {
+            this.projectId.set(projectId);
+        }
     }
 
     public int getId() {
@@ -58,6 +65,20 @@ public class BodyTemplate {
 
     public StringProperty contentProperty() {
         return content;
+    }
+
+    public Integer getProjectId() {
+        return projectId.get();
+    }
+
+    public void setProjectId(Integer projectId) {
+        if (projectId != null) {
+            this.projectId.set(projectId);
+        }
+    }
+
+    public IntegerProperty projectIdProperty() {
+        return projectId;
     }
 
     @Override

@@ -74,4 +74,13 @@ public class HeadersTemplateServiceImpl implements IHeadersTemplateService {
             throw new ServiceException("Database error: " + e.getMessage(), e);
         }
     }
+
+    @Override
+    public List<HeadersTemplate> getHeadersTemplatesByProjectId(Integer projectId) throws ServiceException {
+        try {
+            return dao.getHeadersTemplatesByProjectId(projectId);
+        } catch (SQLException e) {
+            throw new ServiceException("Database error: " + e.getMessage(), e);
+        }
+    }
 } 

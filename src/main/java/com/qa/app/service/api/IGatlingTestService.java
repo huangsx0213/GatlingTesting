@@ -16,4 +16,5 @@ public interface IGatlingTestService {
     void toggleTestRunStatus(int id) throws ServiceException;
     void runTest(GatlingTest test) throws ServiceException;
     void runTestSuite(String suite) throws ServiceException;
+    List<GatlingTest> findTestsByProjectId(Integer projectId) throws ServiceException;
 }

@@ -12,4 +12,5 @@ public interface IHeadersTemplateService {
     HeadersTemplate getHeadersTemplateById(int id) throws ServiceException;
     HeadersTemplate getHeadersTemplateByName(String name) throws ServiceException;
     List<HeadersTemplate> getAllHeadersTemplates() throws ServiceException;
+    List<HeadersTemplate> getHeadersTemplatesByProjectId(Integer projectId) throws ServiceException;
 } 

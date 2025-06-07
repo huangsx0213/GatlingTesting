@@ -23,19 +23,23 @@ public class GatlingTest {
     private final IntegerProperty bodyTemplateId = new SimpleIntegerProperty();
     private final IntegerProperty headersTemplateId = new SimpleIntegerProperty();
     private final StringProperty endpointName = new SimpleStringProperty();
+    private final IntegerProperty projectId = new SimpleIntegerProperty();
     private Map<String, String> dynamicVariables = new HashMap<>();
     private Map<String, String> headersDynamicVariables = new HashMap<>();
 
     public GatlingTest() {
     }
 
-    public GatlingTest(String suite, String tcid, String descriptions, String endpointName) {
+    public GatlingTest(String suite, String tcid, String descriptions, String endpointName, Integer projectId) {
         this.suite.set(suite == null ? "" : suite);
         this.tcid.set(tcid);
         this.descriptions.set(descriptions);
         this.endpointName.set(endpointName);
         this.isEnabled.set(false);
         this.waitTime.set(0);
+        if (projectId != null) {
+            this.projectId.set(projectId);
+        }
     }
 
     public GatlingTest(int id, boolean isEnabled, String suite, String tcid, String descriptions,
@@ -136,6 +140,18 @@ public class GatlingTest {
     public String getEndpointName() { return endpointName.get(); }
     public void setEndpointName(String endpointName) { this.endpointName.set(endpointName); }
     public StringProperty endpointNameProperty() { return endpointName; }
+
+    public Integer getProjectId() {
+        return projectId.get();
+    }
+    public void setProjectId(Integer projectId) {
+        if (projectId != null) {
+            this.projectId.set(projectId);
+        }
+    }
+    public IntegerProperty projectIdProperty() {
+        return projectId;
+    }
 
     @Override
     public String toString() {

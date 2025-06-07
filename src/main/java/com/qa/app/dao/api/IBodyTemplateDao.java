@@ -12,4 +12,5 @@ public interface IBodyTemplateDao {
     List<BodyTemplate> getAllBodyTemplates() throws SQLException;
     void updateBodyTemplate(BodyTemplate template) throws SQLException;
     void deleteBodyTemplate(int id) throws SQLException;
+    List<BodyTemplate> getBodyTemplatesByProjectId(Integer projectId) throws Exception;
 } 

@@ -9,6 +9,7 @@ public interface IEnvironmentService {
     Environment findEnvironmentById(int id) throws ServiceException;
     Environment findEnvironmentByName(String name) throws ServiceException;
     List<Environment> findAllEnvironments() throws ServiceException;
+    List<Environment> findEnvironmentsByProjectId(Integer projectId) throws ServiceException;
     void updateEnvironment(Environment environment) throws ServiceException;
     void deleteEnvironment(int id) throws ServiceException;
 } 

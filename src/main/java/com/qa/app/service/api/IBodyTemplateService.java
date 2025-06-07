@@ -12,4 +12,5 @@ public interface IBodyTemplateService {
     List<BodyTemplate> findAllBodyTemplates() throws ServiceException;
     void updateBodyTemplate(BodyTemplate template) throws ServiceException;
     void deleteBodyTemplate(int id) throws ServiceException;
+    List<BodyTemplate> findBodyTemplatesByProjectId(Integer projectId) throws ServiceException;
 } 

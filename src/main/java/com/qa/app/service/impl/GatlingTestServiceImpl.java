@@ -160,4 +160,13 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             throw new ServiceException("Database error while running test suite: " + e.getMessage(), e);
         }
     }
+
+    @Override
+    public List<GatlingTest> findTestsByProjectId(Integer projectId) throws ServiceException {
+        try {
+            return testDao.getTestsByProjectId(projectId);
+        } catch (SQLException e) {
+            throw new ServiceException("Database error while retrieving tests by projectId: " + e.getMessage(), e);
+        }
+    }
 }

@@ -16,6 +16,7 @@ import com.qa.app.service.api.IEndpointService;
 import com.qa.app.service.api.IEnvironmentService;
 import com.qa.app.service.impl.EndpointServiceImpl;
 import com.qa.app.service.impl.EnvironmentServiceImpl;
+import com.qa.app.util.AppConfig;
 
 public class EndpointViewModel implements Initializable {
     @FXML
@@ -114,12 +115,15 @@ public class EndpointViewModel implements Initializable {
 
     private void loadEndpoints() {
         endpointList.clear();
-        try {
-            for (Endpoint e : endpointService.getAllEndpoints()) {
-                endpointList.add(new EndpointItem(e.getId(), e.getName(), e.getMethod(), e.getUrl(), e.getEnvironmentId()));
+        Integer projectId = AppConfig.getCurrentProjectId();
+        if (projectId != null) {
+            try {
+                for (Endpoint e : endpointService.getEndpointsByProjectId(projectId)) {
+                    endpointList.add(new EndpointItem(e.getId(), e.getName(), e.getMethod(), e.getUrl(), e.getEnvironmentId()));
+                }
+            } catch (ServiceException e) {
+                // 可加错误提示
             }
-        } catch (ServiceException e) {
-            // 可加错误提示
         }
     }
 
@@ -170,7 +174,7 @@ public class EndpointViewModel implements Initializable {
             return;
         }
         try {
-            Endpoint e = new Endpoint(name, method, url, envId);
+            Endpoint e = new Endpoint(name, method, url, envId, AppConfig.getCurrentProjectId());
             endpointService.addEndpoint(e);
             loadEndpoints();
             clearFields();
@@ -211,7 +215,7 @@ public class EndpointViewModel implements Initializable {
             return;
         }
         try {
-            Endpoint e = new Endpoint(selected.getId(), name, method, url, envId);
+            Endpoint e = new Endpoint(selected.getId(), name, method, url, envId, AppConfig.getCurrentProjectId());
             endpointService.updateEndpoint(e);
             loadEndpoints();
             for (EndpointItem item : endpointList) {

@@ -525,7 +525,10 @@ public class GatlingTestViewModel implements Initializable {
 
     private void loadTests() {
         try {
-            testList.setAll(testService.findAllTests());
+            Integer projectId = AppConfig.getCurrentProjectId();
+            if (projectId != null) {
+                testList.setAll(testService.findTestsByProjectId(projectId));
+            }
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to load tests: " + e.getMessage(), MainViewModel.StatusType.ERROR);
@@ -706,7 +709,7 @@ public class GatlingTestViewModel implements Initializable {
             }
             return;
         }
-        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpointName);
+        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpointName, AppConfig.getCurrentProjectId());
         newTest.setEnabled(isEnabledCheckBox.isSelected());
         newTest.setConditions(serializeConditions());
         newTest.setExpResult(expResultArea.getText());
@@ -726,6 +729,7 @@ public class GatlingTestViewModel implements Initializable {
         Map<String, String> headersVars = new HashMap<>();
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         newTest.setHeadersDynamicVariables(headersVars);
+        newTest.setProjectId(AppConfig.getCurrentProjectId());
         // new suite auto-add to dropdown
         if (suite != null && !suite.isEmpty() && !suiteComboBox.getItems().contains(suite)) {
             suiteComboBox.getItems().add(suite);
@@ -791,6 +795,7 @@ public class GatlingTestViewModel implements Initializable {
         Map<String, String> headersVars = new HashMap<>();
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         selectedTest.setHeadersDynamicVariables(headersVars);
+        selectedTest.setProjectId(AppConfig.getCurrentProjectId());
         // new suite auto-add to dropdown
         if (suite != null && !suite.isEmpty() && !suiteComboBox.getItems().contains(suite)) {
             suiteComboBox.getItems().add(suite);

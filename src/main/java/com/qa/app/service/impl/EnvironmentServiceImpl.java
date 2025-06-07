@@ -86,4 +86,13 @@ public class EnvironmentServiceImpl implements IEnvironmentService {
             throw new ServiceException("Database error while deleting environment: " + e.getMessage(), e);
         }
     }
+
+    @Override
+    public List<Environment> findEnvironmentsByProjectId(Integer projectId) throws ServiceException {
+        try {
+            return environmentDao.getEnvironmentsByProjectId(projectId);
+        } catch (SQLException e) {
+            throw new ServiceException("Database error while retrieving environments by projectId: " + e.getMessage(), e);
+        }
+    }
 } 

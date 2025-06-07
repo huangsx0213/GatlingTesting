@@ -18,6 +18,8 @@ import com.qa.app.service.impl.HeadersTemplateServiceImpl;
 
 import org.yaml.snakeyaml.DumperOptions;
 
+import com.qa.app.util.AppConfig;
+
 public class HeadersTemplateViewModel implements Initializable {
     @FXML
     private TextField headersTemplateNameField;
@@ -57,12 +59,15 @@ public class HeadersTemplateViewModel implements Initializable {
 
     private void loadHeadersTemplates() {
         headersTemplateList.clear();
-        try {
-            for (HeadersTemplate t : headersTemplateService.getAllHeadersTemplates()) {
-                headersTemplateList.add(new HeadersTemplateItem(t.getId(), t.getName(), t.getContent()));
+        Integer projectId = AppConfig.getCurrentProjectId();
+        if (projectId != null) {
+            try {
+                for (HeadersTemplate t : headersTemplateService.getHeadersTemplatesByProjectId(projectId)) {
+                    headersTemplateList.add(new HeadersTemplateItem(t.getId(), t.getName(), t.getContent()));
+                }
+            } catch (ServiceException e) {
+                // 可加错误提示
             }
-        } catch (ServiceException e) {
-            // 可加错误提示
         }
     }
 
@@ -87,6 +92,7 @@ public class HeadersTemplateViewModel implements Initializable {
         }
         try {
             HeadersTemplate t = new HeadersTemplate(name, content);
+            t.setProjectId(AppConfig.getCurrentProjectId());
             headersTemplateService.addHeadersTemplate(t);
             loadHeadersTemplates();
             clearFields();
@@ -110,7 +116,7 @@ public class HeadersTemplateViewModel implements Initializable {
             return;
         }
         try {
-            HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), headersTemplateContentArea.getText().trim());
+            HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), headersTemplateContentArea.getText().trim(), AppConfig.getCurrentProjectId());
             headersTemplateService.updateHeadersTemplate(t);
             loadHeadersTemplates();
             clearFields();

@@ -12,4 +12,5 @@ public interface IHeadersTemplateDao {
     HeadersTemplate getHeadersTemplateById(int id) throws SQLException;
     HeadersTemplate getHeadersTemplateByName(String name) throws SQLException;
     List<HeadersTemplate> getAllHeadersTemplates() throws SQLException;
+    List<HeadersTemplate> getHeadersTemplatesByProjectId(Integer projectId) throws SQLException;
 } 

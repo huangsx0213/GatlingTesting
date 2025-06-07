@@ -19,8 +19,8 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     @Override
     public void addTest(GatlingTest test) throws SQLException {
         String sql = "INSERT INTO gatling_tests (is_enabled, suite, tcid, descriptions, conditions, " +
-                    "exp_status, exp_result, save_fields, endpoint_name, tags, wait_time, headers_template_id, body_template_id, body_dynamic_variables, headers_dynamic_variables) " +
-                    "VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "exp_status, exp_result, save_fields, endpoint_name, tags, wait_time, headers_template_id, body_template_id, body_dynamic_variables, headers_dynamic_variables, project_id) " +
+                    "VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setBoolean(1, test.isEnabled());
@@ -38,6 +38,11 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             pstmt.setInt(13, test.getBodyTemplateId());
             pstmt.setString(14, convertMapToJson(test.getBodyDynamicVariables()));
             pstmt.setString(15, convertMapToJson(test.getHeadersDynamicVariables()));
+            if (test.getProjectId() != null) {
+                pstmt.setInt(16, test.getProjectId());
+            } else {
+                pstmt.setNull(16, java.sql.Types.INTEGER);
+            }
             pstmt.executeUpdate();
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
@@ -158,6 +163,21 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
         }
     }
 
+    public List<GatlingTest> getTestsByProjectId(Integer projectId) throws SQLException {
+        String sql = "SELECT * FROM gatling_tests WHERE project_id = ? ORDER BY id";
+        List<GatlingTest> tests = new ArrayList<>();
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, projectId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    tests.add(createTestFromResultSet(rs));
+                }
+            }
+        }
+        return tests;
+    }
+
     private GatlingTest createTestFromResultSet(ResultSet rs) throws SQLException {
         GatlingTest test = new GatlingTest();
         test.setId(rs.getInt("id"));
@@ -176,6 +196,10 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
         test.setBodyTemplateId(rs.getInt("body_template_id"));
         test.setDynamicVariables(convertJsonToMap(rs.getString("body_dynamic_variables")));
         test.setHeadersDynamicVariables(convertJsonToMap(rs.getString("headers_dynamic_variables")));
+        Object pid = rs.getObject("project_id");
+        if (pid != null) {
+            test.setProjectId((Integer)pid);
+        }
         return test;
     }
 

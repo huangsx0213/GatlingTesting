@@ -6,20 +6,23 @@ public class Endpoint {
     private String method;
     private String url;
     private Integer environmentId;
+    private Integer projectId;
 
     public Endpoint() {}
-    public Endpoint(int id, String name, String method, String url, Integer environmentId) {
+    public Endpoint(int id, String name, String method, String url, Integer environmentId, Integer projectId) {
         this.id = id;
         this.name = name;
         this.method = method;
         this.url = url;
         this.environmentId = environmentId;
+        this.projectId = projectId;
     }
-    public Endpoint(String name, String method, String url, Integer environmentId) {
+    public Endpoint(String name, String method, String url, Integer environmentId, Integer projectId) {
         this.name = name;
         this.method = method;
         this.url = url;
         this.environmentId = environmentId;
+        this.projectId = projectId;
     }
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -31,4 +34,6 @@ public class Endpoint {
     public void setUrl(String url) { this.url = url; }
     public Integer getEnvironmentId() { return environmentId; }
     public void setEnvironmentId(Integer environmentId) { this.environmentId = environmentId; }
+    public Integer getProjectId() { return projectId; }
+    public void setProjectId(Integer projectId) { this.projectId = projectId; }
 } 

@@ -9,4 +9,5 @@ public interface IProjectDao {
     void deleteProject(int id);
     Project getProjectById(int id);
     List<Project> getAllProjects();
+    Project getProjectByName(String name);
 } 

@@ -82,4 +82,24 @@ public class ProjectDaoImpl implements IProjectDao {
         }
         return list;
     }
+
+    @Override
+    public Project getProjectByName(String name) {
+        String sql = "SELECT * FROM project WHERE name = ?";
+        try (Connection conn = DBUtil.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new Project(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("description")
+                    );
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to get project by name", e);
+        }
+        return null;
+    }
 } 
