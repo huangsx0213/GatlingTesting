@@ -43,11 +43,14 @@ public class EnvironmentViewModel implements Initializable {
 
     private void loadEnvironments() {
         environmentList.clear();
-        try {
-            environmentList.addAll(environmentService.findAllEnvironments());
-        } catch (ServiceException e) {
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus("Failed to load environments: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+        Integer projectId = com.qa.app.util.AppConfig.getCurrentProjectId();
+        if (projectId != null) {
+            try {
+                environmentList.addAll(environmentService.findEnvironmentsByProjectId(projectId));
+            } catch (ServiceException e) {
+                if (mainViewModel != null) {
+                    mainViewModel.updateStatus("Failed to load environments: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+                }
             }
         }
     }
