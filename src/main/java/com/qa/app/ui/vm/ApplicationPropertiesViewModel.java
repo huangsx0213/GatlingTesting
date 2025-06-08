@@ -76,6 +76,9 @@ public class ApplicationPropertiesViewModel implements Initializable {
     private void onSave() {
         saveProperties();
         loadProperties(); // 保存后自动刷新
+        if (mainViewModel != null) {
+            mainViewModel.updateStatus("Save Success: Properties updated.", MainViewModel.StatusType.SUCCESS);
+        }
     }
 
     @FXML

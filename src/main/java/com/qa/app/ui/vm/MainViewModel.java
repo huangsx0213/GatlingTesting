@@ -53,6 +53,18 @@ public class MainViewModel implements Initializable {
         ERROR
     }
 
+    private static MainViewModel instance;
+
+    public MainViewModel() {
+        instance = this;
+    }
+
+    public static void showGlobalStatus(String message, StatusType type) {
+        if (instance != null) {
+            instance.updateStatus(message, type);
+        }
+    }
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         reinitialize();
@@ -129,6 +141,7 @@ public class MainViewModel implements Initializable {
                 } else if (controller instanceof ProjectViewModel) {
                     ((ProjectViewModel) controller).setMainViewModel(this);
                 } else if (controller instanceof ApplicationPropertiesViewModel) {
+                    ((ApplicationPropertiesViewModel) controller).setMainViewModel(this);
                     ((ApplicationPropertiesViewModel) controller).loadProperties();
                 }
                 // Gatling tab is not closable and always in the first position
@@ -165,6 +178,8 @@ public class MainViewModel implements Initializable {
                         ((EndpointViewModel) controller).setMainViewModel(this);
                     } else if (controller instanceof ProjectViewModel) {
                         ((ProjectViewModel) controller).setMainViewModel(this);
+                    } else if (controller instanceof ApplicationPropertiesViewModel) {
+                        ((ApplicationPropertiesViewModel) controller).setMainViewModel(this);
                     }
                     // let Node find controller
                     contentNode.getProperties().put("controller", controller);
@@ -205,6 +220,7 @@ public class MainViewModel implements Initializable {
                 } else if (controller instanceof ProjectViewModel) {
                     ((ProjectViewModel) controller).refresh();
                 } else if (controller instanceof ApplicationPropertiesViewModel) {
+                    ((ApplicationPropertiesViewModel) controller).setMainViewModel(this);
                     ((ApplicationPropertiesViewModel) controller).loadProperties();
                 }
 

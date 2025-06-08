@@ -65,9 +65,14 @@ public class AppConfig {
                 if (project != null) {
                     currentProject = project;
                 } else {
+                    currentProject = null;
+                    // 状态栏红色提示
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Project '" + projectName + "' not found in database.", com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
                     System.err.println("Project with name '" + projectName + "' not found in database.");
                 }
             } catch (Exception e) {
+                currentProject = null;
+                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Failed to set currentProject: " + e.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
                 System.err.println("Failed to set currentProject by name: " + e.getMessage());
             }
         }
