@@ -40,7 +40,8 @@ public class MainViewModel implements Initializable {
         "Headers Template Management",
         "Body Template Management",
         "Environment Management",
-        "Project Management"
+        "Project Management",
+        "Application Properties"
     );
     private final Map<String, String> fxmlMapping = new HashMap<>();
     private final Map<String, Node> loadedTabs = new HashMap<>();
@@ -54,16 +55,22 @@ public class MainViewModel implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        reinitialize();
+    }
+
+    public void reinitialize() {
         // Initialize FXML mapping
+        fxmlMapping.clear();
         fxmlMapping.put("Gatling Test Management", "/com/qa/app/ui/view/gatling_test_view.fxml");
         fxmlMapping.put("Endpoint Management", "/com/qa/app/ui/view/endpoint_view.fxml");
         fxmlMapping.put("Headers Template Management", "/com/qa/app/ui/view/headers_template_view.fxml");
         fxmlMapping.put("Body Template Management", "/com/qa/app/ui/view/body_template_view.fxml");
         fxmlMapping.put("Environment Management", "/com/qa/app/ui/view/environment_view.fxml");
         fxmlMapping.put("Project Management", "/com/qa/app/ui/view/project_view.fxml");
+        fxmlMapping.put("Application Properties", "/com/qa/app/ui/view/application_properties_view.fxml");
         // Removed System Settings mapping
 
-        navigationList.setItems(navItems); // navItems is already initialized with "Gatling Test Management", "Body Template Management", "Headers Template Management"
+        navigationList.setItems(navItems);
         updateStatus("Welcome to Gatling Testing System!", StatusType.INFO);
         navigationList.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
@@ -84,7 +91,6 @@ public class MainViewModel implements Initializable {
         if (!navItems.isEmpty()) {
             String firstItem = navItems.get(0);
             navigationList.getSelectionModel().selectFirst();
-            // openOrSelectTab(firstItem); // This will be triggered by the listener above
             if (currentFeatureLabel != null) {
                 currentFeatureLabel.setText(firstItem);
             }
@@ -92,6 +98,7 @@ public class MainViewModel implements Initializable {
     }
 
     private void openOrSelectTab(String tabName) {
+        com.qa.app.util.AppConfig.reload();
         // Check if tab is already open
         for (Tab tab : contentTabPane.getTabs()) {
             if (tab.getText().equals(tabName)) {
@@ -121,6 +128,8 @@ public class MainViewModel implements Initializable {
                     ((EndpointViewModel) controller).refresh();
                 } else if (controller instanceof ProjectViewModel) {
                     ((ProjectViewModel) controller).setMainViewModel(this);
+                } else if (controller instanceof ApplicationPropertiesViewModel) {
+                    ((ApplicationPropertiesViewModel) controller).loadProperties();
                 }
                 // Gatling tab is not closable and always in the first position
                 if (tabName.equals("Gatling Test Management")) {
@@ -195,6 +204,8 @@ public class MainViewModel implements Initializable {
                     ((EndpointViewModel) controller).refresh();
                 } else if (controller instanceof ProjectViewModel) {
                     ((ProjectViewModel) controller).refresh();
+                } else if (controller instanceof ApplicationPropertiesViewModel) {
+                    ((ApplicationPropertiesViewModel) controller).loadProperties();
                 }
 
             } catch (IOException e) {
@@ -230,5 +241,13 @@ public class MainViewModel implements Initializable {
                     break;
             }
         }
+    }
+
+    public void reloadAllTabs() {
+        com.qa.app.util.AppConfig.reload();
+        contentTabPane.getTabs().clear();
+        loadedTabs.clear();
+        reinitialize();
+        updateStatus("Reloaded all tabs.", StatusType.INFO);
     }
 }

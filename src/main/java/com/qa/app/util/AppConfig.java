@@ -46,4 +46,30 @@ public class AppConfig {
     public static void setCurrentProject(Project project) {
         currentProject = project;
     }
+
+    public static void reload() {
+        try (InputStream in = AppConfig.class.getClassLoader().getResourceAsStream("application.properties")) {
+            if (in != null) {
+                props.clear();
+                props.load(in);
+            }
+        } catch (IOException e) {
+            System.err.println("Failed to reload application.properties: " + e.getMessage());
+        }
+        // 重新设置 currentProject
+        String projectName = props.getProperty("current.project.name");
+        if (projectName != null && !projectName.isEmpty()) {
+            try {
+                ProjectDaoImpl projectDao = new ProjectDaoImpl();
+                Project project = projectDao.getProjectByName(projectName);
+                if (project != null) {
+                    currentProject = project;
+                } else {
+                    System.err.println("Project with name '" + projectName + "' not found in database.");
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to set currentProject by name: " + e.getMessage());
+            }
+        }
+    }
 } 

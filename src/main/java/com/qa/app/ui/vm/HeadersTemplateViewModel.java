@@ -5,6 +5,9 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.stage.Stage;
+import javafx.scene.control.ButtonType;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -55,6 +58,60 @@ public class HeadersTemplateViewModel implements Initializable {
         headersTemplateTable.setItems(headersTemplateList);
         headersTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showHeadersTemplateDetails(newSel));
         loadHeadersTemplates();
+
+        // 双击行弹窗显示content
+        headersTemplateTable.setRowFactory(tv -> {
+            TableRow<HeadersTemplateItem> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
+                    HeadersTemplateItem item = row.getItem();
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Headers Content Detail");
+                    alert.setHeaderText("Template: " + item.getName());
+                    TextArea area = new TextArea(item.getContent());
+                    area.setEditable(false);
+                    area.setWrapText(true);
+                    area.setPrefWidth(800);
+                    area.setPrefHeight(600);
+                    alert.getDialogPane().setContent(area);
+                    // 设置icon
+                    Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
+                    try {
+                        stage.getIcons().add(new Image(getClass().getResourceAsStream("/icon/favicon.ico")));
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                    // 设置按钮为Close
+                    alert.getButtonTypes().setAll(new ButtonType("Close", ButtonBar.ButtonData.OK_DONE));
+                    alert.showAndWait();
+                }
+            });
+            return row;
+        });
+
+        // content列加Tooltip和最大高度、长度限制
+        headersTemplateContentColumn.setCellFactory(col -> new TableCell<HeadersTemplateItem, String>() {
+            private static final int MAX_LENGTH = 200;
+            private final Tooltip tooltip = new Tooltip();
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setTooltip(null);
+                } else {
+                    if (item.length() > MAX_LENGTH) {
+                        setText(item.substring(0, MAX_LENGTH) + "...");
+                    } else {
+                        setText(item);
+                    }
+                    tooltip.setText(item);
+                    setTooltip(tooltip);
+                    setWrapText(false);
+                    setPrefHeight(80);
+                }
+            }
+        });
     }
 
     private void loadHeadersTemplates() {
