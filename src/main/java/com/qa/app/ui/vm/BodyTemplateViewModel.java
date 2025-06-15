@@ -16,7 +16,7 @@ import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.impl.BodyTemplateServiceImpl;
 import com.qa.app.util.AppConfig;
-import com.qa.app.ui.vm.gatling.TemplateHandler;
+import com.qa.app.ui.vm.gatling.TemplateValidator;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Alert.AlertType;
 
@@ -111,7 +111,7 @@ public class BodyTemplateViewModel implements Initializable {
         }
         
         // Validate before adding
-        TemplateHandler.ValidationResult validationResult = TemplateHandler.validate(content, bodyFormatComboBox.getValue());
+        TemplateValidator.ValidationResult validationResult = TemplateValidator.validate(content, bodyFormatComboBox.getValue());
         if (!validationResult.isValid) {
             showError("Invalid Template: " + validationResult.errorMessage);
             return;
@@ -139,7 +139,7 @@ public class BodyTemplateViewModel implements Initializable {
         String content = bodyTemplateContentArea.getText().trim();
         
         // Validate before updating
-        TemplateHandler.ValidationResult validationResult = TemplateHandler.validate(content, bodyFormatComboBox.getValue());
+        TemplateValidator.ValidationResult validationResult = TemplateValidator.validate(content, bodyFormatComboBox.getValue());
         if (!validationResult.isValid) {
             showError("Invalid Template: " + validationResult.errorMessage);
             return;
@@ -186,7 +186,7 @@ public class BodyTemplateViewModel implements Initializable {
 
         try {
             // Unify formatting logic: always format in place and show status.
-            String formatted = TemplateHandler.format(content, format);
+            String formatted = TemplateValidator.format(content, format);
             bodyTemplateContentArea.setText(formatted);
             showSuccess("Format Success: Content formatted as " + format + ".");
         } catch (Exception e) {
@@ -200,7 +200,7 @@ public class BodyTemplateViewModel implements Initializable {
         String content = bodyTemplateContentArea.getText();
         if (format == null || content.isEmpty()) return;
 
-        TemplateHandler.ValidationResult result = TemplateHandler.validate(content, format);
+        TemplateValidator.ValidationResult result = TemplateValidator.validate(content, format);
 
         if (result.isValid) {
             showSuccess("Validation Success: Content is valid " + format + ".");
