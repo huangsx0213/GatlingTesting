@@ -77,7 +77,7 @@ public class HeadersTemplateViewModel implements Initializable {
                     // 设置icon
                     Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
                     try {
-                        stage.getIcons().add(new Image(getClass().getResourceAsStream("/icon/favicon.ico")));
+                        stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
                     } catch (Exception e) {
                         // ignore
                     }

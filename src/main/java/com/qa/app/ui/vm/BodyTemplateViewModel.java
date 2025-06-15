@@ -280,7 +280,7 @@ public class BodyTemplateViewModel implements Initializable {
     private void setDialogIcon(Alert alert) {
         Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
         try {
-            stage.getIcons().add(new Image(getClass().getResourceAsStream("/icon/favicon.ico")));
+            stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
         } catch (Exception e) {
             // ignore
         }
