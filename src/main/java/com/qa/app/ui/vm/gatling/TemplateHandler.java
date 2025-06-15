@@ -8,6 +8,17 @@ import com.qa.app.model.DynamicVariable;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import freemarker.template.Configuration;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
+import freemarker.template.Version;
+import java.io.IOException;
+import java.io.StringWriter;
+import freemarker.core.JSONOutputFormat;
+import java.util.Set;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import java.util.HashSet;
 
 public class TemplateHandler {
     private final ComboBox<String> templateComboBox;
@@ -18,6 +29,7 @@ public class TemplateHandler {
     private final TableColumn<DynamicVariable, String> keyColumn;
     private final TableColumn<DynamicVariable, String> valueColumn;
     private final TextArea generatedArea;
+    private final Configuration freemarkerCfg = new Configuration(new Version("2.3.32"));
 
     public TemplateHandler(
         ComboBox<String> templateComboBox,
@@ -37,6 +49,15 @@ public class TemplateHandler {
         this.keyColumn = keyColumn;
         this.valueColumn = valueColumn;
         this.generatedArea = generatedArea;
+        // FreeMarker 配置
+        freemarkerCfg.setDefaultEncoding("UTF-8");
+        freemarkerCfg.setTemplateExceptionHandler(freemarker.template.TemplateExceptionHandler.RETHROW_HANDLER);
+        freemarkerCfg.setOutputFormat(JSONOutputFormat.INSTANCE);
+        // 将语法更改为方括号，以避免与JSON语法冲突
+        freemarkerCfg.setTagSyntax(Configuration.SQUARE_BRACKET_TAG_SYNTAX);
+        freemarkerCfg.setInterpolationSyntax(Configuration.SQUARE_BRACKET_INTERPOLATION_SYNTAX);
+        // 兼容模式：将不存在或为null的变量视为空字符串，而不是抛出错误
+        freemarkerCfg.setClassicCompatible(true);
     }
 
     public void setup() {
@@ -88,12 +109,21 @@ public class TemplateHandler {
 
     public void populateDynamicVariables(String template) {
         variables.clear();
-        if (template != null) {
-            Pattern pattern = Pattern.compile("\\$\\{([^}]+)\\}");
-            Matcher matcher = pattern.matcher(template);
-            while (matcher.find()) {
-                variables.add(new DynamicVariable(matcher.group(1), ""));
-            }
+        if (template == null || template.isBlank()) {
+            return;
+        }
+
+        // Final, user-driven approach: Only extract variables explicitly defined with @{...}
+        // This syntax is unique and avoids conflicts with system property placeholders like ${...}.
+        Pattern pattern = Pattern.compile("\\@\\{([^}]+)\\}");
+        Matcher matcher = pattern.matcher(template);
+        Set<String> foundVars = new java.util.LinkedHashSet<>();
+        while (matcher.find()) {
+            foundVars.add(matcher.group(1).trim());
+        }
+
+        for (String varName : foundVars) {
+            variables.add(new DynamicVariable(varName, ""));
         }
     }
 
@@ -102,12 +132,39 @@ public class TemplateHandler {
         if (selectedTemplateName == null || !templates.containsKey(selectedTemplateName)) {
             return null;
         }
-        String template = templates.get(selectedTemplateName);
-        String content = template;
-        for (DynamicVariable var : variables) {
-            content = content.replace("${" + var.getKey() + "}", var.getValue());
+        String templateStr = templates.get(selectedTemplateName);
+
+        // Bridge Step: Convert user's @{...} syntax to FreeMarker's [=...] syntax
+        // This allows user-friendly variable definition while retaining a conflict-free engine syntax.
+        if (templateStr != null) {
+             templateStr = templateStr.replaceAll("\\@\\{([^}]+)\\}", "[=$1]");
         }
-        return content;
+
+        // Pre-existing fix: handle unintentionally escaped quotes
+        if (templateStr != null) {
+            templateStr = templateStr.replace("\\\"", "\"");
+        }
+        
+        // Build the data model
+        Map<String, Object> dataModel = new java.util.HashMap<>();
+        for (DynamicVariable var : variables) {
+            String value = var.getValue();
+            // 关键修复：只有当变量有实际值时，才将其加入数据模型。
+            // 这样，值为空的变量在FreeMarker看来才是"缺失"的，从而使默认值"!"能够生效。
+            if (value != null && !value.isEmpty()) {
+                dataModel.put(var.getKey(), value);
+            }
+        }
+
+        try {
+            Template template = new Template("jsonTemplate", templateStr, freemarkerCfg);
+            StringWriter out = new StringWriter();
+            template.process(dataModel, out);
+            return out.toString();
+        } catch (IOException | TemplateException e) {
+            e.printStackTrace();
+            return "模板渲染错误: " + e.getMessage();
+        }
     }
 
     public void updateGenerated() {

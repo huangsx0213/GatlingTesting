@@ -924,29 +924,11 @@ public class GatlingTestViewModel implements Initializable {
     // 5. Template/variable handling
     // =====================
     private String buildRequestBody() {
-        String selectedTemplateName = bodyTemplateComboBox.getSelectionModel().getSelectedItem();
-        if (selectedTemplateName == null || !bodyTemplates.containsKey(selectedTemplateName)) {
-            return null;
-        }
-        String template = bodyTemplates.get(selectedTemplateName);
-        String body = template;
-        for (DynamicVariable var : bodyTemplateVariables) {
-            body = body.replace("${" + var.getKey() + "}", var.getValue());
-        }
-        return body;
+        return bodyTemplateHandler.buildContent();
     }
 
     private String buildHeaders() {
-        String selectedTemplateName = headersTemplateComboBox.getSelectionModel().getSelectedItem();
-        if (selectedTemplateName == null || !headersTemplates.containsKey(selectedTemplateName)) {
-            return null;
-        }
-        String template = headersTemplates.get(selectedTemplateName);
-        String headers = template;
-        for (DynamicVariable var : headersTemplateVariables) {
-            headers = headers.replace("${" + var.getKey() + "}", var.getValue());
-        }
-        return headers;
+        return headersTemplateHandler.buildContent();
     }
 
     private int getBodyTemplateIdByName(String name) {
