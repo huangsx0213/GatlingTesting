@@ -6,10 +6,12 @@ import java.util.List;
 import com.qa.app.dao.api.IGatlingTestDao;
 import com.qa.app.dao.impl.GatlingTestDaoImpl;
 import com.qa.app.model.GatlingTest;
+import com.qa.app.model.GatlingRunParameters;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IEndpointService;
 import com.qa.app.model.Endpoint;
+import com.qa.app.util.GatlingTestExecutor;
 
 public class GatlingTestServiceImpl implements IGatlingTestService {
 
@@ -122,24 +124,27 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     }
 
     @Override
-    public void runTest(GatlingTest test) throws ServiceException {
+    public void runTest(GatlingTest test, GatlingRunParameters params) throws ServiceException {
+        if (test == null) {
+            throw new ServiceException("Test cannot be null.");
+        }
+        Endpoint endpoint = endpointService.getEndpointByName(test.getEndpointName());
+        if (endpoint == null) {
+            throw new ServiceException("Endpoint not found for test.");
+        }
+
         try {
-            if (test == null) {
-                throw new ServiceException("Test cannot be null.");
-            }
-            Endpoint endpoint = endpointService.getEndpointById(test.getEndpointId());
-            if (endpoint == null) {
-                throw new ServiceException("Endpoint not found for test.");
-            }
             testDao.updateTestRunStatus(test.getId(), true);
-            System.out.println("Executing test: " + test.getTcid() + " on endpoint: " + endpoint.getName() + " [" + endpoint.getUrl() + "]");
-            Thread.sleep(test.getWaitTime() * 1000L);
-            testDao.updateTestRunStatus(test.getId(), false);
-        } catch (SQLException e) {
-            throw new ServiceException("Database error while running test: " + e.getMessage(), e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new ServiceException("Test execution was interrupted: " + e.getMessage(), e);
+            GatlingTestExecutor.execute(test, params, endpoint);
+        } catch (Exception e) {
+            throw new ServiceException("Failed to run Gatling test: " + e.getMessage(), e);
+        } finally {
+            try {
+                testDao.updateTestRunStatus(test.getId(), false);
+            } catch (SQLException e) {
+                // Log this error, but don't re-throw as the primary exception is more important
+                System.err.println("Failed to update test run status after execution: " + e.getMessage());
+            }
         }
     }
 
@@ -153,7 +158,8 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
 
             for (GatlingTest test : tests) {
                 if (test.isEnabled()) {
-                    runTest(test);
+                    // This will run with default parameters.
+                    runTest(test, new GatlingRunParameters(1, 0, 1));
                 }
             }
         } catch (SQLException e) {

@@ -3,6 +3,7 @@ package com.qa.app.service.api;
 import java.util.List;
 
 import com.qa.app.model.GatlingTest;
+import com.qa.app.model.GatlingRunParameters;
 import com.qa.app.service.ServiceException;
 
 public interface IGatlingTestService {
@@ -14,7 +15,7 @@ public interface IGatlingTestService {
     void updateTest(GatlingTest test) throws ServiceException;
     void removeTest(int id) throws ServiceException;
     void toggleTestRunStatus(int id) throws ServiceException;
-    void runTest(GatlingTest test) throws ServiceException;
+    void runTest(GatlingTest test, GatlingRunParameters params) throws ServiceException;
     void runTestSuite(String suite) throws ServiceException;
     List<GatlingTest> findTestsByProjectId(Integer projectId) throws ServiceException;
 }

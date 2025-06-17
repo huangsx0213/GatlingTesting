@@ -13,20 +13,15 @@
         <maven.compiler.target>17</maven.compiler.target>
         <javafx.version>17.0.2</javafx.version> <!-- Or a newer stable version -->
         <sqlite.jdbc.version>3.36.0.3</sqlite.jdbc.version> <!-- Or a newer stable version -->
-        <gatling.version>3.14.3</gatling.version>
+        <gatling.version>3.11.3</gatling.version>
         <scala.version>2.13.14</scala.version>
     </properties>
 
     <dependencies>
-        <!-- Gatling -->
+        <!-- Gatling Test Framework for embedding -->
         <dependency>
             <groupId>io.gatling</groupId>
-            <artifactId>gatling-app</artifactId>
-            <version>${gatling.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.gatling</groupId>
-            <artifactId>gatling-http-java</artifactId>
+            <artifactId>gatling-test-framework</artifactId>
             <version>${gatling.version}</version>
         </dependency>
         <dependency>
@@ -92,6 +87,26 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>io.gatling</groupId>
+                <artifactId>gatling-maven-plugin</artifactId>
+                <version>${gatling.version}</version>
+                <configuration>
+                    <simulationClass>com.qa.app.util.DynamicJavaSimulation</simulationClass>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>4.8.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

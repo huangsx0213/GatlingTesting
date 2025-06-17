@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ButtonType?>
+<?import javafx.scene.control.DialogPane?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.layout.GridPane?>
+
+<DialogPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.qa.app.ui.vm.GatlingRunDialogViewModel"
+            headerText="Set Gatling Run Parameters">
+    <content>
+        <GridPane hgap="10" vgap="10">
+            <padding>
+                <Insets top="20" right="20" bottom="10" left="20"/>
+            </padding>
+            <Label text="Number of Users:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+            <Spinner fx:id="usersSpinner" min="1" max="1000" initialValue="1" editable="true" GridPane.rowIndex="0"
+                     GridPane.columnIndex="1"/>
+
+            <Label text="Ramp-up Period (s):" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+            <Spinner fx:id="rampUpSpinner" min="0" max="3600" initialValue="0" editable="true" GridPane.rowIndex="1"
+                     GridPane.columnIndex="1"/>
+
+            <Label text="Repetitions per User:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+            <Spinner fx:id="repetitionsSpinner" min="1" max="10000" initialValue="1" editable="true"
+                     GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+        </GridPane>
+    </content>
+    <buttonTypes>
+        <ButtonType text="Run" buttonData="OK_DONE"/>
+        <ButtonType text="Cancel" buttonData="CANCEL_CLOSE"/>
+    </buttonTypes>
+</DialogPane> 

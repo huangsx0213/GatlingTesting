@@ -11,6 +11,7 @@ import com.qa.app.util.AppConfig;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxTableCell;
@@ -19,12 +20,15 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.FlowPane;
 import org.controlsfx.control.CheckComboBox;
+import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 public class GatlingTestViewModel implements Initializable {
@@ -827,14 +831,42 @@ public class GatlingTestViewModel implements Initializable {
         }
 
         try {
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus("Running test: " + selectedTest.getTcid(), MainViewModel.StatusType.INFO);
+            // Create and load the dialog
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/qa/app/ui/view/GatlingRunDialog.fxml"));
+            DialogPane dialogPane = loader.load();
+
+            GatlingRunDialogViewModel controller = loader.getController();
+
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setDialogPane(dialogPane);
+            dialog.setTitle("Run Gatling Test");
+            Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
+            stage.getIcons().add(new javafx.scene.image.Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
+
+
+            Optional<ButtonType> result = dialog.showAndWait();
+
+            if (result.isPresent() && result.get().getButtonData() == ButtonBar.ButtonData.OK_DONE) {
+                GatlingRunParameters params = controller.getParameters();
+
+                // Populate the fields before running, to ensure latest data is used
+                populateTestFromFields(selectedTest);
+
+                if (mainViewModel != null) {
+                    mainViewModel.updateStatus("Running test: " + selectedTest.getTcid(), MainViewModel.StatusType.INFO);
+                }
+                // Pass the test and params to the service
+                testService.runTest(selectedTest, params);
+                testTable.refresh();
+                if (mainViewModel != null) {
+                    mainViewModel.updateStatus("Test completed: " + selectedTest.getTcid(),
+                            MainViewModel.StatusType.SUCCESS);
+                }
             }
-            testService.runTest(selectedTest);
-            testTable.refresh();
+        } catch (IOException e) {
+            e.printStackTrace();
             if (mainViewModel != null) {
-                mainViewModel.updateStatus("Test completed: " + selectedTest.getTcid(),
-                        MainViewModel.StatusType.SUCCESS);
+                mainViewModel.updateStatus("Failed to open run dialog: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
         } catch (ServiceException e) {
             if (mainViewModel != null) {
