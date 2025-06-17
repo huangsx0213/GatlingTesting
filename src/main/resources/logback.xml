@@ -1,0 +1,24 @@
+<configuration>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%-5level] %-35.35logger{35} - %msg%n%rEx</pattern>
+        </encoder>
+        <immediateFlush>false</immediateFlush>
+    </appender>
+
+    <!--
+      The logger name is the FQDN of the class to log.
+      Typically, you want to set the log level of the com.qa.app package to DEBUG
+      and the log level of "io.gatling.http" to TRACE.
+    -->
+
+    <logger name="com.qa.app" level="INFO" />
+    <logger name="io.gatling" level="INFO" />
+    <logger name="io.gatling.http" level="INFO" />
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+</configuration> 
