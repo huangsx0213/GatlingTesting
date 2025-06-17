@@ -3,12 +3,15 @@ package com.qa.app.util;
 import com.qa.app.model.Endpoint;
 import com.qa.app.model.GatlingRunParameters;
 import com.qa.app.model.GatlingTest;
-import io.gatling.app.Gatling;
+import org.json.JSONObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import org.json.JSONObject;
 
 public class GatlingTestExecutor {
 
@@ -75,21 +78,63 @@ public class GatlingTestExecutor {
             System.out.println("等待时间(秒): " + test.getWaitTime());
             System.out.println("===================================");
 
-            // 设置动态参数
-            DynamicJavaSimulation.setParameters(test, params, endpoint);
+            // Do not use static setters as they don't work across processes
+            // DynamicJavaSimulation.setParameters(test, params, endpoint);
 
-            // 构建Gatling命令行参数
-            List<String> args = new ArrayList<>();
-            args.add("-s");
-            args.add(DynamicJavaSimulation.class.getName());
-            args.add("-rf");
+            // Execute Gatling in a separate process to avoid System.exit() in the main app
+            String javaHome = System.getProperty("java.home");
+            String javaBin = Paths.get(javaHome, "bin", "java").toString();
+            String classpath = System.getProperty("java.class.path");
+            String gatlingMain = "io.gatling.app.Gatling";
+            String simulationClass = DynamicJavaSimulation.class.getName();
             String resultsPath = Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
-            args.add(resultsPath);
 
-            // 执行Gatling测试
+            // Serialize parameters to JSON and write to temp files to avoid command line arg issues
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            File testFile = File.createTempFile("gatling_test_", ".json");
+            testFile.deleteOnExit();
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(testFile))) {
+                writer.write(objectMapper.writeValueAsString(test));
+            }
+
+            File paramsFile = File.createTempFile("gatling_params_", ".json");
+            paramsFile.deleteOnExit();
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(paramsFile))) {
+                writer.write(objectMapper.writeValueAsString(params));
+            }
+
+            File endpointFile = File.createTempFile("gatling_endpoint_", ".json");
+            endpointFile.deleteOnExit();
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(endpointFile))) {
+                writer.write(objectMapper.writeValueAsString(endpoint));
+            }
+
+            List<String> command = new ArrayList<>();
+            command.add(javaBin);
+            command.add("-cp");
+            command.add(classpath);
+            command.add("-Dgatling.test.file=" + testFile.getAbsolutePath());
+            command.add("-Dgatling.params.file=" + paramsFile.getAbsolutePath());
+            command.add("-Dgatling.endpoint.file=" + endpointFile.getAbsolutePath());
+            command.add(gatlingMain);
+            command.add("-s");
+            command.add(simulationClass);
+            command.add("-rf");
+            command.add(resultsPath);
+
             System.out.println("开始执行Gatling测试...");
-            Gatling.main(args.toArray(new String[0]));
-            System.out.println("Gatling测试执行完成。");
+            ProcessBuilder processBuilder = new ProcessBuilder(command);
+            processBuilder.inheritIO();
+
+            Process process = processBuilder.start();
+            int exitCode = process.waitFor();
+
+            if (exitCode == 0) {
+                System.out.println("Gatling测试执行完成。");
+            } else {
+                System.out.println("Gatling测试执行失败，退出代码: " + exitCode);
+            }
 
         } catch (Exception e) {
             System.err.println("执行Gatling测试失败: " + e.getMessage());

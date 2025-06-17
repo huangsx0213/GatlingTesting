@@ -1,144 +1,88 @@
 package com.qa.app.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qa.app.model.Endpoint;
 import com.qa.app.model.GatlingRunParameters;
 import com.qa.app.model.GatlingTest;
-import io.gatling.javaapi.core.*;
-import io.gatling.javaapi.http.*;
-import org.json.JSONObject;
+import io.gatling.javaapi.core.ScenarioBuilder;
+import io.gatling.javaapi.core.Simulation;
+import io.gatling.javaapi.http.HttpProtocolBuilder;
 
-import java.net.URL;
+import java.io.File;
 import java.time.Duration;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static io.gatling.javaapi.core.CoreDsl.*;
-import static io.gatling.javaapi.http.HttpDsl.*;
+import static io.gatling.javaapi.http.HttpDsl.http;
+import static io.gatling.javaapi.http.HttpDsl.status;
 
 public class DynamicJavaSimulation extends Simulation {
 
-    private static final ThreadLocal<GatlingTest> testThreadLocal = new ThreadLocal<>();
-    private static final ThreadLocal<GatlingRunParameters> paramsThreadLocal = new ThreadLocal<>();
-    private static final ThreadLocal<Endpoint> endpointThreadLocal = new ThreadLocal<>();
+    private final GatlingTest test;
+    private final GatlingRunParameters params;
+    private final Endpoint endpoint;
 
-    public static void setParameters(GatlingTest test, GatlingRunParameters params, Endpoint endpoint) {
-        testThreadLocal.set(test);
-        paramsThreadLocal.set(params);
-        endpointThreadLocal.set(endpoint);
-        
-        System.out.println("DynamicJavaSimulation: 参数已设置");
-        System.out.println("- 测试TCID: " + test.getTcid());
-        System.out.println("- 端点URL: " + endpoint.getUrl());
-        System.out.println("- 并发用户数: " + params.getUsers());
-        System.out.println("- 重复次数: " + params.getRepetitions());
-    }
-
-    private GatlingTest getTest() { 
-        GatlingTest test = testThreadLocal.get();
-        if (test == null) {
-            System.err.println("警告: 测试参数未设置，使用默认值");
-            return new GatlingTest();
+    public DynamicJavaSimulation() {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            this.test = objectMapper.readValue(new File(System.getProperty("gatling.test.file")), GatlingTest.class);
+            this.params = objectMapper.readValue(new File(System.getProperty("gatling.params.file")), GatlingRunParameters.class);
+            this.endpoint = objectMapper.readValue(new File(System.getProperty("gatling.endpoint.file")), Endpoint.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to deserialize simulation parameters from file", e);
         }
-        return test; 
-    }
-    
-    private GatlingRunParameters getParams() { 
-        GatlingRunParameters params = paramsThreadLocal.get();
-        if (params == null) {
-            System.err.println("警告: 运行参数未设置，使用默认值");
-            return new GatlingRunParameters(1, 0, 1);
+
+        HttpProtocolBuilder httpProtocol = http
+                .baseUrl(endpoint.getUrl())
+                .acceptHeader("application/json;q=0.9,*/*;q=0.8");
+
+        // Parse headers from the generated string
+        Map<String, String> headersMap = parseHeaders(test.getHeaders());
+
+        // Automatically add Content-Type if it's a POST/PUT with a body and header is missing
+        String method = endpoint.getMethod().toUpperCase();
+        boolean hasBody = test.getBody() != null && !test.getBody().trim().isEmpty();
+
+        if (hasBody && (method.equals("POST") || method.equals("PUT")) &&
+            !headersMap.keySet().stream().anyMatch(key -> key.equalsIgnoreCase("Content-Type"))) {
+            headersMap.put("Content-Type", "application/json");
         }
-        return params; 
-    }
-    
-    private Endpoint getEndpoint() { 
-        Endpoint endpoint = endpointThreadLocal.get();
-        if (endpoint == null) {
-            System.err.println("警告: 端点参数未设置，使用默认值");
-            Endpoint defaultEndpoint = new Endpoint();
-            defaultEndpoint.setUrl("http://localhost");
-            defaultEndpoint.setMethod("GET");
-            return defaultEndpoint;
-        }
-        return endpoint; 
-    }
 
-    HttpProtocolBuilder httpProtocol = http
-            .baseUrl(getEndpoint().getUrl())
-            .acceptHeader("application/json;q=0.9,*/*;q=0.8");
-            // 默认情况下，Gatling会自动跟随重定向，无需额外配置
+        ScenarioBuilder scn = scenario("DynamicSimulation")
+                .repeat(params.getRepetitions()).on(
+                        exec(http("request_1")
+                                .httpRequest(endpoint.getMethod(), "")
+                                .headers(headersMap)
+                                .body(StringBody(test.getBody() != null ? test.getBody() : ""))
+                                .check(status().is(Integer.parseInt(test.getExpStatus()))))
+                );
 
-    ScenarioBuilder scn = scenario("DynamicSimulation")
-            .repeat(getParams().getRepetitions()).on(
-                exec(http("request_1")
-                    .httpRequest(getEndpoint().getMethod(), "")
-                    .headers(createHeaders(getTest().getHeaders()))
-                    .body(StringBody(getTest().getBody() != null ? getTest().getBody() : ""))
-                    .check(status().is(getExpectedStatus())))
-            );
+        System.out.println("DynamicJavaSimulation: Test scene initialized");
+        System.out.println("- HTTP Method: " + endpoint.getMethod());
+        System.out.println("- Repetitions: " + params.getRepetitions());
 
-    {
-        System.out.println("DynamicJavaSimulation: 初始化测试场景");
-        System.out.println("- HTTP方法: " + getEndpoint().getMethod());
-        System.out.println("- 重复次数: " + getParams().getRepetitions());
-        System.out.println("- 已启用自动重定向跟踪（默认）");
-        
-        setUp(scn.injectOpen(rampUsers(getParams().getUsers()).during(Duration.ofSeconds(getParams().getRampUp()))))
+        setUp(scn.injectOpen(rampUsers(params.getUsers()).during(Duration.ofSeconds(params.getRampUp()))))
                 .protocols(httpProtocol);
     }
-
-    private int getExpectedStatus() {
-        try {
-            String expStatus = getTest().getExpStatus();
-            if (expStatus != null && !expStatus.isEmpty()) {
-                return Integer.parseInt(expStatus);
-            }
-        } catch (Exception e) {
-            System.err.println("解析期望状态码失败，使用默认值200: " + e.getMessage());
-        }
-        return 200;
-    }
-
-    private static Map<String, String> createHeaders(String headersText) {
-        if (headersText == null || headersText.trim().isEmpty()) {
-            return Collections.emptyMap();
+    
+    private Map<String, String> parseHeaders(String headersString) {
+        if (headersString == null || headersString.trim().isEmpty()) {
+            return new HashMap<>();
         }
         
-        Map<String, String> headers = new HashMap<>();
-        
-        try {
-            // 首先尝试解析为JSON格式
-            if (headersText.trim().startsWith("{")) {
-                JSONObject json = new JSONObject(headersText);
-                for (String key : json.keySet()) {
-                    headers.put(key, json.getString(key));
-                }
-            } else {
-                // 如果不是JSON格式，则尝试按行解析
-                String[] lines = headersText.split("\\r?\\n");
-                for (String line : lines) {
-                    line = line.trim();
-                    if (!line.isEmpty()) {
-                        int colonIndex = line.indexOf(':');
-                        if (colonIndex > 0) {
-                            String key = line.substring(0, colonIndex).trim();
-                            String value = line.substring(colonIndex + 1).trim();
-                            headers.put(key, value);
-                        }
-                    }
-                }
-            }
-            
-            System.out.println("成功解析请求头，共 " + headers.size() + " 个");
-            for (Map.Entry<String, String> entry : headers.entrySet()) {
-                System.out.println("  " + entry.getKey() + ": " + entry.getValue());
-            }
-            
-            return headers;
-        } catch (Exception e) {
-            System.err.println("解析请求头失败，使用空Map: " + e.getMessage());
-            return Collections.emptyMap();
-        }
+        return Arrays.stream(headersString.split("\\r?\\n"))
+                .map(String::trim)
+                .filter(line -> !line.isEmpty() && line.contains(":"))
+                .map(line -> line.split(":", 2))
+                .filter(parts -> parts.length == 2 && !parts[0].trim().isEmpty())
+                .collect(Collectors.toMap(
+                        parts -> parts[0].trim(),
+                        parts -> parts[1].trim(),
+                        (v1, v2) -> v2, // In case of duplicate headers, keep the last one
+                        HashMap::new
+                ));
     }
 } 

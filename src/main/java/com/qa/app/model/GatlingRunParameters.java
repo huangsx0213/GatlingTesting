@@ -1,9 +1,13 @@
 package com.qa.app.model;
 
 public class GatlingRunParameters {
-    private final int users;
-    private final int rampUp;
-    private final int repetitions;
+    private int users;
+    private int rampUp;
+    private int repetitions;
+
+    // A no-argument constructor is required for Jackson deserialization
+    public GatlingRunParameters() {
+    }
 
     public GatlingRunParameters(int users, int rampUp, int repetitions) {
         this.users = users;
