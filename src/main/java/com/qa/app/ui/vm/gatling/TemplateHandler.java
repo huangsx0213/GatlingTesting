@@ -18,6 +18,9 @@ import freemarker.core.JSONOutputFormat;
 import java.util.Set;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.qa.app.util.VariableGenerator;
+import javafx.collections.FXCollections;
+import javafx.scene.control.cell.ComboBoxTableCell;
 
 public class TemplateHandler {
     private final ComboBox<String> templateComboBox;
@@ -76,19 +79,12 @@ public class TemplateHandler {
         valueColumn.setCellValueFactory(new PropertyValueFactory<>("value"));
         varsTable.setItems(variables);
         varsTable.setEditable(true);
-        valueColumn.setCellFactory(col -> new TextFieldTableCell<>(new javafx.util.converter.DefaultStringConverter()) {
-            @Override
-            public void startEdit() {
-                super.startEdit();
-                TextField textField = (TextField) getGraphic();
-                if (textField != null) {
-                    textField.focusedProperty().addListener((obs, was, isNow) -> {
-                        if (!isNow && isEditing()) {
-                            commitEdit(textField.getText());
-                        }
-                    });
-                }
-            }
+        valueColumn.setCellFactory(col -> {
+            ComboBoxTableCell<DynamicVariable, String> cell = new ComboBoxTableCell<>(
+                    new javafx.util.converter.DefaultStringConverter(),
+                    FXCollections.observableArrayList(VariableGenerator.getRuleFormats()));
+            cell.setComboBoxEditable(true);
+            return cell;
         });
         valueColumn.setOnEditCommit(event -> {
             DynamicVariable editedVar = event.getTableView().getItems().get(event.getTablePosition().getRow());
@@ -159,7 +155,7 @@ public class TemplateHandler {
         // Build the data model
         Map<String, Object> dataModel = new java.util.HashMap<>();
         for (DynamicVariable var : variables) {
-            String value = var.getValue();
+            String value = VariableGenerator.generate(var.getValue());
             // Only add variables with actual values to the data model.
             if (value != null && !value.isEmpty()) {
                 dataModel.put(var.getKey(), value);

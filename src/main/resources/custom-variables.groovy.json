@@ -1,0 +1,13 @@
+[ {
+  "name" : "orderId",
+  "format" : "@{orderId}",
+  "description" : "orderId",
+  "groovyScript" : "return 'ORD-' + System.currentTimeMillis() + '-' + UUID.randomUUID().toString().substring(0, 8).toUpperCase()",
+  "pattern" : "@\\{\\QorderId\\E\\}"
+}, {
+  "name" : "uuid",
+  "format" : "@{uuid}",
+  "description" : "Description",
+  "groovyScript" : "return UUID.randomUUID().toString()",
+  "pattern" : "@\\{\\Quuid\\E\\}"
+} ]

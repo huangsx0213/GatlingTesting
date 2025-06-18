@@ -61,6 +61,14 @@
             <version>2.15.2</version>
         </dependency>
 
+        <!-- Groovy for dynamic scripting (Upgraded to v4 for modern JDK compatibility) -->
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>4.0.21</version>
+            <type>pom</type>
+        </dependency>
+
         <!-- SnakeYAML -->
         <dependency>
             <groupId>org.yaml</groupId>
