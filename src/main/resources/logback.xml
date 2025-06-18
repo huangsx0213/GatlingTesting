@@ -15,7 +15,7 @@
 
     <logger name="com.qa.app" level="INFO" />
     <logger name="io.gatling" level="INFO" />
-    <logger name="io.gatling.http" level="INFO" />
+    <logger name="io.gatling.http" level="TRACE" />
 
     <root level="INFO">
         <appender-ref ref="CONSOLE" />
