@@ -56,7 +56,7 @@ public class ApplicationPropertiesViewModel implements Initializable {
                 propertyList.add(new PropertyItem(key, props.getProperty(key)));
             }
         } catch (IOException e) {
-            // 可加错误提示
+            // add error hint
         }
     }
 
@@ -68,14 +68,14 @@ public class ApplicationPropertiesViewModel implements Initializable {
         try (OutputStream output = new FileOutputStream(propertiesFilePath)) {
             props.store(output, "Updated by ApplicationPropertiesViewModel");
         } catch (IOException e) {
-            // 可加错误提示
+            // add error hint
         }
     }
 
     @FXML
     private void onSave() {
         saveProperties();
-        loadProperties(); // 保存后自动刷新
+        loadProperties(); // after save, auto refresh
         if (mainViewModel != null) {
             mainViewModel.updateStatus("Save Success: Properties updated.", MainViewModel.StatusType.SUCCESS);
         }

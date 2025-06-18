@@ -18,15 +18,6 @@ import freemarker.core.JSONOutputFormat;
 import java.util.Set;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import java.io.StringReader;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.stream.StreamResult;
-import javax.xml.transform.stream.StreamSource;
-import org.xml.sax.InputSource;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 public class TemplateHandler {
     private final ComboBox<String> templateComboBox;
@@ -69,14 +60,14 @@ public class TemplateHandler {
         this.keyColumn = keyColumn;
         this.valueColumn = valueColumn;
         this.generatedArea = generatedArea;
-        // FreeMarker 配置
+        // FreeMarker configuration
         freemarkerCfg.setDefaultEncoding("UTF-8");
         freemarkerCfg.setTemplateExceptionHandler(freemarker.template.TemplateExceptionHandler.RETHROW_HANDLER);
         freemarkerCfg.setOutputFormat(JSONOutputFormat.INSTANCE);
-        // 将语法更改为方括号，以避免与JSON语法冲突
+        // Change the syntax to square brackets to avoid conflicts with JSON syntax
         freemarkerCfg.setTagSyntax(Configuration.SQUARE_BRACKET_TAG_SYNTAX);
         freemarkerCfg.setInterpolationSyntax(Configuration.SQUARE_BRACKET_INTERPOLATION_SYNTAX);
-        // 兼容模式：将不存在或为null的变量视为空字符串，而不是抛出错误
+        // Compatible mode: treat missing or null variables as empty strings instead of throwing errors
         freemarkerCfg.setClassicCompatible(true);
     }
 
@@ -169,8 +160,7 @@ public class TemplateHandler {
         Map<String, Object> dataModel = new java.util.HashMap<>();
         for (DynamicVariable var : variables) {
             String value = var.getValue();
-            // 关键修复：只有当变量有实际值时，才将其加入数据模型。
-            // 这样，值为空的变量在FreeMarker看来才是"缺失"的，从而使默认值"!"能够生效。
+            // Only add variables with actual values to the data model.
             if (value != null && !value.isEmpty()) {
                 dataModel.put(var.getKey(), value);
             }
@@ -183,7 +173,7 @@ public class TemplateHandler {
             return out.toString();
         } catch (IOException | TemplateException e) {
             e.printStackTrace();
-            return "模板渲染错误: " + e.getMessage();
+            return "Template rendering error: " + e.getMessage();
         }
     }
 

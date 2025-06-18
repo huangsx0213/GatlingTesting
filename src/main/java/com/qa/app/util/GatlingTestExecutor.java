@@ -17,29 +17,29 @@ public class GatlingTestExecutor {
 
     public static void execute(GatlingTest test, GatlingRunParameters params, Endpoint endpoint) {
         try {
-            // 打印测试详细信息
-            System.out.println("========== Gatling测试详情 ==========");
-            System.out.println("测试ID: " + test.getId());
-            System.out.println("测试TCID: " + test.getTcid());
-            System.out.println("测试Suite: " + test.getSuite());
+            // print test details
+            System.out.println("========== Gatling Test Details ==========");
+            System.out.println("Test ID: " + test.getId());
+            System.out.println("Test TCID: " + test.getTcid());
+            System.out.println("Test Suite: " + test.getSuite());
             
-            System.out.println("\n----- 端点信息 -----");
-            System.out.println("端点名称: " + endpoint.getName());
+            System.out.println("\n----- Endpoint Information -----");
+            System.out.println("Endpoint Name: " + endpoint.getName());
             System.out.println("URL: " + endpoint.getUrl());
-            System.out.println("方法: " + endpoint.getMethod());
+            System.out.println("Method: " + endpoint.getMethod());
             
-            System.out.println("\n----- 请求头 -----");
+            System.out.println("\n----- Request Headers -----");
             try {
                 if (test.getHeaders() != null && !test.getHeaders().trim().isEmpty()) {
                     String headersText = test.getHeaders().trim();
                     if (headersText.startsWith("{")) {
-                        // JSON格式
+                        // JSON format
                         JSONObject headers = new JSONObject(headersText);
                         for (String key : headers.keySet()) {
                             System.out.println(key + ": " + headers.getString(key));
                         }
                     } else {
-                        // 多行文本格式
+                        // multi-line text format
                         String[] lines = headersText.split("\\r?\\n");
                         for (String line : lines) {
                             line = line.trim();
@@ -49,33 +49,33 @@ public class GatlingTestExecutor {
                         }
                     }
                 } else {
-                    System.out.println("(无请求头)");
+                    System.out.println("(No request headers)");
                 }
             } catch (Exception e) {
-                System.out.println("请求头解析失败: " + e.getMessage());
-                System.out.println("原始请求头: " + test.getHeaders());
+                System.out.println("Request headers parsing failed: " + e.getMessage());
+                System.out.println("Original request headers: " + test.getHeaders());
             }
             
-            System.out.println("\n----- 请求体 -----");
+            System.out.println("\n----- Request Body -----");
             if (test.getBody() != null && !test.getBody().trim().isEmpty()) {
                 try {
-                    // 尝试格式化JSON
+                    // try to format JSON
                     JSONObject json = new JSONObject(test.getBody());
-                    System.out.println(json.toString(2)); // 缩进2个空格
+                    System.out.println(json.toString(2)); // indent 2 spaces
                 } catch (Exception e) {
-                    // 如果不是有效的JSON，直接打印原始内容
+                    // if not valid JSON, print original content
                     System.out.println(test.getBody());
                 }
             } else {
-                System.out.println("(无请求体)");
+                System.out.println("(No request body)");
             }
             
-            System.out.println("\n----- 测试参数 -----");
-            System.out.println("并发用户数: " + params.getUsers());
-            System.out.println("预热时间(秒): " + params.getRampUp());
-            System.out.println("重复次数: " + params.getRepetitions());
-            System.out.println("期望状态码: " + test.getExpStatus());
-            System.out.println("等待时间(秒): " + test.getWaitTime());
+            System.out.println("\n----- Test Parameters -----");
+            System.out.println("Concurrent users: " + params.getUsers());
+            System.out.println("Warmup time (seconds): " + params.getRampUp());
+            System.out.println("Repetitions: " + params.getRepetitions());
+            System.out.println("Expected status code: " + test.getExpStatus());
+            System.out.println("Wait time (seconds): " + test.getWaitTime());
             System.out.println("===================================");
 
             // Do not use static setters as they don't work across processes
@@ -123,7 +123,7 @@ public class GatlingTestExecutor {
             command.add("-rf");
             command.add(resultsPath);
 
-            System.out.println("开始执行Gatling测试...");
+            System.out.println("Starting Gatling test...");
             ProcessBuilder processBuilder = new ProcessBuilder(command);
             processBuilder.inheritIO();
 
@@ -131,13 +131,13 @@ public class GatlingTestExecutor {
             int exitCode = process.waitFor();
 
             if (exitCode == 0) {
-                System.out.println("Gatling测试执行完成。");
+                System.out.println("Gatling test execution completed.");
             } else {
-                System.out.println("Gatling测试执行失败，退出代码: " + exitCode);
+                System.out.println("Gatling test execution failed, exit code: " + exitCode);
             }
 
         } catch (Exception e) {
-            System.err.println("执行Gatling测试失败: " + e.getMessage());
+            System.err.println("Gatling test execution failed: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Failed to run Gatling test via Java API", e);
         }

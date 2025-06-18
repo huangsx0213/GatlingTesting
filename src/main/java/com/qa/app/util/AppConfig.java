@@ -18,7 +18,7 @@ public class AppConfig {
         } catch (IOException e) {
             System.err.println("Failed to load application.properties: " + e.getMessage());
         }
-        // 自动根据current.project.name设置currentProject
+        // auto set currentProject by current.project.name
         String projectName = props.getProperty("current.project.name");
         if (projectName != null && !projectName.isEmpty()) {
             try {
@@ -56,7 +56,7 @@ public class AppConfig {
         } catch (IOException e) {
             System.err.println("Failed to reload application.properties: " + e.getMessage());
         }
-        // 重新设置 currentProject
+        // reset currentProject
         String projectName = props.getProperty("current.project.name");
         if (projectName != null && !projectName.isEmpty()) {
             try {
@@ -66,7 +66,7 @@ public class AppConfig {
                     currentProject = project;
                 } else {
                     currentProject = null;
-                    // 状态栏红色提示
+                    // status bar red hint
                     com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Project '" + projectName + "' not found in database.", com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
                 }
             } catch (Exception e) {

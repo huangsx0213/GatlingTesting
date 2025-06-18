@@ -12,7 +12,7 @@ public class DBUtil {
         try {
             Class.forName("org.sqlite.JDBC");
             Connection conn = DriverManager.getConnection(URL);
-            // 启用SQLite外键约束
+            // enable SQLite foreign key constraints
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("PRAGMA foreign_keys = ON");
             }

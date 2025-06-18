@@ -59,7 +59,7 @@ public class HeadersTemplateViewModel implements Initializable {
         headersTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showHeadersTemplateDetails(newSel));
         loadHeadersTemplates();
 
-        // 双击行弹窗显示content
+        // double click row to show content in popup
         headersTemplateTable.setRowFactory(tv -> {
             TableRow<HeadersTemplateItem> row = new TableRow<>();
             row.setOnMouseClicked(event -> {
@@ -74,14 +74,14 @@ public class HeadersTemplateViewModel implements Initializable {
                     area.setPrefWidth(800);
                     area.setPrefHeight(600);
                     alert.getDialogPane().setContent(area);
-                    // 设置icon
+                    // set icon
                     Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
                     try {
                         stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
                     } catch (Exception e) {
                         // ignore
                     }
-                    // 设置按钮为Close
+                    // set button to Close
                     alert.getButtonTypes().setAll(new ButtonType("Close", ButtonBar.ButtonData.OK_DONE));
                     alert.showAndWait();
                 }
@@ -89,7 +89,7 @@ public class HeadersTemplateViewModel implements Initializable {
             return row;
         });
 
-        // content列加Tooltip和最大高度、长度限制
+        // add Tooltip and max height, length limit to content column
         headersTemplateContentColumn.setCellFactory(col -> new TableCell<HeadersTemplateItem, String>() {
             private static final int MAX_LENGTH = 200;
             private final Tooltip tooltip = new Tooltip();
@@ -123,7 +123,7 @@ public class HeadersTemplateViewModel implements Initializable {
                     headersTemplateList.add(new HeadersTemplateItem(t.getId(), t.getName(), t.getContent()));
                 }
             } catch (ServiceException e) {
-                // 可加错误提示
+                // add error hint
             }
         }
     }

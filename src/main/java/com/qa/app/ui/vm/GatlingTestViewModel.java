@@ -442,7 +442,7 @@ public class GatlingTestViewModel implements Initializable {
         endpointList.clear();
         endpointNameList.clear();
         try {
-            // 获取当前环境
+            // get current environment
             String envName = AppConfig.getCurrentEnv();
             Integer envId = null;
             for (Environment env : environmentService.findAllEnvironments()) {
@@ -452,7 +452,7 @@ public class GatlingTestViewModel implements Initializable {
                 }
             }
             if (envId != null) {
-                // 只加载当前环境下的endpoint
+                // only load endpoints in current environment
                 for (Endpoint ep : endpointService.getAllEndpoints()) {
                     if (envId.equals(ep.getEnvironmentId())) {
                         endpointList.add(ep);
