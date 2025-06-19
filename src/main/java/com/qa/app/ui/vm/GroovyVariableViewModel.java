@@ -11,8 +11,6 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 public class GroovyVariableViewModel {
 
@@ -117,13 +115,13 @@ public class GroovyVariableViewModel {
 
     @FXML
     private void handleSave() {
-        GroovyVariable selected = variablesListView.getSelectionModel().getSelectedItem();
-        if (selected == null) {
+        if (currentlyEditing == null) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("No variable selected to save.", MainViewModel.StatusType.ERROR);
             }
             return;
         }
+        GroovyVariable selected = currentlyEditing;
         String name = nameField.getText();
         String format = formatField.getText();
         String description = descriptionField.getText();
@@ -165,13 +163,13 @@ public class GroovyVariableViewModel {
 
     @FXML
     private void handleDelete() {
-        GroovyVariable selected = variablesListView.getSelectionModel().getSelectedItem();
-        if (selected == null) {
+        if (currentlyEditing == null) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("No variable selected to delete.", MainViewModel.StatusType.ERROR);
             }
             return;
         }
+        GroovyVariable selected = currentlyEditing;
         System.out.println("[DEBUG] Try to delete variable id: " + selected.getId()); // debug log
         try {
             if (selected.getId() != null) {
@@ -205,16 +203,6 @@ public class GroovyVariableViewModel {
         }
     }
 
-    private void saveChangesToFile() {
-        try {
-            variableService.saveVariables(List.copyOf(variables));
-            VariableGenerator.reloadCustomVariables();
-        } catch (ServiceException e) {
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus("Error saving variables to file: " + e.getMessage(), MainViewModel.StatusType.ERROR);
-            }
-        }
-    }
     
     private void clearAndEnableDetailPane() {
         nameField.clear();
@@ -233,9 +221,7 @@ public class GroovyVariableViewModel {
         deleteButton.setDisable(disabled);
     }
 
-    private void showAlert(String title, String content) {
-        // No longer used, replaced by status bar messages
-    }
+
     
     public void setMainViewModel(MainViewModel mainViewModel) {
         this.mainViewModel = mainViewModel;

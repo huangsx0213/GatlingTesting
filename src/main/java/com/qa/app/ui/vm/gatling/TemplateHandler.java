@@ -3,7 +3,6 @@ package com.qa.app.ui.vm.gatling;
 import javafx.collections.ObservableList;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.control.cell.TextFieldTableCell;
 import com.qa.app.model.DynamicVariable;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -16,8 +15,6 @@ import java.io.IOException;
 import java.io.StringWriter;
 import freemarker.core.JSONOutputFormat;
 import java.util.Set;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.qa.app.util.VariableGenerator;
 import javafx.collections.FXCollections;
 import javafx.scene.control.cell.ComboBoxTableCell;
@@ -32,7 +29,6 @@ public class TemplateHandler {
     private final TableColumn<DynamicVariable, String> valueColumn;
     private final TextArea generatedArea;
     private final Configuration freemarkerCfg = new Configuration(new Version("2.3.32"));
-    private static final ObjectMapper jsonMapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     private static final Configuration staticFreemarkerCfg;
 

@@ -1,5 +1,6 @@
 package com.qa.app.util;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qa.app.model.Endpoint;
 import com.qa.app.model.GatlingLoadParameters;
@@ -16,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import static io.gatling.javaapi.core.CoreDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.http;
@@ -255,7 +255,7 @@ public class DynamicJavaSimulation extends Simulation {
         }
         try {
             // Attempt to parse as JSON first
-            return new ObjectMapper().readValue(headersString, Map.class);
+            return new ObjectMapper().readValue(headersString, new TypeReference<Map<String, String>>() {});
         } catch (IOException e) {
             // Fallback to key: value line-by-line parsing
             Map<String, String> headers = new java.util.HashMap<>();
