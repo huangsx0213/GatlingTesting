@@ -705,8 +705,20 @@ public class GatlingTestViewModel implements Initializable {
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         test.setHeadersDynamicVariables(headersVars);
         
-        test.setBody(buildRequestBody());
-        test.setHeaders(buildHeaders());
+        // 存储原始模板（含占位符）以便运行时动态渲染
+        String selectedBodyTemplateName = bodyTemplateComboBox.getSelectionModel().getSelectedItem();
+        if (selectedBodyTemplateName != null && bodyTemplates.containsKey(selectedBodyTemplateName)) {
+            test.setBody(bodyTemplates.get(selectedBodyTemplateName));
+        } else {
+            test.setBody(null);
+        }
+
+        String selectedHeadersTemplateName = headersTemplateComboBox.getSelectionModel().getSelectedItem();
+        if (selectedHeadersTemplateName != null && headersTemplates.containsKey(selectedHeadersTemplateName)) {
+            test.setHeaders(headersTemplates.get(selectedHeadersTemplateName));
+        } else {
+            test.setHeaders(null);
+        }
 
         test.setProjectId(AppConfig.getCurrentProjectId());
 

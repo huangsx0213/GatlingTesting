@@ -6,6 +6,7 @@ import com.qa.app.model.Endpoint;
 import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.GatlingTest;
 import com.qa.app.model.threadgroups.*;
+import com.qa.app.util.RuntimeTemplateProcessor;
 import io.gatling.javaapi.core.*;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
@@ -221,15 +222,18 @@ public class DynamicJavaSimulation extends Simulation {
 
     private HttpRequestActionBuilder createRequestBuilder() {
         String requestName = test.getTcid();
+
         HttpRequestActionBuilder request;
 
         // Set method and body
         switch (endpoint.getMethod().toUpperCase()) {
             case "POST":
-                request = http(requestName).post("").body(StringBody(test.getBody()));
+                request = http(requestName).post("").body(StringBody(session ->
+                        RuntimeTemplateProcessor.render(test.getBody(), test.getBodyDynamicVariables())));
                 break;
             case "PUT":
-                request = http(requestName).put("").body(StringBody(test.getBody()));
+                request = http(requestName).put("").body(StringBody(session ->
+                        RuntimeTemplateProcessor.render(test.getBody(), test.getBodyDynamicVariables())));
                 break;
             case "DELETE":
                 request = http(requestName).delete("");
@@ -240,10 +244,15 @@ public class DynamicJavaSimulation extends Simulation {
                 break;
         }
 
-        // Set headers
-        Map<String, String> headersMap = parseHeaders(test.getHeaders());
-        for (Map.Entry<String, String> header : headersMap.entrySet()) {
-            request = request.header(header.getKey(), header.getValue());
+        // ---------------- 处理 Headers ----------------
+        // 先解析模板以获取所有 Header Key，随后为每一个 Key 设置一个动态 Expression
+        java.util.Map<String, String> rawHeaderMap = parseHeaders(test.getHeaders());
+        for (java.util.Map.Entry<String, String> entry : rawHeaderMap.entrySet()) {
+            String headerKey = entry.getKey();
+            String headerValueTemplate = entry.getValue();
+
+            request = request.header(headerKey, session ->
+                    RuntimeTemplateProcessor.render(headerValueTemplate, test.getHeadersDynamicVariables()));
         }
 
         return request.check(status().is(Integer.parseInt(test.getExpStatus())));

@@ -3,7 +3,8 @@ package com.qa.app.util;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import groovy.lang.Binding;
-import groovy.lang.GroovyShell;
+import groovy.lang.GroovyClassLoader;
+import groovy.lang.Script;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,6 +20,10 @@ public class GroovyVariable {
     private final String groovyScript;
     private final Pattern pattern;
     private final int expectedArgCount;
+
+    // 脚本编译缓存
+    private static final GroovyClassLoader GLOBAL_GROOVY_CLASS_LOADER = new GroovyClassLoader();
+    private Class<? extends Script> compiledScriptClass;
 
     @JsonCreator
     public GroovyVariable(
@@ -40,6 +45,14 @@ public class GroovyVariable {
         }
         this.expectedArgCount = (int) count;
         this.pattern = buildPatternFromFormat(format, this.expectedArgCount);
+
+        // 预编译脚本，若失败仍可在 generate 时退回原脚本字符串
+        try {
+            this.compiledScriptClass = GLOBAL_GROOVY_CLASS_LOADER.parseClass(groovyScript);
+        } catch (Exception e) {
+            System.err.println("[GroovyVariable] 脚本预编译失败: " + e.getMessage());
+            this.compiledScriptClass = null;
+        }
     }
 
     public GroovyVariable(Integer id, String name, String format, String description, String groovyScript) {
@@ -58,6 +71,14 @@ public class GroovyVariable {
         }
         this.expectedArgCount = (int) count;
         this.pattern = buildPatternFromFormat(format, this.expectedArgCount);
+
+        // 预编译脚本，若失败仍可在 generate 时退回原脚本字符串
+        try {
+            this.compiledScriptClass = GLOBAL_GROOVY_CLASS_LOADER.parseClass(groovyScript);
+        } catch (Exception e) {
+            System.err.println("[GroovyVariable] 脚本预编译失败: " + e.getMessage());
+            this.compiledScriptClass = null;
+        }
     }
 
     private Pattern buildPatternFromFormat(String formatStr, int argCount) {
@@ -101,11 +122,23 @@ public class GroovyVariable {
         }
 
         try {
-            Binding binding = new Binding();
-            binding.setVariable("args", args);
-            GroovyShell shell = new GroovyShell(binding);
-            Object result = shell.evaluate(groovyScript);
-            return String.valueOf(result);
+            if (compiledScriptClass == null) {
+                // 如果预编译失败，则回退到即时解析
+                Binding binding = new Binding();
+                binding.setVariable("args", args);
+                Object result = new GroovyClassLoader().parseClass(groovyScript).newInstance();
+                if (result instanceof Script script) {
+                    script.setBinding(binding);
+                    return String.valueOf(script.run());
+                } else {
+                    return format;
+                }
+            } else {
+                Script scriptInstance = compiledScriptClass.getDeclaredConstructor().newInstance();
+                scriptInstance.setProperty("args", args);
+                Object result = scriptInstance.run();
+                return String.valueOf(result);
+            }
         } catch (Exception e) {
             System.err.println("Error executing Groovy script for variable '" + name + "': " + e.getMessage());
             e.printStackTrace();
