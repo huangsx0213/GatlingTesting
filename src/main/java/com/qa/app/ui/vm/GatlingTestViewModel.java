@@ -862,6 +862,7 @@ public class GatlingTestViewModel implements Initializable {
                     mainViewModel.updateStatus("Test completed: " + selectedTest.getTcid(),
                             MainViewModel.StatusType.SUCCESS);
                 }
+                refreshAll();
             }
         } catch (IOException e) {
             e.printStackTrace();
