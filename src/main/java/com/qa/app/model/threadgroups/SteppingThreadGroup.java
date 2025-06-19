@@ -5,13 +5,13 @@ import java.io.Serializable;
 public class SteppingThreadGroup implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private int numThreads = 100;
+    private int numThreads = 1;
     private int initialDelay = 0;
-    private int startUsers = 10;
-    private int incrementUsers = 10;
+    private int startUsers = 0;
+    private int incrementUsers = 1;
     private int incrementTime = 30;
     private int holdLoad = 60;
-    private int threadLifetime = 3600;
+    private int threadLifetime = 60;
 
     public int getNumThreads() {
         return numThreads;

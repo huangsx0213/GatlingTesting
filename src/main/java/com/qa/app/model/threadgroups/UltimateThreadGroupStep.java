@@ -24,7 +24,7 @@ public class UltimateThreadGroupStep implements Serializable {
 
     // Default constructor for UI
     public UltimateThreadGroupStep() {
-        this(0, 10, 30, 60, 10);
+        this(0, 1, 1, 60, 1);
     }
 
     public int getStartTime() {
