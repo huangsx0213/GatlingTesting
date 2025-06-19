@@ -13,6 +13,8 @@ import javafx.util.converter.IntegerStringConverter;
 import java.net.URL;
 import java.util.ResourceBundle;
 
+import com.qa.app.util.UserPreferences;
+
 public class GatlingLoadDialogViewModel implements Initializable {
 
     // Common
@@ -50,8 +52,6 @@ public class GatlingLoadDialogViewModel implements Initializable {
     private Spinner<Integer> steppingIncrementTimeSpinner;
     @FXML
     private Spinner<Integer> steppingHoldLoadSpinner;
-    @FXML
-    private Spinner<Integer> steppingThreadLifetimeSpinner;
 
     // Ultimate
     @FXML
@@ -75,10 +75,17 @@ public class GatlingLoadDialogViewModel implements Initializable {
 
     private final ObservableList<UltimateThreadGroupStep> ultimateSteps = FXCollections.observableArrayList();
 
+    private UserPreferences prefs;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        // Load user preferences
+        prefs = UserPreferences.load();
+
         // Standard setup
         setupStandardTab();
+
+        applyPreferencesToUI();
 
         // Ultimate Thread Group TableView setup
         setupUltimateTable();
@@ -119,6 +126,26 @@ public class GatlingLoadDialogViewModel implements Initializable {
         }
     }
 
+    private void applyPreferencesToUI() {
+        // Standard
+        StandardThreadGroup s = prefs.standard;
+        standardNumThreadsSpinner.getValueFactory().setValue(s.getNumThreads());
+        standardRampUpSpinner.getValueFactory().setValue(s.getRampUp());
+        standardLoopsSpinner.getValueFactory().setValue(s.getLoops());
+        standardSchedulerCheckBox.setSelected(s.isScheduler());
+        standardDurationSpinner.getValueFactory().setValue(s.getDuration());
+        standardDelaySpinner.getValueFactory().setValue(s.getDelay());
+
+        // Stepping
+        SteppingThreadGroup st = prefs.stepping;
+        steppingNumThreadsSpinner.getValueFactory().setValue(st.getNumThreads());
+        steppingInitialDelaySpinner.getValueFactory().setValue(st.getInitialDelay());
+        steppingStartUsersSpinner.getValueFactory().setValue(st.getStartUsers());
+        steppingIncrementUsersSpinner.getValueFactory().setValue(st.getIncrementUsers());
+        steppingIncrementTimeSpinner.getValueFactory().setValue(st.getIncrementTime());
+        steppingHoldLoadSpinner.getValueFactory().setValue(st.getHoldLoad());
+    }
+
     public GatlingLoadParameters getParameters() {
         GatlingLoadParameters params = new GatlingLoadParameters();
         Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
@@ -133,6 +160,9 @@ public class GatlingLoadDialogViewModel implements Initializable {
             config.setDuration(standardDurationSpinner.getValue());
             config.setDelay(standardDelaySpinner.getValue());
             params.setStandardThreadGroup(config);
+
+            // 保存到首选项
+            prefs.standard = config;
         } else if (selectedTab == steppingLoadTab) {
             params.setType(ThreadGroupType.STEPPING);
             SteppingThreadGroup config = new SteppingThreadGroup();
@@ -142,14 +172,18 @@ public class GatlingLoadDialogViewModel implements Initializable {
             config.setIncrementUsers(steppingIncrementUsersSpinner.getValue());
             config.setIncrementTime(steppingIncrementTimeSpinner.getValue());
             config.setHoldLoad(steppingHoldLoadSpinner.getValue());
-            config.setThreadLifetime(steppingThreadLifetimeSpinner.getValue());
             params.setSteppingThreadGroup(config);
+
+            prefs.stepping = config;
         } else if (selectedTab == ultimateTab) {
             params.setType(ThreadGroupType.ULTIMATE);
             UltimateThreadGroup config = new UltimateThreadGroup();
             config.setSteps(new java.util.ArrayList<>(ultimateStepsTable.getItems()));
             params.setUltimateThreadGroup(config);
         }
+
+        // 持久化首选项
+        prefs.save();
 
         return params;
     }

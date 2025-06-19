@@ -54,7 +54,25 @@ public class DynamicJavaSimulation extends Simulation {
             setup.maxDuration(Duration.ofSeconds(standardConfig.getDuration() + standardConfig.getDelay()));
         } else if (params.getType() == ThreadGroupType.STEPPING) {
             SteppingThreadGroup steppingConfig = params.getSteppingThreadGroup();
-            setup.maxDuration(Duration.ofSeconds(steppingConfig.getThreadLifetime()));
+
+            // 根据 JMeter Stepping TG 语义：initialDelay + 总 rampUp 时长 + holdLoad
+            long totalRampUp = 0;
+
+            // 初始用户 ramp 时间（只有当 startUsers > 0 时才计）
+            if (steppingConfig.getStartUsers() > 0) {
+                totalRampUp += steppingConfig.getIncrementTime();
+            }
+
+            // 计算后续增量批次数量
+            int remainingUsers = steppingConfig.getNumThreads() - steppingConfig.getStartUsers();
+            if (remainingUsers > 0 && steppingConfig.getIncrementUsers() > 0) {
+                int numberOfSteps = (int) Math.ceil((double) remainingUsers / steppingConfig.getIncrementUsers());
+                totalRampUp += (long) numberOfSteps * steppingConfig.getIncrementTime();
+            }
+
+            long totalDuration = (long) steppingConfig.getInitialDelay() + totalRampUp + steppingConfig.getHoldLoad();
+
+            setup.maxDuration(Duration.ofSeconds(totalDuration));
         } else if (params.getType() == ThreadGroupType.ULTIMATE) {
             long maxDuration = 0;
             for (UltimateThreadGroupStep step : params.getUltimateThreadGroup().getSteps()) {
@@ -86,18 +104,18 @@ public class DynamicJavaSimulation extends Simulation {
                     steps.add(nothingFor(Duration.ofSeconds(steppingConfig.getInitialDelay())));
                 }
 
-                // 2. Start initial users
-                steps.add(atOnceUsers(steppingConfig.getStartUsers()));
+                // 2. Ramp-up initial users
+                int rampDurationSec = Math.max(1, steppingConfig.getIncrementTime());
+                steps.add(rampUsers(steppingConfig.getStartUsers()).during(Duration.ofSeconds(rampDurationSec)));
 
-                // 3. Calculate steps for increment
+                // 3. Subsequent increments – 每个批次用户在线性 ramp-up 过程中被逐步拉起
                 int remainingUsers = steppingConfig.getNumThreads() - steppingConfig.getStartUsers();
                 if (remainingUsers > 0 && steppingConfig.getIncrementUsers() > 0) {
                     int numberOfSteps = (int) Math.ceil((double) remainingUsers / steppingConfig.getIncrementUsers());
                     for (int i = 0; i < numberOfSteps; i++) {
-                        steps.add(nothingFor(Duration.ofSeconds(steppingConfig.getIncrementTime())));
                         int usersInThisStep = Math.min(steppingConfig.getIncrementUsers(), remainingUsers - (i * steppingConfig.getIncrementUsers()));
                         if (usersInThisStep > 0) {
-                           steps.add(atOnceUsers(usersInThisStep));
+                           steps.add(rampUsers(usersInThisStep).during(Duration.ofSeconds(rampDurationSec)));
                         }
                     }
                 }
@@ -143,7 +161,7 @@ public class DynamicJavaSimulation extends Simulation {
                     // For now, we assume phases can overlap. The total duration will be controlled by maxDuration.
 
                     // Update the end time for the next step's calculation
-                    lastStepEndTime = step.getStartTime() + step.getStartupTime() + step.getHoldTime() + step.getShutdownTime();
+                    lastStepEndTime = step.getStartTime() + step.getStartupTime();
                 }
                 return scn.injectOpen(injectionSteps);
 

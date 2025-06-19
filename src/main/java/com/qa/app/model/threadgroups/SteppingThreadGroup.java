@@ -11,7 +11,6 @@ public class SteppingThreadGroup implements Serializable {
     private int incrementUsers = 1;
     private int incrementTime = 30;
     private int holdLoad = 60;
-    private int threadLifetime = 60;
 
     public int getNumThreads() {
         return numThreads;
@@ -59,13 +58,5 @@ public class SteppingThreadGroup implements Serializable {
 
     public void setHoldLoad(int holdLoad) {
         this.holdLoad = holdLoad;
-    }
-
-    public int getThreadLifetime() {
-        return threadLifetime;
-    }
-
-    public void setThreadLifetime(int threadLifetime) {
-        this.threadLifetime = threadLifetime;
     }
 } 

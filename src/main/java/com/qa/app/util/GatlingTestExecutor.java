@@ -51,7 +51,6 @@ public class GatlingTestExecutor {
                     System.out.println("  Increment Users: " + steppingConfig.getIncrementUsers());
                     System.out.println("  Increment Interval: " + steppingConfig.getIncrementTime() + "s");
                     System.out.println("  Hold Load For: " + steppingConfig.getHoldLoad() + "s");
-                    System.out.println("  Thread Lifetime: " + steppingConfig.getThreadLifetime() + "s");
                     break;
                 case ULTIMATE:
                     System.out.println("  --- Ultimate Steps ---");
