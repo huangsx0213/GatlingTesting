@@ -12,6 +12,7 @@ import java.util.stream.IntStream;
 
 public class GroovyVariable {
 
+    private Integer id;
     private final String name;
     private final String format;
     private final String description;
@@ -25,6 +26,24 @@ public class GroovyVariable {
             @JsonProperty("format") String format,
             @JsonProperty("description") String description,
             @JsonProperty("groovyScript") String groovyScript) {
+        this.name = name;
+        this.format = format;
+        this.description = description;
+        this.groovyScript = groovyScript;
+
+        long count = 0;
+        if (format.contains("(") && format.contains(")")) {
+            String argsPart = format.substring(format.indexOf('(') + 1, format.lastIndexOf(')'));
+            if (!argsPart.trim().isEmpty()) {
+                count = Arrays.stream(argsPart.split(",")).filter(s -> !s.trim().isEmpty()).count();
+            }
+        }
+        this.expectedArgCount = (int) count;
+        this.pattern = buildPatternFromFormat(format, this.expectedArgCount);
+    }
+
+    public GroovyVariable(Integer id, String name, String format, String description, String groovyScript) {
+        this.id = id;
         this.name = name;
         this.format = format;
         this.description = description;
@@ -116,5 +135,13 @@ public class GroovyVariable {
     
     public String getGroovyScript() {
         return groovyScript;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
     }
 } 

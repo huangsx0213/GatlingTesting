@@ -105,6 +105,19 @@ public class DBUtil {
                     + ");";
             stmt.execute(endpointSql);
 
+            // Create groovy_variables table if it doesn't exist
+            String groovyVariableSql = "CREATE TABLE IF NOT EXISTS groovy_variables ("
+                    + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "name TEXT NOT NULL, "
+                    + "value TEXT, "
+                    + "environment_id INTEGER, "
+                    + "project_id INTEGER, "
+                    + "FOREIGN KEY (environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
+                    + "FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
+                    + " UNIQUE(name, environment_id)"
+                    + ");";
+            stmt.execute(groovyVariableSql);
+
             // Create project table if it doesn't exist
             String projectSql = "CREATE TABLE IF NOT EXISTS project ("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"

@@ -8,6 +8,7 @@ import com.qa.app.ui.vm.gatling.TagHandler;
 import com.qa.app.ui.vm.gatling.TemplateHandler;
 import com.qa.app.ui.vm.gatling.TestCondictionHandler;
 import com.qa.app.util.AppConfig;
+import com.qa.app.util.VariableGenerator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -17,7 +18,6 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.ComboBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.FlowPane;
 import org.controlsfx.control.CheckComboBox;
 import javafx.stage.Stage;
@@ -953,5 +953,16 @@ public class GatlingTestViewModel implements Initializable {
 
     private String serializeConditions() {
         return conditionHandler.serializeConditions();
+    }
+
+    public void refreshDynamicVariables() {
+        VariableGenerator.reloadCustomVariables();
+        loadTemplates();
+        loadHeadersTemplates();
+        // refresh dynamic variables table
+        if (bodyDynamicVarsTable != null) bodyDynamicVarsTable.refresh();
+        if (headersTemplateVarsTable != null) headersTemplateVarsTable.refresh();
+        if (bodyTemplateComboBox != null) bodyTemplateComboBox.setItems(FXCollections.observableArrayList(bodyTemplateIdNameMap.values()));
+        if (headersTemplateComboBox != null) headersTemplateComboBox.setItems(FXCollections.observableArrayList(headersTemplateIdNameMap.values()));
     }
 }

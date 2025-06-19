@@ -41,8 +41,8 @@ public class MainViewModel implements Initializable {
         "Body Template Management",
         "Environment Management",
         "Project Management",
-        "Application Properties",
-        "Groovy Variables"
+        "Variables Management",
+        "Application Properties"
     );
     private final Map<String, String> fxmlMapping = new HashMap<>();
     private final Map<String, Node> loadedTabs = new HashMap<>();
@@ -80,8 +80,8 @@ public class MainViewModel implements Initializable {
         fxmlMapping.put("Body Template Management", "/com/qa/app/ui/view/body_template_view.fxml");
         fxmlMapping.put("Environment Management", "/com/qa/app/ui/view/environment_view.fxml");
         fxmlMapping.put("Project Management", "/com/qa/app/ui/view/project_view.fxml");
+        fxmlMapping.put("Variables Management", "/com/qa/app/ui/view/groovy_variable_view.fxml");
         fxmlMapping.put("Application Properties", "/com/qa/app/ui/view/application_properties_view.fxml");
-        fxmlMapping.put("Groovy Variables", "/com/qa/app/ui/view/groovy_variable_view.fxml");
         // Removed System Settings mapping
 
         navigationList.setItems(navItems);
@@ -131,6 +131,7 @@ public class MainViewModel implements Initializable {
                     controller = contentNode.getUserData();
                 }
                 if (controller instanceof GatlingTestViewModel) {
+                    ((GatlingTestViewModel) controller).refreshDynamicVariables();
                     ((GatlingTestViewModel) controller).refresh();
                 } else if (controller instanceof BodyTemplateViewModel) {
                     ((BodyTemplateViewModel) controller).refresh();
@@ -146,7 +147,7 @@ public class MainViewModel implements Initializable {
                     ((ApplicationPropertiesViewModel) controller).setMainViewModel(this);
                     ((ApplicationPropertiesViewModel) controller).loadProperties();
                 } else if (controller instanceof GroovyVariableViewModel) {
-                    // No specific action needed on switch for now, handled in initialize
+                    ((GroovyVariableViewModel) controller).refresh();
                 }
                 // Gatling tab is not closable and always in the first position
                 if (tabName.equals("Gatling Test Management")) {
@@ -185,7 +186,7 @@ public class MainViewModel implements Initializable {
                     } else if (controller instanceof ApplicationPropertiesViewModel) {
                         ((ApplicationPropertiesViewModel) controller).setMainViewModel(this);
                     } else if (controller instanceof GroovyVariableViewModel) {
-                        // No specific action needed on new tab creation
+                        ((GroovyVariableViewModel) controller).setMainViewModel(this);
                     }
                     // let Node find controller
                     contentNode.getProperties().put("controller", controller);
@@ -214,6 +215,7 @@ public class MainViewModel implements Initializable {
                     controller = contentNode.getUserData();
                 }
                 if (controller instanceof GatlingTestViewModel) {
+                    ((GatlingTestViewModel) controller).refreshDynamicVariables();
                     ((GatlingTestViewModel) controller).refresh();
                 } else if (controller instanceof BodyTemplateViewModel) {
                     ((BodyTemplateViewModel) controller).refresh();
@@ -229,7 +231,7 @@ public class MainViewModel implements Initializable {
                     ((ApplicationPropertiesViewModel) controller).setMainViewModel(this);
                     ((ApplicationPropertiesViewModel) controller).loadProperties();
                 } else if (controller instanceof GroovyVariableViewModel) {
-                    // No refresh action needed for now
+                    ((GroovyVariableViewModel) controller).refresh();
                 }
 
             } catch (IOException e) {

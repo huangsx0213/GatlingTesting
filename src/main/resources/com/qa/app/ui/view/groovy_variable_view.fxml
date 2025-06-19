@@ -1,91 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ListView?>
-<?import javafx.scene.control.SplitPane?>
-<?import javafx.scene.control.TextArea?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.ColumnConstraints?>
-<?import javafx.scene.layout.GridPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Font?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.qa.app.ui.vm.GroovyVariableViewModel">
-    <top>
-        <VBox>
-            <children>
-                <Label text="Custom Groovy Variables Management" BorderPane.alignment="CENTER">
-                    <font>
-                        <Font name="System Bold" size="18.0" />
-                    </font>
-                </Label>
-                <Label text="Variables are stored in your user directory. Changes are saved automatically." textFill="GREY">
-                     <VBox.margin>
-                        <Insets top="5.0" />
-                    </VBox.margin>
-                </Label>
-            </children>
+<AnchorPane prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.qa.app.ui.vm.GroovyVariableViewModel">
+    <children>
+        <VBox spacing="15.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" VBox.vgrow="ALWAYS">
             <padding>
-                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
             </padding>
+            
+            <!-- Header Section -->
+            <Label text="Variables Management" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
+            <Separator />
+            
+            <!-- Main Content Area -->
+            <HBox spacing="15.0" VBox.vgrow="ALWAYS">
+                <!-- Variables List Section -->
+                <VBox spacing="10.0" prefWidth="300.0" minWidth="250.0" maxWidth="350.0">
+                    <Label text="Variables List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+                    <ListView fx:id="variablesListView" VBox.vgrow="ALWAYS" styleClass="table-view" />
+                </VBox>
+                
+                <!-- Variable Details Section -->
+                <VBox spacing="15.0" HBox.hgrow="ALWAYS">
+                    <Label text="Variable Details" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+                    <Separator />
+                    
+                    <!-- Form Fields -->
+                    <GridPane hgap="15.0" vgap="10.0" VBox.vgrow="NEVER">
+                        <columnConstraints>
+                            <ColumnConstraints prefWidth="120.0"/>
+                            <ColumnConstraints prefWidth="400.0" hgrow="ALWAYS"/>
+                        </columnConstraints>
+                        <rowConstraints>
+                            <RowConstraints minHeight="40.0"/>
+                            <RowConstraints minHeight="40.0"/>
+                            <RowConstraints minHeight="40.0"/>
+                        </rowConstraints>
+                        <children>
+                            <Label text="Variable Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <TextField fx:id="nameField" promptText="Enter variable name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                            
+                            <Label text="Format:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                            <TextField fx:id="formatField" promptText="Enter variable format" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                            
+                            <Label text="Description:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                            <TextField fx:id="descriptionField" promptText="Enter variable description" GridPane.rowIndex="2" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                        </children>
+                    </GridPane>
+                    
+                    <!-- Groovy Script Section -->
+                    <VBox spacing="5.0" VBox.vgrow="ALWAYS">
+                        <Label text="Groovy Script:" style="-fx-font-weight: bold;" />
+                        <TextArea fx:id="scriptArea" promptText="Enter your Groovy script here..." VBox.vgrow="ALWAYS" wrapText="true" />
+                    </VBox>
+                    
+                    <!-- Action Buttons -->
+                    <HBox spacing="10.0" alignment="CENTER_LEFT">
+                        <Button fx:id="addButton" text="Add Variable" onAction="#handleAdd" mnemonicParsing="false" />
+                        <Button fx:id="saveButton" text="Save Variable" onAction="#handleSave" mnemonicParsing="false" />
+                        <Button fx:id="deleteButton" text="Delete Variable" onAction="#handleDelete" mnemonicParsing="false" />
+                        <Button fx:id="clearButton" text="Clear Form" onAction="#handleClear" mnemonicParsing="false" />
+                    </HBox>
+                </VBox>
+            </HBox>
         </VBox>
-    </top>
-    <center>
-        <SplitPane dividerPositions="0.3" BorderPane.alignment="CENTER">
-            <items>
-                <BorderPane>
-                    <center>
-                        <ListView fx:id="variablesListView" />
-                    </center>
-                    <bottom>
-                        <HBox alignment="CENTER_LEFT" spacing="10.0" BorderPane.alignment="CENTER">
-                            <padding>
-                                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                            </padding>
-                            <children>
-                                <Button fx:id="addButton" onAction="#handleAdd" text="New Variable" />
-                                <Button fx:id="deleteButton" onAction="#handleDelete" text="Delete" />
-                            </children>
-                        </HBox>
-                    </bottom>
-                </BorderPane>
-                <AnchorPane>
-                    <children>
-                        <VBox spacing="10.0" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="10.0">
-                            <children>
-                                <GridPane hgap="10.0" vgap="10.0">
-                                    <columnConstraints>
-                                        <ColumnConstraints hgrow="NEVER" minWidth="100.0" />
-                                        <ColumnConstraints hgrow="ALWAYS" />
-                                    </columnConstraints>
-                                    <children>
-                                        <Label text="Name:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                                        <TextField fx:id="nameField" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-
-                                        <Label text="Format:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                                        <TextField fx:id="formatField" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                                        
-                                        <Label text="Description:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                                        <TextField fx:id="descriptionField" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-                                    </children>
-                                </GridPane>
-                                <Label text="Groovy Script:" />
-                                <TextArea fx:id="scriptArea" prefHeight="200.0" wrapText="true" VBox.vgrow="ALWAYS" />
-                                <HBox alignment="CENTER_RIGHT">
-                                    <children>
-                                        <Button fx:id="saveButton" onAction="#handleSave" text="Save Changes" />
-                                    </children>
-                                </HBox>
-                            </children>
-                        </VBox>
-                    </children>
-                </AnchorPane>
-            </items>
-        </SplitPane>
-    </center>
-</BorderPane> 
+    </children>
+</AnchorPane> 
