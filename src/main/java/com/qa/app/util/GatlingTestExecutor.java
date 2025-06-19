@@ -1,10 +1,11 @@
 package com.qa.app.util;
 
-import com.qa.app.model.Endpoint;
-import com.qa.app.model.GatlingRunParameters;
-import com.qa.app.model.GatlingTest;
-import org.json.JSONObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.qa.app.model.Endpoint;
+import com.qa.app.model.GatlingLoadParameters;
+import com.qa.app.model.GatlingTest;
+import com.qa.app.model.threadgroups.SteppingThreadGroup;
+import com.qa.app.model.threadgroups.UltimateThreadGroupStep;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -15,71 +16,54 @@ import java.util.List;
 
 public class GatlingTestExecutor {
 
-    public static void execute(GatlingTest test, GatlingRunParameters params, Endpoint endpoint) {
+    public static void execute(GatlingTest test, GatlingLoadParameters params, Endpoint endpoint) {
         try {
             // print test details
             System.out.println("========== Gatling Test Details ==========");
             System.out.println("Test ID: " + test.getId());
             System.out.println("Test TCID: " + test.getTcid());
             System.out.println("Test Suite: " + test.getSuite());
-            
+
             System.out.println("\n----- Endpoint Information -----");
             System.out.println("Endpoint Name: " + endpoint.getName());
             System.out.println("URL: " + endpoint.getUrl());
             System.out.println("Method: " + endpoint.getMethod());
-            
+
             System.out.println("\n----- Request Headers -----");
-            try {
-                if (test.getHeaders() != null && !test.getHeaders().trim().isEmpty()) {
-                    String headersText = test.getHeaders().trim();
-                    if (headersText.startsWith("{")) {
-                        // JSON format
-                        JSONObject headers = new JSONObject(headersText);
-                        for (String key : headers.keySet()) {
-                            System.out.println(key + ": " + headers.getString(key));
-                        }
-                    } else {
-                        // multi-line text format
-                        String[] lines = headersText.split("\\r?\\n");
-                        for (String line : lines) {
-                            line = line.trim();
-                            if (!line.isEmpty()) {
-                                System.out.println(line);
-                            }
-                        }
-                    }
-                } else {
-                    System.out.println("(No request headers)");
-                }
-            } catch (Exception e) {
-                System.out.println("Request headers parsing failed: " + e.getMessage());
-                System.out.println("Original request headers: " + test.getHeaders());
-            }
-            
+            System.out.println(test.getHeaders());
+
             System.out.println("\n----- Request Body -----");
-            if (test.getBody() != null && !test.getBody().trim().isEmpty()) {
-                try {
-                    // try to format JSON
-                    JSONObject json = new JSONObject(test.getBody());
-                    System.out.println(json.toString(2)); // indent 2 spaces
-                } catch (Exception e) {
-                    // if not valid JSON, print original content
-                    System.out.println(test.getBody());
-                }
-            } else {
-                System.out.println("(No request body)");
-            }
-            
+            System.out.println(test.getBody());
+
             System.out.println("\n----- Test Parameters -----");
-            System.out.println("Concurrent users: " + params.getUsers());
-            System.out.println("Warmup time (seconds): " + params.getRampUp());
-            System.out.println("Repetitions: " + params.getRepetitions());
+            System.out.println("Load Profile Type: " + params.getType());
+            switch (params.getType()) {
+                case STANDARD:
+                    System.out.println("  Users: " + params.getStandardThreadGroup().getNumThreads());
+                    System.out.println("  Ramp-up (s): " + params.getStandardThreadGroup().getRampUp());
+                    System.out.println("  Duration (s): " + params.getStandardThreadGroup().getDuration());
+                    break;
+                case STEPPING:
+                    SteppingThreadGroup steppingConfig = params.getSteppingThreadGroup();
+                    System.out.println("  Total Threads: " + steppingConfig.getNumThreads());
+                    System.out.println("  Initial Delay: " + steppingConfig.getInitialDelay() + "s");
+                    System.out.println("  Initial Users: " + steppingConfig.getStartUsers());
+                    System.out.println("  Increment Users: " + steppingConfig.getIncrementUsers());
+                    System.out.println("  Increment Interval: " + steppingConfig.getIncrementTime() + "s");
+                    System.out.println("  Hold Load For: " + steppingConfig.getHoldLoad() + "s");
+                    System.out.println("  Thread Lifetime: " + steppingConfig.getThreadLifetime() + "s");
+                    break;
+                case ULTIMATE:
+                    System.out.println("  --- Ultimate Steps ---");
+                    for(UltimateThreadGroupStep step : params.getUltimateThreadGroup().getSteps()){
+                         System.out.println(String.format("    - Step: %d users, delay %ds, rampUp %ds, hold %ds, rampDown %ds",
+                            step.getInitialLoad(), step.getStartTime(), step.getStartupTime(), step.getHoldTime(), step.getShutdownTime()));
+                    }
+                    break;
+            }
             System.out.println("Expected status code: " + test.getExpStatus());
             System.out.println("Wait time (seconds): " + test.getWaitTime());
             System.out.println("===================================");
-
-            // Do not use static setters as they don't work across processes
-            // DynamicJavaSimulation.setParameters(test, params, endpoint);
 
             // Execute Gatling in a separate process to avoid System.exit() in the main app
             String javaHome = System.getProperty("java.home");
@@ -123,23 +107,31 @@ public class GatlingTestExecutor {
             command.add("-rf");
             command.add(resultsPath);
 
-            System.out.println("Starting Gatling test...");
-            ProcessBuilder processBuilder = new ProcessBuilder(command);
-            processBuilder.inheritIO();
+            System.out.println("Starting Gatling test in background...");
+            // Run the process in a new thread to avoid blocking the caller (e.g., UI thread)
+            new Thread(() -> {
+                try {
+                    ProcessBuilder processBuilder = new ProcessBuilder(command);
+                    processBuilder.inheritIO();
 
-            Process process = processBuilder.start();
-            int exitCode = process.waitFor();
+                    Process process = processBuilder.start();
+                    int exitCode = process.waitFor();
 
-            if (exitCode == 0) {
-                System.out.println("Gatling test execution completed.");
-            } else {
-                System.out.println("Gatling test execution failed, exit code: " + exitCode);
-            }
+                    if (exitCode == 0) {
+                        System.out.println("Gatling test execution completed.");
+                    } else {
+                        System.out.println("Gatling test execution failed, exit code: " + exitCode);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Gatling test execution failed: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }).start();
 
         } catch (Exception e) {
-            System.err.println("Gatling test execution failed: " + e.getMessage());
+            System.err.println("Failed to initialize Gatling test execution: " + e.getMessage());
             e.printStackTrace();
-            throw new RuntimeException("Failed to run Gatling test via Java API", e);
+            throw new RuntimeException("Failed to start Gatling test process", e);
         }
     }
 } 

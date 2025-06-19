@@ -74,7 +74,7 @@ public class GroovyVariableViewModel {
         if (name == null || name.isBlank() || format == null || format.isBlank()) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Name and Format cannot be empty.", MainViewModel.StatusType.ERROR);
-            }
+    }
             return;
         }
         // Check for duplicate name

@@ -6,7 +6,9 @@ import java.util.List;
 import com.qa.app.dao.api.IGatlingTestDao;
 import com.qa.app.dao.impl.GatlingTestDaoImpl;
 import com.qa.app.model.GatlingTest;
-import com.qa.app.model.GatlingRunParameters;
+import com.qa.app.model.GatlingLoadParameters;
+import com.qa.app.model.threadgroups.StandardThreadGroup;
+import com.qa.app.model.threadgroups.ThreadGroupType;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IEndpointService;
@@ -124,7 +126,7 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     }
 
     @Override
-    public void runTest(GatlingTest test, GatlingRunParameters params) throws ServiceException {
+    public void runTest(GatlingTest test, GatlingLoadParameters params) throws ServiceException {
         if (test == null) {
             throw new ServiceException("Test cannot be null.");
         }
@@ -159,7 +161,14 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             for (GatlingTest test : tests) {
                 if (test.isEnabled()) {
                     // This will run with default parameters.
-                    runTest(test, new GatlingRunParameters(1, 0, 1));
+                    GatlingLoadParameters defaultParams = new GatlingLoadParameters();
+                    defaultParams.setType(ThreadGroupType.STANDARD);
+                    StandardThreadGroup standardThreadGroup = new StandardThreadGroup();
+                    standardThreadGroup.setNumThreads(1);
+                    standardThreadGroup.setRampUp(0);
+                    standardThreadGroup.setDuration(1);
+                    defaultParams.setStandardThreadGroup(standardThreadGroup);
+                    runTest(test, defaultParams);
                 }
             }
         } catch (SQLException e) {

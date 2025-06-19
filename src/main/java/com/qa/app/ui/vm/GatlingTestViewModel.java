@@ -832,10 +832,10 @@ public class GatlingTestViewModel implements Initializable {
 
         try {
             // Create and load the dialog
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/qa/app/ui/view/GatlingRunDialog.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/qa/app/ui/view/GatlingLoadDialog.fxml"));
             DialogPane dialogPane = loader.load();
 
-            GatlingRunDialogViewModel controller = loader.getController();
+            GatlingLoadDialogViewModel controller = loader.getController();
 
             Dialog<ButtonType> dialog = new Dialog<>();
             dialog.setDialogPane(dialogPane);
@@ -847,7 +847,7 @@ public class GatlingTestViewModel implements Initializable {
             Optional<ButtonType> result = dialog.showAndWait();
 
             if (result.isPresent() && result.get().getButtonData() == ButtonBar.ButtonData.OK_DONE) {
-                GatlingRunParameters params = controller.getParameters();
+                GatlingLoadParameters params = controller.getParameters();
 
                 // Populate the fields before running, to ensure latest data is used
                 populateTestFromFields(selectedTest);
