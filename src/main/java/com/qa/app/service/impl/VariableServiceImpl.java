@@ -1,10 +1,12 @@
-package com.qa.app.service;
+package com.qa.app.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qa.app.dao.api.IGroovyVariableDao;
 import com.qa.app.dao.impl.GroovyVariableDaoImpl;
+import com.qa.app.service.ServiceException;
+import com.qa.app.service.api.IVariableService;
 import com.qa.app.util.GroovyVariable;
 
 import java.io.IOException;
@@ -14,30 +16,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class VariableService {
+public class VariableServiceImpl implements IVariableService {
 
     private final ObjectMapper objectMapper;
     private final IGroovyVariableDao groovyVariableDao;
 
-    public VariableService() {
+    public VariableServiceImpl() {
         this.objectMapper = new ObjectMapper();
         this.groovyVariableDao = new GroovyVariableDaoImpl();
     }
 
-    public List<GroovyVariable> loadVariables() {
+    @Override
+    public List<GroovyVariable> loadVariables() throws ServiceException {
         try {
             List<com.qa.app.model.GroovyVariable> dbVariables = groovyVariableDao.getAll();
             return dbVariables.stream()
                     .map(this::convertModelToUtil)
                     .collect(Collectors.toList());
         } catch (SQLException e) {
-            System.err.println("Error loading variables from database");
-            e.printStackTrace();
-            return new ArrayList<>();
+            throw new ServiceException("Error loading variables from database", e);
         }
     }
 
-    public void saveVariables(List<GroovyVariable> variables) {
+    @Override
+    public void saveVariables(List<GroovyVariable> variables) throws ServiceException {
         try {
             // This is a simple but potentially destructive way to "sync"
             // It matches the old file-overwrite logic.
@@ -47,8 +49,36 @@ public class VariableService {
                 groovyVariableDao.add(modelVar);
             }
         } catch (SQLException | JsonProcessingException e) {
-            System.err.println("Error saving variables to database");
-            e.printStackTrace();
+            throw new ServiceException("Error saving variables to database", e);
+        }
+    }
+
+    @Override
+    public void addVariable(GroovyVariable variable) throws ServiceException {
+        try {
+            com.qa.app.model.GroovyVariable modelVar = convertUtilToModel(variable);
+            groovyVariableDao.add(modelVar);
+        } catch (SQLException | JsonProcessingException e) {
+            throw new ServiceException("Error adding variable", e);
+        }
+    }
+
+    @Override
+    public void updateVariable(GroovyVariable variable) throws ServiceException {
+        try {
+            com.qa.app.model.GroovyVariable modelVar = convertUtilToModel(variable);
+            groovyVariableDao.update(modelVar);
+        } catch (SQLException | JsonProcessingException e) {
+            throw new ServiceException("Error updating variable", e);
+        }
+    }
+
+    @Override
+    public void deleteVariable(Integer id) throws ServiceException {
+        try {
+            groovyVariableDao.delete(id);
+        } catch (SQLException e) {
+            throw new ServiceException("Error deleting variable", e);
         }
     }
 
@@ -64,7 +94,6 @@ public class VariableService {
             );
             return utilVar;
         } catch (IOException e) {
-            System.err.println("Error parsing variable value for " + modelVar.getName());
             // Return a "broken" representation
             return new GroovyVariable(modelVar.getId(), modelVar.getName(), "ERROR", "Could not parse data", e.getMessage());
         }
@@ -81,37 +110,7 @@ public class VariableService {
         com.qa.app.model.GroovyVariable modelVar = new com.qa.app.model.GroovyVariable();
         modelVar.setName(utilVar.getName());
         modelVar.setValue(valueJson);
-        // 直接使用id
         modelVar.setId(utilVar.getId());
         return modelVar;
     }
-
-    public void addVariable(GroovyVariable variable) {
-        try {
-            com.qa.app.model.GroovyVariable modelVar = convertUtilToModel(variable);
-            groovyVariableDao.add(modelVar);
-        } catch (Exception e) {
-            System.err.println("Error adding variable");
-            e.printStackTrace();
-        }
-    }
-
-    public void updateVariable(GroovyVariable variable) {
-        try {
-            com.qa.app.model.GroovyVariable modelVar = convertUtilToModel(variable);
-            groovyVariableDao.update(modelVar);
-        } catch (Exception e) {
-            System.err.println("Error updating variable");
-            e.printStackTrace();
-        }
-    }
-
-    public void deleteVariable(Integer id) {
-        try {
-            groovyVariableDao.delete(id);
-        } catch (Exception e) {
-            System.err.println("Error deleting variable");
-            e.printStackTrace();
-        }
-    }
-} 
+}

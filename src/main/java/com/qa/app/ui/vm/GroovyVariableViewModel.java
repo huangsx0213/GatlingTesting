@@ -1,6 +1,8 @@
 package com.qa.app.ui.vm;
 
-import com.qa.app.service.VariableService;
+import com.qa.app.service.ServiceException;
+import com.qa.app.service.api.IVariableService;
+import com.qa.app.service.impl.VariableServiceImpl;
 import com.qa.app.util.GroovyVariable;
 import com.qa.app.util.VariableGenerator;
 import javafx.collections.FXCollections;
@@ -8,6 +10,7 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,36 +25,43 @@ public class GroovyVariableViewModel {
     @FXML private Button deleteButton;
     @FXML private Button addButton;
 
-    private final VariableService variableService = new VariableService();
+    private final IVariableService variableService = new VariableServiceImpl();
     private ObservableList<GroovyVariable> variables;
     private GroovyVariable currentlyEditing = null;
     private MainViewModel mainViewModel;
 
     @FXML
     public void initialize() {
-        variables = FXCollections.observableArrayList(variableService.loadVariables());
-        variablesListView.setItems(variables);
+        try {
+            variables = FXCollections.observableArrayList(variableService.loadVariables());
+            variablesListView.setItems(variables);
 
-        variablesListView.setCellFactory(lv -> new ListCell<>() {
-            @Override
-            protected void updateItem(GroovyVariable item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty ? null : item.getName());
-            }
-        });
-
-        variablesListView.getSelectionModel().selectedItemProperty().addListener(
-            (obs, oldVal, newVal) -> {
-                if (newVal != null) {
-                    selectVariable(newVal);
+            variablesListView.setCellFactory(lv -> new ListCell<>() {
+                @Override
+                protected void updateItem(GroovyVariable item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty ? null : item.getName());
                 }
-            }
-        );
+            });
 
-        if (!variables.isEmpty()) {
-            variablesListView.getSelectionModel().selectFirst();
-        } else {
-            setDetailPaneDisabled(false);
+            variablesListView.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldVal, newVal) -> {
+                    if (newVal != null) {
+                        selectVariable(newVal);
+                    }
+                }
+            );
+
+            if (!variables.isEmpty()) {
+                variablesListView.getSelectionModel().selectFirst();
+            } else {
+                setDetailPaneDisabled(false);
+            }
+        } catch (ServiceException e) {
+            variables = FXCollections.observableArrayList(new ArrayList<>());
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Error loading variables: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
         }
     }
 
@@ -86,16 +96,22 @@ public class GroovyVariableViewModel {
             return;
         }
         GroovyVariable newVar = new GroovyVariable(name, format, description, script);
-        variableService.addVariable(newVar);
-        VariableGenerator.reloadCustomVariables();
-        refresh();
-        // Select the newly added variable
-        variablesListView.getItems().stream()
-            .filter(v -> v.getName().equals(name))
-            .findFirst()
-            .ifPresent(v -> variablesListView.getSelectionModel().select(v));
-        if (mainViewModel != null) {
-            mainViewModel.updateStatus("Variable '" + name + "' added successfully.", MainViewModel.StatusType.SUCCESS);
+        try {
+            variableService.addVariable(newVar);
+            VariableGenerator.reloadCustomVariables();
+            refresh();
+            // Select the newly added variable
+            variablesListView.getItems().stream()
+                .filter(v -> v.getName().equals(name))
+                .findFirst()
+                .ifPresent(v -> variablesListView.getSelectionModel().select(v));
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Variable '" + name + "' added successfully.", MainViewModel.StatusType.SUCCESS);
+            }
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Error adding variable: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
         }
     }
 
@@ -128,16 +144,22 @@ public class GroovyVariableViewModel {
         }
         // 保留原id
         GroovyVariable updatedVariable = new GroovyVariable(selected.getId(), name, format, description, script);
-        variableService.updateVariable(updatedVariable);
-        VariableGenerator.reloadCustomVariables();
-        refresh();
-        // Select the updated variable
-        variablesListView.getItems().stream()
-            .filter(v -> v.getName().equals(name))
-            .findFirst()
-            .ifPresent(v -> variablesListView.getSelectionModel().select(v));
-        if (mainViewModel != null) {
-            mainViewModel.updateStatus("Variable '" + name + "' saved successfully.", MainViewModel.StatusType.SUCCESS);
+        try {
+            variableService.updateVariable(updatedVariable);
+            VariableGenerator.reloadCustomVariables();
+            refresh();
+            // Select the updated variable
+            variablesListView.getItems().stream()
+                .filter(v -> v.getName().equals(name))
+                .findFirst()
+                .ifPresent(v -> variablesListView.getSelectionModel().select(v));
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Variable '" + name + "' saved successfully.", MainViewModel.StatusType.SUCCESS);
+            }
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Error saving variable: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
         }
     }
 
@@ -151,15 +173,21 @@ public class GroovyVariableViewModel {
             return;
         }
         System.out.println("[DEBUG] Try to delete variable id: " + selected.getId()); // debug log
-        if (selected.getId() != null) {
-            variableService.deleteVariable(selected.getId());
-        } else {
-            System.out.println("[DEBUG] id is null");
-        }
-        VariableGenerator.reloadCustomVariables();
-        refresh();
-        if (mainViewModel != null) {
-            mainViewModel.updateStatus("Variable deleted successfully.", MainViewModel.StatusType.SUCCESS);
+        try {
+            if (selected.getId() != null) {
+                variableService.deleteVariable(selected.getId());
+            } else {
+                System.out.println("[DEBUG] id is null");
+            }
+            VariableGenerator.reloadCustomVariables();
+            refresh();
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Variable deleted successfully.", MainViewModel.StatusType.SUCCESS);
+            }
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Error deleting variable: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
         }
     }
 
@@ -178,8 +206,14 @@ public class GroovyVariableViewModel {
     }
 
     private void saveChangesToFile() {
-        variableService.saveVariables(List.copyOf(variables));
-        VariableGenerator.reloadCustomVariables();
+        try {
+            variableService.saveVariables(List.copyOf(variables));
+            VariableGenerator.reloadCustomVariables();
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Error saving variables to file: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+        }
     }
     
     private void clearAndEnableDetailPane() {
@@ -208,11 +242,17 @@ public class GroovyVariableViewModel {
     }
     
     public void refresh() {
-        variables.setAll(variableService.loadVariables());
-        if (!variables.isEmpty()) {
-            variablesListView.getSelectionModel().selectFirst();
-        } else {
-            clearAndEnableDetailPane();
+        try {
+            variables.setAll(variableService.loadVariables());
+            if (!variables.isEmpty()) {
+                variablesListView.getSelectionModel().selectFirst();
+            } else {
+                clearAndEnableDetailPane();
+            }
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Error loading variables: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
         }
     }
 }

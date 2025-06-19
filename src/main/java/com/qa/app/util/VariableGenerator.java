@@ -1,7 +1,8 @@
 package com.qa.app.util;
 
 
-import com.qa.app.service.VariableService;
+import com.qa.app.service.api.IVariableService;
+import com.qa.app.service.impl.VariableServiceImpl;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -42,14 +43,19 @@ public class VariableGenerator {
     }
 
     private static List<GroovyVariable> CUSTOM_VARIABLES;
-    private static final VariableService variableService = new VariableService();
+    private static final IVariableService variableService = new VariableServiceImpl();
 
     static {
         loadCustomVariables();
     }
 
     public static void loadCustomVariables() {
-        CUSTOM_VARIABLES = variableService.loadVariables();
+        try {
+            CUSTOM_VARIABLES = variableService.loadVariables();
+        } catch (Exception e) {
+            System.err.println("Error loading custom variables: " + e.getMessage());
+            CUSTOM_VARIABLES = new ArrayList<>();
+        }
     }
 
     public static void reloadCustomVariables() {
