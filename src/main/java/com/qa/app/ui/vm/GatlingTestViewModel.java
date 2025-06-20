@@ -21,6 +21,9 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.FlowPane;
 import org.controlsfx.control.CheckComboBox;
 import javafx.stage.Stage;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.collections.ListChangeListener;
 
 import java.io.IOException;
 import java.net.URL;
@@ -149,6 +152,8 @@ public class GatlingTestViewModel implements Initializable {
     private TagHandler tagHandler;
 
     private final EnvironmentServiceImpl environmentService = new EnvironmentServiceImpl();
+    private final Map<GatlingTest, BooleanProperty> selectionMap = new HashMap<>();
+    private final CheckBox selectAllCheckBox = new CheckBox();
 
     // =====================
     // 1. Initialize related
@@ -322,14 +327,40 @@ public class GatlingTestViewModel implements Initializable {
 
         testTable.setItems(testList);
         testTable.setEditable(true);
+        testTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
         setupTestTableListeners();
     }
 
     private void setupTestTableColumns() {
+        // Selection column
+        TableColumn<GatlingTest, Boolean> selectColumn = new TableColumn<>();
+        selectColumn.setGraphic(selectAllCheckBox);
+        selectColumn.setPrefWidth(40);
+        selectColumn.setCellValueFactory(cellData -> {
+            GatlingTest test = cellData.getValue();
+            return selectionMap.computeIfAbsent(test, k -> new SimpleBooleanProperty(false));
+        });
+        selectColumn.setCellFactory(CheckBoxTableCell.forTableColumn(selectColumn));
+        testTable.getColumns().add(0, selectColumn);
+
         // Initialize table columns
         isEnabledColumn.setCellValueFactory(new PropertyValueFactory<>("isEnabled"));
-        isEnabledColumn.setCellFactory(CheckBoxTableCell.forTableColumn(isEnabledColumn));
+        isEnabledColumn.setCellFactory(column -> {
+            TableCell<GatlingTest, Boolean> cell = new TableCell<>() {
+                @Override
+                protected void updateItem(Boolean item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        setText(item ? "Y" : "N");
+                    }
+                }
+            };
+            cell.setStyle("-fx-alignment: CENTER;");
+            return cell;
+        });
         suiteColumn.setCellValueFactory(new PropertyValueFactory<>("suite"));
         testTcidColumn.setCellValueFactory(new PropertyValueFactory<>("tcid"));
         descriptionsColumn.setCellValueFactory(new PropertyValueFactory<>("descriptions"));
@@ -433,6 +464,48 @@ public class GatlingTestViewModel implements Initializable {
                 suiteComboBox.setValue(newVal.getSuite());
             }
         });
+
+        // Listener for multi-selection changes to update checkboxes
+        testTable.getSelectionModel().getSelectedItems().addListener((ListChangeListener<GatlingTest>) c -> {
+            while (c.next()) {
+                if (c.wasAdded()) {
+                    for (GatlingTest test : c.getAddedSubList()) {
+                        if (selectionMap.containsKey(test)) {
+                            selectionMap.get(test).set(true);
+                        }
+                    }
+                }
+                if (c.wasRemoved()) {
+                    for (GatlingTest test : c.getRemoved()) {
+                        if (selectionMap.containsKey(test)) {
+                            selectionMap.get(test).set(false);
+                        }
+                    }
+                }
+            }
+            updateSelectAllCheckBoxState();
+        });
+
+        selectAllCheckBox.setOnAction(e -> {
+            if (selectAllCheckBox.isSelected()) {
+                testTable.getSelectionModel().selectAll();
+            } else {
+                testTable.getSelectionModel().clearSelection();
+            }
+        });
+    }
+
+    private void updateSelectAllCheckBoxState() {
+        int selectedCount = testTable.getSelectionModel().getSelectedItems().size();
+        if (selectedCount == 0) {
+            selectAllCheckBox.setSelected(false);
+            selectAllCheckBox.setIndeterminate(false);
+        } else if (selectedCount == testList.size() && !testList.isEmpty()) {
+            selectAllCheckBox.setSelected(true);
+            selectAllCheckBox.setIndeterminate(false);
+        } else {
+            selectAllCheckBox.setIndeterminate(true);
+        }
     }
 
     // =====================
@@ -510,7 +583,25 @@ public class GatlingTestViewModel implements Initializable {
         try {
             Integer projectId = AppConfig.getCurrentProjectId();
             if (projectId != null) {
-                testList.setAll(testService.findTestsByProjectId(projectId));
+                List<GatlingTest> tests = testService.findTestsByProjectId(projectId);
+                
+                // Clear old selection states before loading new tests
+                selectionMap.clear();
+                testList.setAll(tests);
+
+                // Initialize selection properties for the new tests
+                for (GatlingTest test : tests) {
+                    BooleanProperty selected = new SimpleBooleanProperty(false);
+                    selected.addListener((obs, wasSelected, isSelected) -> {
+                        if (isSelected) {
+                            testTable.getSelectionModel().select(test);
+                        } else {
+                            testTable.getSelectionModel().clearSelection(testList.indexOf(test));
+                        }
+                    });
+                    selectionMap.put(test, selected);
+                }
+                updateSelectAllCheckBoxState();
             }
         } catch (ServiceException e) {
             if (mainViewModel != null) {
@@ -750,6 +841,17 @@ public class GatlingTestViewModel implements Initializable {
 
         try {
             testService.createTest(newTest);
+
+            BooleanProperty selected = new SimpleBooleanProperty(false);
+            selected.addListener((obs, wasSelected, isSelected) -> {
+                if (isSelected) {
+                    testTable.getSelectionModel().select(newTest);
+                } else {
+                    testTable.getSelectionModel().clearSelection(testList.indexOf(newTest));
+                }
+            });
+            selectionMap.put(newTest, selected);
+            
             testList.add(newTest);
             clearFields();
             testTable.getSelectionModel().select(newTest);
@@ -801,26 +903,31 @@ public class GatlingTestViewModel implements Initializable {
 
     @FXML
     private void handleDeleteTest() {
-        GatlingTest selectedTest = testTable.getSelectionModel().getSelectedItem();
-        if (selectedTest == null) {
+        ObservableList<GatlingTest> selectedTests = testTable.getSelectionModel().getSelectedItems();
+        if (selectedTests.isEmpty()) {
             if (mainViewModel != null) {
-                mainViewModel.updateStatus("Selection Error: Please select a test from the table to delete.",
+                mainViewModel.updateStatus("Selection Error: Please select at least one test from the table to delete.",
                         MainViewModel.StatusType.ERROR);
             }
             return;
         }
 
+        List<GatlingTest> testsToDelete = new ArrayList<>(selectedTests);
+
         try {
-            testService.removeTest(selectedTest.getId());
-            testList.remove(selectedTest);
+            for (GatlingTest test : testsToDelete) {
+                testService.removeTest(test.getId());
+                selectionMap.remove(test);
+            }
+            testList.removeAll(testsToDelete);
             clearFields();
             if (mainViewModel != null) {
-                mainViewModel.updateStatus("Test deleted successfully.", MainViewModel.StatusType.SUCCESS);
+                mainViewModel.updateStatus(testsToDelete.size() + " test(s) deleted successfully.", MainViewModel.StatusType.SUCCESS);
             }
             refreshAll();
         } catch (ServiceException e) {
             if (mainViewModel != null) {
-                mainViewModel.updateStatus("Failed to delete test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+                mainViewModel.updateStatus("Failed to delete test(s): " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
         }
     }
@@ -833,10 +940,10 @@ public class GatlingTestViewModel implements Initializable {
 
     @FXML
     private void handleRunTest() {
-        GatlingTest selectedTest = testTable.getSelectionModel().getSelectedItem();
-        if (selectedTest == null) {
+        ObservableList<GatlingTest> selectedTests = testTable.getSelectionModel().getSelectedItems();
+        if (selectedTests.isEmpty()) {
             if (mainViewModel != null) {
-                mainViewModel.updateStatus("Selection Error: Please select a test to run.",
+                mainViewModel.updateStatus("Selection Error: Please select at least one test to run.",
                         MainViewModel.StatusType.ERROR);
             }
             return;
@@ -851,7 +958,7 @@ public class GatlingTestViewModel implements Initializable {
 
             Dialog<ButtonType> dialog = new Dialog<>();
             dialog.setDialogPane(dialogPane);
-            dialog.setTitle("Run Gatling Test");
+            dialog.setTitle("Run Gatling Test(s)");
             Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
             stage.getIcons().add(new javafx.scene.image.Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
 
@@ -860,18 +967,33 @@ public class GatlingTestViewModel implements Initializable {
 
             if (result.isPresent() && result.get().getButtonData() == ButtonBar.ButtonData.OK_DONE) {
                 GatlingLoadParameters params = controller.getParameters();
+                List<GatlingTest> testsToRun = new ArrayList<>(selectedTests);
 
-                // Populate the fields before running, to ensure latest data is used
-                populateTestFromFields(selectedTest);
+                // Populate the fields for the focused test, to ensure latest data is used
+                GatlingTest focusedTest = testTable.getSelectionModel().getSelectedItem();
+                if (focusedTest != null && testsToRun.contains(focusedTest)) {
+                    populateTestFromFields(focusedTest);
+                }
 
                 if (mainViewModel != null) {
-                    mainViewModel.updateStatus("Running test: " + selectedTest.getTcid(), MainViewModel.StatusType.INFO);
+                    mainViewModel.updateStatus("Running " + testsToRun.size() + " test(s)...", MainViewModel.StatusType.INFO);
                 }
-                // Pass the test and params to the service
-                testService.runTest(selectedTest, params);
+
+                for (GatlingTest test : testsToRun) {
+                    if (mainViewModel != null) {
+                        mainViewModel.updateStatus("Running test: " + test.getTcid(), MainViewModel.StatusType.INFO);
+                    }
+                    // Pass the test and params to the service
+                    testService.runTest(test, params);
+                    if (mainViewModel != null) {
+                        mainViewModel.updateStatus("Test completed: " + test.getTcid(),
+                                MainViewModel.StatusType.SUCCESS);
+                    }
+                }
+
                 testTable.refresh();
                 if (mainViewModel != null) {
-                    mainViewModel.updateStatus("Test completed: " + selectedTest.getTcid(),
+                    mainViewModel.updateStatus(testsToRun.size() + " test(s) completed.",
                             MainViewModel.StatusType.SUCCESS);
                 }
                 refreshAll();
@@ -883,7 +1005,7 @@ public class GatlingTestViewModel implements Initializable {
             }
         } catch (ServiceException e) {
             if (mainViewModel != null) {
-                mainViewModel.updateStatus("Failed to run test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+                mainViewModel.updateStatus("Failed to run test(s): " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
         }
     }
