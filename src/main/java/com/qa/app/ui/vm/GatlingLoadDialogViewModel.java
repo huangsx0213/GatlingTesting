@@ -144,6 +144,11 @@ public class GatlingLoadDialogViewModel implements Initializable {
         steppingIncrementUsersSpinner.getValueFactory().setValue(st.getIncrementUsers());
         steppingIncrementTimeSpinner.getValueFactory().setValue(st.getIncrementTime());
         steppingHoldLoadSpinner.getValueFactory().setValue(st.getHoldLoad());
+
+        // Ultimate
+        if (prefs.ultimate != null && prefs.ultimate.getSteps() != null) {
+            ultimateSteps.setAll(prefs.ultimate.getSteps());
+        }
     }
 
     public GatlingLoadParameters getParameters() {
@@ -180,6 +185,8 @@ public class GatlingLoadDialogViewModel implements Initializable {
             UltimateThreadGroup config = new UltimateThreadGroup();
             config.setSteps(new java.util.ArrayList<>(ultimateStepsTable.getItems()));
             params.setUltimateThreadGroup(config);
+            // 保存到首选项
+            prefs.ultimate = config;
         }
 
         // 持久化首选项
