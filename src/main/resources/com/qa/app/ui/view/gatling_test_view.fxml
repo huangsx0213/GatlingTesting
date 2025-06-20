@@ -221,7 +221,7 @@
                         <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteTest" text="Delete Test" />
                         <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearFields" text="Clear Form" />
                         <Separator orientation="VERTICAL" />
-                        <Button fx:id="runTestButton" mnemonicParsing="false" onAction="#handleRunTest" text="Run Selected Test" />
+                        <Button fx:id="runTestButton" mnemonicParsing="false" onAction="#handleRunTest" text="Run Selected Test(s)" />
                                 <Button fx:id="runSuiteButton" mnemonicParsing="false" onAction="#handleRunSuite" text="Run Test Suite" />
                     </children>
                     <padding>

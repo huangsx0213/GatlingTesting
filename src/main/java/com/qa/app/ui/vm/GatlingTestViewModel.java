@@ -337,6 +337,7 @@ public class GatlingTestViewModel implements Initializable {
         TableColumn<GatlingTest, Boolean> selectColumn = new TableColumn<>();
         selectColumn.setGraphic(selectAllCheckBox);
         selectColumn.setPrefWidth(40);
+        selectColumn.setSortable(false);
         selectColumn.setCellValueFactory(cellData -> {
             GatlingTest test = cellData.getValue();
             return selectionMap.computeIfAbsent(test, k -> new SimpleBooleanProperty(false));
@@ -492,6 +493,8 @@ public class GatlingTestViewModel implements Initializable {
             } else {
                 testTable.getSelectionModel().clearSelection();
             }
+            syncSelectionProperties();
+            testTable.refresh();
         });
     }
 
@@ -505,6 +508,22 @@ public class GatlingTestViewModel implements Initializable {
             selectAllCheckBox.setIndeterminate(false);
         } else {
             selectAllCheckBox.setIndeterminate(true);
+        }
+        syncSelectionProperties();
+    }
+
+    /**
+     * Ensure the BooleanProperty bound to each checkbox row reflects the actual selection model.
+     */
+    private void syncSelectionProperties() {
+        for (GatlingTest t : testList) {
+            BooleanProperty prop = selectionMap.get(t);
+            if (prop != null) {
+                boolean shouldBeSelected = testTable.getSelectionModel().getSelectedItems().contains(t);
+                if (prop.get() != shouldBeSelected) {
+                    prop.set(shouldBeSelected);
+                }
+            }
         }
     }
 
@@ -979,33 +998,25 @@ public class GatlingTestViewModel implements Initializable {
                     mainViewModel.updateStatus("Running " + testsToRun.size() + " test(s)...", MainViewModel.StatusType.INFO);
                 }
 
-                for (GatlingTest test : testsToRun) {
+                // Execute all selected tests sequentially within the same thread group configuration
+                try {
+                    testService.runTests(testsToRun, params);
+                    testTable.refresh();
                     if (mainViewModel != null) {
-                        mainViewModel.updateStatus("Running test: " + test.getTcid(), MainViewModel.StatusType.INFO);
-                    }
-                    // Pass the test and params to the service
-                    testService.runTest(test, params);
-                    if (mainViewModel != null) {
-                        mainViewModel.updateStatus("Test completed: " + test.getTcid(),
+                        mainViewModel.updateStatus(testsToRun.size() + " test(s) completed.",
                                 MainViewModel.StatusType.SUCCESS);
                     }
+                    refreshAll();
+                } catch (ServiceException ex) {
+                    if (mainViewModel != null) {
+                        mainViewModel.updateStatus("Failed to run test(s): " + ex.getMessage(), MainViewModel.StatusType.ERROR);
+                    }
                 }
-
-                testTable.refresh();
-                if (mainViewModel != null) {
-                    mainViewModel.updateStatus(testsToRun.size() + " test(s) completed.",
-                            MainViewModel.StatusType.SUCCESS);
-                }
-                refreshAll();
             }
         } catch (IOException e) {
             e.printStackTrace();
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to open run dialog: " + e.getMessage(), MainViewModel.StatusType.ERROR);
-            }
-        } catch (ServiceException e) {
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus("Failed to run test(s): " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
         }
     }

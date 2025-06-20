@@ -14,11 +14,17 @@ import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IEndpointService;
 import com.qa.app.model.Endpoint;
 import com.qa.app.util.GatlingTestExecutor;
+import com.qa.app.model.BodyTemplate;
+import com.qa.app.model.HeadersTemplate;
+import com.qa.app.service.api.IBodyTemplateService;
+import com.qa.app.service.api.IHeadersTemplateService;
 
 public class GatlingTestServiceImpl implements IGatlingTestService {
 
     private final IGatlingTestDao testDao = new GatlingTestDaoImpl(); // In a real app, use dependency injection
     private final IEndpointService endpointService = new EndpointServiceImpl();
+    private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
+    private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
 
     @Override
     public void createTest(GatlingTest test) throws ServiceException {
@@ -136,17 +142,33 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         }
 
         try {
-            testDao.updateTestRunStatus(test.getId(), true);
+            enrichTemplates(test);
             GatlingTestExecutor.execute(test, params, endpoint);
         } catch (Exception e) {
             throw new ServiceException("Failed to run Gatling test: " + e.getMessage(), e);
-        } finally {
-            try {
-                testDao.updateTestRunStatus(test.getId(), false);
-            } catch (SQLException e) {
-                // Log this error, but don't re-throw as the primary exception is more important
-                System.err.println("Failed to update test run status after execution: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void runTests(java.util.List<GatlingTest> tests, GatlingLoadParameters params) throws ServiceException {
+        if (tests == null || tests.isEmpty()) {
+            throw new ServiceException("Test list cannot be null or empty.");
+        }
+
+        java.util.List<Endpoint> endpoints = new java.util.ArrayList<>();
+        for (GatlingTest test : tests) {
+            enrichTemplates(test);
+            Endpoint endpoint = endpointService.getEndpointByName(test.getEndpointName());
+            if (endpoint == null) {
+                throw new ServiceException("Endpoint not found for test: " + test.getTcid());
             }
+            endpoints.add(endpoint);
+        }
+
+        try {
+            GatlingTestExecutor.executeBatchSync(tests, params, endpoints);
+        } catch (Exception e) {
+            throw new ServiceException("Failed to run Gatling batch tests: " + e.getMessage(), e);
         }
     }
 
@@ -183,5 +205,21 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         } catch (SQLException e) {
             throw new ServiceException("Database error while retrieving tests by projectId: " + e.getMessage(), e);
         }
+    }
+
+    private void enrichTemplates(GatlingTest test) {
+        try {
+            if ((test.getBody() == null || test.getBody().isEmpty()) && test.getBodyTemplateId() > 0) {
+                BodyTemplate bt = bodyTemplateService.findBodyTemplateById(test.getBodyTemplateId());
+                if (bt != null) test.setBody(bt.getContent());
+            }
+        } catch (Exception ignored) { }
+
+        try {
+            if ((test.getHeaders() == null || test.getHeaders().isEmpty()) && test.getHeadersTemplateId() > 0) {
+                HeadersTemplate ht = headersTemplateService.getHeadersTemplateById(test.getHeadersTemplateId());
+                if (ht != null) test.setHeaders(ht.getContent());
+            }
+        } catch (Exception ignored) { }
     }
 }

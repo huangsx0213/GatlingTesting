@@ -25,26 +25,52 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 
 public class DynamicJavaSimulation extends Simulation {
 
-    private final GatlingTest test;
     private final GatlingLoadParameters params;
-    private final Endpoint endpoint;
+    private final List<BatchItem> batchItems;
+    private final boolean isBatchMode;
+
+    private static class BatchItem {
+        public GatlingTest test;
+        public Endpoint endpoint;
+    }
 
     {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            this.test = objectMapper.readValue(new File(System.getProperty("gatling.test.file")), GatlingTest.class);
             this.params = objectMapper.readValue(new File(System.getProperty("gatling.params.file")), GatlingLoadParameters.class);
-            this.endpoint = objectMapper.readValue(new File(System.getProperty("gatling.endpoint.file")), Endpoint.class);
+
+            String batchFilePath = System.getProperty("gatling.tests.file");
+            if (batchFilePath != null && !batchFilePath.isEmpty()) {
+                // Batch mode
+                this.batchItems = objectMapper.readValue(new File(batchFilePath), new TypeReference<List<BatchItem>>(){});
+                this.isBatchMode = true;
+            } else {
+                // Single test mode (backward compatibility)
+                BatchItem item = new BatchItem();
+                item.test = objectMapper.readValue(new File(System.getProperty("gatling.test.file")), GatlingTest.class);
+                item.endpoint = objectMapper.readValue(new File(System.getProperty("gatling.endpoint.file")), Endpoint.class);
+                this.batchItems = java.util.Collections.singletonList(item);
+                this.isBatchMode = false;
+            }
         } catch (IOException e) {
             throw new RuntimeException("Failed to deserialize simulation parameters from file", e);
         }
 
-        HttpProtocolBuilder httpProtocol = createHttpProtocol();
+        HttpProtocolBuilder httpProtocol = createHttpProtocol(batchItems.get(0).endpoint);
         ScenarioBuilder scn = createScenario();
 
-        System.out.println("DynamicJavaSimulation: Test scene initialized for TCID: " + test.getTcid());
-        System.out.println("- Base URL: " + endpoint.getUrl());
-        System.out.println("- HTTP Method: " + endpoint.getMethod());
+        if (!isBatchMode) {
+            System.out.println("DynamicJavaSimulation: Single test mode for TCID: " + batchItems.get(0).test.getTcid());
+        } else {
+            System.out.println("DynamicJavaSimulation: Batch mode with " + batchItems.size() + " test(s)");
+            for (int i = 0; i < batchItems.size(); i++) {
+                BatchItem bi = batchItems.get(i);
+                System.out.println(String.format("  %d) %s [ %s %s ]", i + 1,
+                        bi.test.getTcid(),
+                        bi.endpoint.getMethod(),
+                        bi.endpoint.getUrl()));
+            }
+        }
 
         PopulationBuilder populationBuilder = buildInjectionProfile(scn);
         SetUp setup = setUp(populationBuilder).protocols(httpProtocol);
@@ -190,7 +216,7 @@ public class DynamicJavaSimulation extends Simulation {
         }
     }
 
-    private HttpProtocolBuilder createHttpProtocol() {
+    private HttpProtocolBuilder createHttpProtocol(Endpoint endpoint) {
         return http
                 .baseUrl(endpoint.getUrl())
                 .acceptHeader("application/json, text/plain, */*")
@@ -209,56 +235,79 @@ public class DynamicJavaSimulation extends Simulation {
         if ((standardConfig != null && standardConfig.isScheduler()) 
             || params.getType() == ThreadGroupType.STEPPING
             || params.getType() == ThreadGroupType.ULTIMATE) {
-            return scenario("Dynamic Test Scenario for " + test.getTcid()).forever().on(
+            return scenario("Dynamic Test Scenario")
+                    .forever().on(
                     chain
             );
         }
 
         // If standard config is not using scheduler and has a loop count, apply it.
         if (standardConfig != null && !standardConfig.isScheduler() && standardConfig.getLoops() != -1) {
-            return scenario("Dynamic Test Scenario for " + test.getTcid()).exec(
+            return scenario("Dynamic Test Scenario")
+                    .exec(
                 repeat(standardConfig.getLoops()).on(
                     chain
                 )
             );
         }
 
-        return scenario("Dynamic Test Scenario for " + test.getTcid())
+        return scenario("Dynamic Test Scenario")
                 .exec(chain);
     }
 
     private ChainBuilder createHttpChain() {
-        HttpRequestActionBuilder requestBuilder = createRequestBuilder();
+        ChainBuilder chain = null;
+        for (int i = 0; i < batchItems.size(); i++) {
+            BatchItem item = batchItems.get(i);
+            HttpRequestActionBuilder requestBuilder = createRequestBuilder(item);
 
-        if (test.getWaitTime() > 0) {
-            return exec(requestBuilder)
-                    .pause(Duration.ofSeconds(test.getWaitTime()));
-        } else {
-            return exec(requestBuilder);
+            if (chain == null) {
+                chain = exec(requestBuilder);
+            } else {
+                chain = chain.exec(requestBuilder);
+            }
+
+            if (item.test.getWaitTime() > 0) {
+                System.out.println(String.format("   -> Pause %ds after %s", item.test.getWaitTime(), item.test.getTcid()));
+                chain = chain.pause(Duration.ofSeconds(item.test.getWaitTime()));
+            }
         }
+        return chain;
     }
 
-    private HttpRequestActionBuilder createRequestBuilder() {
+    private HttpRequestActionBuilder createRequestBuilder(BatchItem item) {
+        GatlingTest test = item.test;
+        Endpoint endpoint = item.endpoint;
         String requestName = test.getTcid();
 
         HttpRequestActionBuilder request;
 
-        // Set method and body
-        switch (endpoint.getMethod().toUpperCase()) {
+        String method = endpoint.getMethod() == null ? "GET" : endpoint.getMethod().toUpperCase();
+        String bodyTemplate = test.getBody();
+
+        switch (method) {
             case "POST":
-                request = http(requestName).post("").body(StringBody(session ->
-                        RuntimeTemplateProcessor.render(test.getBody(), test.getBodyDynamicVariables())));
+                if (bodyTemplate == null || bodyTemplate.isEmpty()) {
+                    request = http(requestName).post(endpoint.getUrl());
+                } else {
+                    request = http(requestName).post(endpoint.getUrl()).body(StringBody(session ->
+                            RuntimeTemplateProcessor.render(bodyTemplate, test.getBodyDynamicVariables())));
+                }
                 break;
             case "PUT":
-                request = http(requestName).put("").body(StringBody(session ->
-                        RuntimeTemplateProcessor.render(test.getBody(), test.getBodyDynamicVariables())));
+                if (bodyTemplate == null || bodyTemplate.isEmpty()) {
+                    request = http(requestName).put(endpoint.getUrl());
+                } else {
+                    request = http(requestName).put(endpoint.getUrl()).body(StringBody(session ->
+                            RuntimeTemplateProcessor.render(bodyTemplate, test.getBodyDynamicVariables())));
+                }
                 break;
             case "DELETE":
-                request = http(requestName).delete("");
+                request = http(requestName).delete(endpoint.getUrl());
                 break;
             case "GET":
             default:
-                request = http(requestName).get("");
+                request = http(requestName).get(endpoint.getUrl());
                 break;
         }
 
