@@ -8,7 +8,7 @@
     "delay" : 0
   },
   "stepping" : {
-    "numThreads" : 2,
+    "numThreads" : 5,
     "initialDelay" : 0,
     "startUsers" : 1,
     "incrementUsers" : 1,
