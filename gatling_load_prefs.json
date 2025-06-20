@@ -3,14 +3,14 @@
     "numThreads" : 1,
     "rampUp" : 0,
     "loops" : 1,
-    "scheduler" : true,
+    "scheduler" : false,
     "duration" : 60,
     "delay" : 0
   },
   "stepping" : {
-    "numThreads" : 1,
+    "numThreads" : 2,
     "initialDelay" : 0,
-    "startUsers" : 0,
+    "startUsers" : 1,
     "incrementUsers" : 1,
     "incrementTime" : 30,
     "holdLoad" : 60

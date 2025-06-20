@@ -73,6 +73,13 @@ public class GatlingLoadDialogViewModel implements Initializable {
     @FXML
     private Button removeUltimateStepButton;
 
+    // Dialog-level Save button
+    @FXML
+    private ButtonType saveButton;
+
+    @FXML
+    private DialogPane dialogPane;
+
     private final ObservableList<UltimateThreadGroupStep> ultimateSteps = FXCollections.observableArrayList();
 
     private UserPreferences prefs;
@@ -89,6 +96,9 @@ public class GatlingLoadDialogViewModel implements Initializable {
 
         // Ultimate Thread Group TableView setup
         setupUltimateTable();
+
+        // Setup global Save button
+        setupSaveButton();
     }
 
     private void setupStandardTab() {
@@ -123,6 +133,45 @@ public class GatlingLoadDialogViewModel implements Initializable {
         // Add a default step
         if (ultimateSteps.isEmpty()) {
             ultimateSteps.add(new UltimateThreadGroupStep());
+        }
+    }
+
+    private void setupSaveButton() {
+        if (dialogPane == null || saveButton == null) return;
+        Button saveBtn = (Button) dialogPane.lookupButton(saveButton);
+        if (saveBtn != null) {
+            saveBtn.addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
+                // 阻止弹窗关闭
+                e.consume();
+                
+                Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+                if (selectedTab == standardLoadTab) {
+                    StandardThreadGroup config = new StandardThreadGroup();
+                    config.setNumThreads(standardNumThreadsSpinner.getValue());
+                    config.setRampUp(standardRampUpSpinner.getValue());
+                    config.setLoops(standardLoopsSpinner.getValue());
+                    config.setScheduler(standardSchedulerCheckBox.isSelected());
+                    config.setDuration(standardDurationSpinner.getValue());
+                    config.setDelay(standardDelaySpinner.getValue());
+                    prefs.standard = config;
+                } else if (selectedTab == steppingLoadTab) {
+                    SteppingThreadGroup config = new SteppingThreadGroup();
+                    config.setNumThreads(steppingNumThreadsSpinner.getValue());
+                    config.setInitialDelay(steppingInitialDelaySpinner.getValue());
+                    config.setStartUsers(steppingStartUsersSpinner.getValue());
+                    config.setIncrementUsers(steppingIncrementUsersSpinner.getValue());
+                    config.setIncrementTime(steppingIncrementTimeSpinner.getValue());
+                    config.setHoldLoad(steppingHoldLoadSpinner.getValue());
+                    prefs.stepping = config;
+                } else if (selectedTab == ultimateTab) {
+                    UltimateThreadGroup config = new UltimateThreadGroup();
+                    config.setSteps(new java.util.ArrayList<>(ultimateStepsTable.getItems()));
+                    prefs.ultimate = config;
+                }
+
+                // Persist
+                prefs.save();
+            });
         }
     }
 
