@@ -4,266 +4,343 @@ import com.qa.app.model.GatlingTest;
 import com.qa.app.model.Scenario;
 import com.qa.app.model.ScenarioStep;
 import com.qa.app.service.ServiceException;
+import com.qa.app.service.api.IGatlingScenarioService;
 import com.qa.app.service.api.IGatlingTestService;
+import com.qa.app.service.impl.GatlingScenarioServiceImpl;
 import com.qa.app.service.impl.GatlingTestServiceImpl;
-import com.qa.app.ui.vm.MainViewModel;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.fxml.Initializable;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.Tooltip;
-
-import java.net.URL;
+import java.util.ArrayList;
 import java.time.LocalDate;
-import java.util.ResourceBundle;
+import java.util.List;
+import java.util.stream.Collectors;
 
-/**
- * ViewModel for Scenario Management page.
- * This is the first skeleton implementation focusing on UI binding.
- */
-public class ScenarioViewModel implements Initializable {
+public class ScenarioViewModel {
 
-    // ----- Scenario list (left panel) -----
-    @FXML private TableView<Scenario> scenarioTable;
-    @FXML private TableColumn<Scenario, String> scNameCol;
-    @FXML private TableColumn<Scenario, String> scDescCol;
-
-    // ----- Scenario details (center) -----
+    // -------------- FXML components --------------
     @FXML private TextField scenarioNameField;
     @FXML private TextArea scenarioDescArea;
-    @FXML private DatePicker startDatePicker;
-    @FXML private ComboBox<String> frequencyCombo;
-    @FXML private ComboBox<String> threadGroupCombo;
-
-    // ----- Available tests -----
     @FXML private TableView<GatlingTest> availableTestTable;
+    @FXML private TableView<ScenarioStep> scenarioStepTable;
+    @FXML private TableView<Scenario> scenarioTable;
+
+    @FXML private ComboBox<String> suiteFilterCombo;
+    @FXML private TextField tagFilterField;
+
     @FXML private TableColumn<GatlingTest, String> tcidCol;
     @FXML private TableColumn<GatlingTest, String> suiteCol;
-    @FXML private TableColumn<GatlingTest, String> availableDescCol;
     @FXML private TableColumn<GatlingTest, String> availableTagsCol;
+    @FXML private TableColumn<GatlingTest, String> availableDescCol;
 
-    // ----- Scenario steps -----
-    @FXML private TableView<ScenarioStep> scenarioStepTable;
     @FXML private TableColumn<ScenarioStep, Number> orderCol;
     @FXML private TableColumn<ScenarioStep, String> stepTcidCol;
     @FXML private TableColumn<ScenarioStep, Number> waitCol;
     @FXML private TableColumn<ScenarioStep, String> stepTagsCol;
 
-    @FXML private ComboBox<String> suiteFilterCombo;
-    @FXML private TextField tagFilterField;
+    @FXML private TableColumn<Scenario, String> scNameCol;
+    @FXML private TableColumn<Scenario, String> scDescCol;
 
-    // Buttons
-    @FXML private Button addButton;
-    @FXML private Button removeButton;
-    @FXML private Button moveUpButton;
-    @FXML private Button moveDownButton;
+    @FXML private ComboBox<String> frequencyCombo;
+    @FXML private ComboBox<String> threadGroupCombo;
+    @FXML private DatePicker startDatePicker;
+    @FXML private Spinner<Integer> hourSpinner;
+    @FXML private Spinner<Integer> minuteSpinner;
+    @FXML private Spinner<Integer> secondSpinner;
 
-    private final ObservableList<Scenario> scenarios = FXCollections.observableArrayList();
+    // ----------------- data -------------------
     private final ObservableList<GatlingTest> availableTests = FXCollections.observableArrayList();
     private final ObservableList<ScenarioStep> steps = FXCollections.observableArrayList();
+    private final ObservableList<Scenario> scenarios = FXCollections.observableArrayList();
 
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
+    private final IGatlingScenarioService scenarioService = new GatlingScenarioServiceImpl();
 
+    // for MainViewModel to inject reference
     private MainViewModel mainViewModel;
 
-    public void setMainViewModel(MainViewModel mainViewModel) {
-        this.mainViewModel = mainViewModel;
+    public void setMainViewModel(MainViewModel vm) {
+        this.mainViewModel = vm;
     }
 
-    @Override
-    public void initialize(URL location, ResourceBundle resources) {
-        initScenarioTable();
-        initAvailableTestTable();
-        initScenarioStepTable();
-        initComboBoxes();
-        initFilterControls();
-        loadAvailableTests();
-        startDatePicker.setValue(LocalDate.now());
-    }
-
-    private void initScenarioTable() {
-        scNameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
-        scDescCol.setCellValueFactory(new PropertyValueFactory<>("description"));
-        scenarioTable.setItems(scenarios);
-    }
-
-    private void initAvailableTestTable() {
-        tcidCol.setCellValueFactory(new PropertyValueFactory<>("tcid"));
-        suiteCol.setCellValueFactory(new PropertyValueFactory<>("suite"));
-        availableTagsCol.setCellValueFactory(new PropertyValueFactory<>("tags"));
-        availableDescCol.setCellValueFactory(new PropertyValueFactory<>("descriptions"));
-        availableDescCol.setCellFactory(col -> new TableCell<GatlingTest, String>() {
-            private Tooltip tooltip = new Tooltip();
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setTooltip(null);} else {
-                    setText(item);
-                    if (item.length() > 20) { tooltip.setText(item); setTooltip(tooltip);} else { setTooltip(null);} }
-            }
-        });
+    @FXML
+    public void initialize() {
+        // bind table data
         availableTestTable.setItems(availableTests);
-        availableTestTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-    }
-
-    private void initScenarioStepTable() {
-        orderCol.setCellValueFactory(param -> javafx.beans.binding.Bindings.createIntegerBinding(param.getValue()::getOrder));
-        stepTcidCol.setCellValueFactory(new PropertyValueFactory<>("testTcid"));
-        waitCol.setCellValueFactory(param -> javafx.beans.binding.Bindings.createIntegerBinding(param.getValue()::getWaitTime));
-        stepTagsCol.setCellValueFactory(new PropertyValueFactory<>("tags"));
         scenarioStepTable.setItems(steps);
-    }
+        scenarioTable.setItems(scenarios);
 
-    private void initComboBoxes() {
+        // set column binding
+        tcidCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTcid()));
+        suiteCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getSuite()));
+        availableTagsCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTags()));
+        availableDescCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getDescriptions()));
+
+        orderCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().getOrder()));
+        stepTcidCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTestTcid()));
+        waitCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().getWaitTime()));
+        stepTagsCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTags()));
+
+        scNameCol.setCellValueFactory(cell -> cell.getValue().nameProperty());
+        scDescCol.setCellValueFactory(cell -> cell.getValue().descriptionProperty());
+
+        // table selection listener same as endpoint
+        scenarioTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showScenarioDetails(newSel));
+
+        // init combos
         frequencyCombo.setItems(FXCollections.observableArrayList("Once", "Daily", "Weekly"));
         threadGroupCombo.setItems(FXCollections.observableArrayList("Standard", "Stepping", "Ultimate"));
+
+        // init time spinners
+        hourSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 23, 0));
+        minuteSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 59, 0));
+        secondSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 59, 0));
+
+        reloadTests();
+        reloadScenarios();
+
+        updateSuiteFilterOptions();
     }
 
-    private void initFilterControls() {
-        // Load suites into filter combo (simple distinct list)
-        try {
-            java.util.List<GatlingTest> all = testService.findAllTests();
-            java.util.Set<String> suites = new java.util.HashSet<>();
-            for (GatlingTest t : all) { suites.add(t.getSuite()); }
-            suiteFilterCombo.setItems(FXCollections.observableArrayList(suites));
-            suiteFilterCombo.getItems().add(0, "All");
-            suiteFilterCombo.getSelectionModel().selectFirst();
-        } catch (ServiceException ignored) {}
+    private void updateSuiteFilterOptions() {
+        List<String> suites = availableTests.stream()
+                .map(GatlingTest::getSuite)
+                .filter(s -> s != null && !s.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
+        suites.add(0, "All");
+        suiteFilterCombo.setItems(FXCollections.observableArrayList(suites));
     }
 
-    private void loadAvailableTests() {
+    private void reloadTests() {
         try {
-            availableTests.setAll(testService.findAllTests());
+            availableTests.clear();
+            availableTests.addAll(testService.findAllTests());
+            updateSuiteFilterOptions();
         } catch (ServiceException e) {
-            showError("Failed to load tests: " + e.getMessage());
+            showError("load test cases failed: " + e.getMessage());
         }
     }
 
-    // ======================= Button handlers =======================
-    @FXML private void handleAddScenario() {
-        Scenario sc = new Scenario();
-        sc.setName("New Scenario");
-        sc.setDescription("");
-        scenarios.add(sc);
-        scenarioTable.getSelectionModel().select(sc);
-    }
-
-    @FXML private void handleDuplicateScenario() {
-        Scenario selected = scenarioTable.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
-        Scenario copy = new Scenario();
-        copy.setName(selected.getName() + " Copy");
-        copy.setDescription(selected.getDescription());
-        scenarios.add(copy);
-        scenarioTable.getSelectionModel().select(copy);
-    }
-
-    @FXML private void handleDeleteScenario() {
-        Scenario selected = scenarioTable.getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            scenarios.remove(selected);
-        }
-    }
-
-    @FXML private void handleClearSteps() {
-        steps.clear();
-    }
-
-    @FXML private void handleSaveScenario() {
-        // TODO: persist scenario & steps via service layer
-        showInfo("Scenario saved (stub)");
-    }
-
-    @FXML private void handleRunScenario() {
-        // TODO: construct batch execution and call service
-        showInfo("Run Now clicked (stub)");
-    }
-
-    @FXML private void handleScheduleScenario() {
-        // TODO: save schedule configuration
-        showInfo("Schedule clicked (stub)");
-    }
-
-    @FXML private void openLoadDialog() {
-        // TODO: open existing Gatling load dialog
-        showInfo("Open Load Dialog (stub)");
-    }
-
-    @FXML private void handleFilterCases() {
-        String suite = suiteFilterCombo.getValue();
-        String tagKeyword = tagFilterField.getText();
+    private void reloadScenarios() {
         try {
-            java.util.List<GatlingTest> all = testService.findAllTests();
-            java.util.List<GatlingTest> filtered = new java.util.ArrayList<>();
-            for (GatlingTest t : all) {
-                boolean match = true;
-                if (suite != null && !"All".equals(suite) && !suite.equalsIgnoreCase(t.getSuite())) {
-                    match = false;
-                }
-                if (match && tagKeyword != null && !tagKeyword.isBlank()) {
-                    String tags = t.getTags() == null ? "" : t.getTags();
-                    if (!tags.toLowerCase().contains(tagKeyword.toLowerCase())) {
-                        match = false;
-                    }
-                }
-                if (match) filtered.add(t);
-            }
-            availableTests.setAll(filtered);
-        } catch (ServiceException e) { showError("Filter failed: " + e.getMessage()); }
-    }
-
-    @FXML private void handleResetFilter() {
-        tagFilterField.clear();
-        suiteFilterCombo.getSelectionModel().selectFirst();
-        loadAvailableTests();
-    }
-
-    @FXML private void handleAddToSteps() {
-        ObservableList<GatlingTest> selectedItems = availableTestTable.getSelectionModel().getSelectedItems();
-        if (selectedItems == null || selectedItems.isEmpty()) { showError("Select case(s) to add."); return; }
-        for (GatlingTest t : selectedItems) {
-            ScenarioStep step = new ScenarioStep(steps.size() + 1, t.getTcid(), 0, t.getTags());
-            steps.add(step);
+            scenarios.clear();
+            scenarios.addAll(scenarioService.findAllScenarios());
+        } catch (ServiceException e) {
+            showError("load scenarios failed: " + e.getMessage());
         }
-        refreshStepOrder();
     }
 
-    @FXML private void handleRemoveFromSteps() {
-        ScenarioStep selected = scenarioStepTable.getSelectionModel().getSelectedItem();
-        if (selected == null) { showError("Select a step to remove."); return; }
-        steps.remove(selected);
-        refreshStepOrder();
+    // ------------------- event handling ----------------------
+    @FXML
+    private void handleFilterCases(ActionEvent evt) {
+        String suite = suiteFilterCombo.getValue();
+        String tagKw = tagFilterField.getText();
+        reloadTests();
+        availableTests.removeIf(t -> {
+            boolean ok = true;
+            if (suite != null && !suite.equals("All") && !suite.isBlank()) {
+                ok = ok && suite.equals(t.getSuite());
+            }
+            if (ok && tagKw != null && !tagKw.isBlank()) {
+                ok = t.getTags() != null && t.getTags().contains(tagKw);
+            }
+            return !ok;
+        });
     }
 
-    @FXML private void handleMoveStepUp() {
+    @FXML
+    private void handleResetFilter(ActionEvent evt) {
+        suiteFilterCombo.setValue("All");
+        tagFilterField.clear();
+        reloadTests();
+    }
+
+    @FXML
+    private void handleAddToSteps(ActionEvent evt) {
+        GatlingTest selected = availableTestTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+        ScenarioStep step = new ScenarioStep(steps.size() + 1, selected.getTcid(), 0, selected.getTags());
+        steps.add(step);
+    }
+
+    @FXML
+    private void handleRemoveFromSteps(ActionEvent evt) {
+        ScenarioStep sel = scenarioStepTable.getSelectionModel().getSelectedItem();
+        if (sel != null) {
+            steps.remove(sel);
+            reindexSteps();
+        }
+    }
+
+    @FXML
+    private void handleMoveStepUp(ActionEvent evt) {
         int idx = scenarioStepTable.getSelectionModel().getSelectedIndex();
         if (idx > 0) {
-            java.util.Collections.swap(steps, idx, idx - 1);
-            refreshStepOrder();
+            ScenarioStep s = steps.remove(idx);
+            steps.add(idx - 1, s);
+            reindexSteps();
             scenarioStepTable.getSelectionModel().select(idx - 1);
         }
     }
 
-    @FXML private void handleMoveStepDown() {
+    @FXML
+    private void handleMoveStepDown(ActionEvent evt) {
         int idx = scenarioStepTable.getSelectionModel().getSelectedIndex();
-        if (idx >= 0 && idx < steps.size() - 1) {
-            java.util.Collections.swap(steps, idx, idx + 1);
-            refreshStepOrder();
+        if (idx < steps.size() - 1 && idx >= 0) {
+            ScenarioStep s = steps.remove(idx);
+            steps.add(idx + 1, s);
+            reindexSteps();
             scenarioStepTable.getSelectionModel().select(idx + 1);
         }
     }
 
-    private void refreshStepOrder() {
+    @FXML
+    private void handleClearSteps(ActionEvent evt) {
+        steps.clear();
+    }
+
+    private void reindexSteps() {
         for (int i = 0; i < steps.size(); i++) {
             steps.get(i).setOrder(i + 1);
         }
-        scenarioStepTable.refresh();
     }
 
-    // ======================= Helpers =======================
+    // clear form fields
+    @FXML
+    private void handleClearScenarioForm(ActionEvent evt) {
+        clearScenarioForm();
+    }
+
+    private void clearScenarioForm() {
+        scenarioNameField.clear();
+        scenarioDescArea.clear();
+        steps.clear();
+        scenarioTable.getSelectionModel().clearSelection();
+        startDatePicker.setValue(null);
+        frequencyCombo.getSelectionModel().clearSelection();
+        threadGroupCombo.getSelectionModel().clearSelection();
+    }
+
+    // TODO: schedule/thread group dialog
+    @FXML private void openLoadDialog(ActionEvent evt) {
+        showInfo("this feature is not implemented yet");
+    }
+
+    @FXML
+    private void handleAddScenario(ActionEvent evt) {
+        String name = scenarioNameField.getText();
+        if (name == null || name.isBlank()) {
+            showError("scenario name cannot be empty");
+            return;
+        }
+        Scenario sc = new Scenario();
+        sc.setName(name);
+        sc.setDescription(scenarioDescArea.getText());
+        sc.setThreadGroupJson("{}"); // default empty JSON
+        sc.setScheduleJson("{}");
+        try {
+            scenarioService.createScenario(sc, new ArrayList<>(steps));
+            scenarios.add(0, sc);
+            showInfo("scenario created successfully");
+            reloadScenarios();
+        } catch (ServiceException e) {
+            showError(e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleSaveScenario(ActionEvent evt) {
+        Scenario selected = scenarioTable.getSelectionModel().getSelectedItem();
+        if (selected == null) { showError("please select a scenario to update"); return; }
+        selected.setName(scenarioNameField.getText());
+        selected.setDescription(scenarioDescArea.getText());
+        try {
+            scenarioService.updateScenario(selected, new ArrayList<>(steps));
+            showInfo("save successfully");
+            reloadScenarios();
+        } catch (ServiceException e) {
+            showError(e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleDuplicateScenario(ActionEvent evt) {
+        Scenario sel = scenarioTable.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        try {
+            Scenario dup = scenarioService.duplicateScenario(sel.getId());
+            scenarios.add(0, dup);
+            showInfo("duplicate successfully");
+        } catch (ServiceException e) {
+            showError(e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleDeleteScenario(ActionEvent evt) {
+        Scenario sel = scenarioTable.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        try {
+            scenarioService.deleteScenario(sel.getId());
+            scenarios.remove(sel);
+            showInfo("delete successfully");
+        } catch (ServiceException e) {
+            showError(e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleRunScenario(ActionEvent evt) {
+        Scenario sel = scenarioTable.getSelectionModel().getSelectedItem();
+        if (sel == null) { showError("please select a scenario"); return; }
+        try {
+            scenarioService.runScenario(sel.getId());
+            showInfo("scenario started");
+        } catch (ServiceException e) {
+            showError(e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleScheduleScenario(ActionEvent evt) {
+        Scenario sel = scenarioTable.getSelectionModel().getSelectedItem();
+        if (sel == null) { showError("please select a scenario"); return; }
+
+        LocalDate date = startDatePicker.getValue();
+        String freq = frequencyCombo.getValue();
+        if (date == null || freq == null) {
+            showError("please select start time and frequency");
+            return;
+        }
+
+        // simple cron mapping
+        String cron = "";
+        switch (freq) {
+            case "Daily": cron = "0 0 0 * * ?"; break;
+            case "Weekly": cron = "0 0 0 ? * MON"; break;
+            case "Once": default: cron = ""; break;
+        }
+
+        int h = hourSpinner.getValue();
+        int m = minuteSpinner.getValue();
+        int s = secondSpinner.getValue();
+        java.time.LocalDateTime startDateTime = date.atTime(h, m, s);
+
+        try {
+            scenarioService.upsertSchedule(sel.getId(), cron, true);
+            // 更新 scenario.scheduleJson
+            sel.setScheduleJson("{\"startDateTime\":\""+startDateTime.toString()+"\",\"frequency\":\""+freq+"\"}");
+            scenarioService.updateScenario(sel, scenarioService.findStepsByScenarioId(sel.getId()));
+            showInfo("schedule saved");
+        } catch (ServiceException e) {
+            showError(e.getMessage());
+        }
+    }
+
+    // ----------- utility methods ------------
     private void showError(String msg) {
         Alert alert = new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK);
         alert.showAndWait();
@@ -272,5 +349,22 @@ public class ScenarioViewModel implements Initializable {
     private void showInfo(String msg) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK);
         alert.showAndWait();
+    }
+
+    // 新增显示详情
+    private void showScenarioDetails(Scenario sc) {
+        if (sc == null) {
+            scenarioNameField.clear();
+            scenarioDescArea.clear();
+            steps.clear();
+            return;
+        }
+        scenarioNameField.setText(sc.getName());
+        scenarioDescArea.setText(sc.getDescription());
+        try {
+            steps.setAll(scenarioService.findStepsByScenarioId(sc.getId()));
+        } catch (ServiceException e) {
+            steps.clear();
+        }
     }
 } 

@@ -1,10 +1,13 @@
 package com.qa.app.model;
 
+/**
+ * 场景步骤：序号、测试用例 TCID、等待时间、Tags。
+ */
 public class ScenarioStep {
-    private int order;
-    private String testTcid;
-    private int waitTime;
-    private String tags;
+    private int order;          // 步骤序号（从 1 开始）
+    private String testTcid;    // 对应 GatlingTest.tcid
+    private int waitTime;       // 本步骤执行完后的等待时间（秒）
+    private String tags;        // 可选标签
 
     public ScenarioStep() {}
 

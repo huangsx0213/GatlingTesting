@@ -125,6 +125,39 @@ public class DBUtil {
                     + " description TEXT"
                     + ");";
             stmt.execute(projectSql);
+
+            // Create scenarios table
+            String scenarioSql = "CREATE TABLE IF NOT EXISTS scenario (" +
+                    " id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    " name TEXT NOT NULL UNIQUE," +
+                    " desc TEXT," +
+                    " thread_group_json TEXT," +
+                    " schedule_json TEXT" +
+                    ");";
+            stmt.execute(scenarioSql);
+
+            // Create scenario_step table
+            String stepSql = "CREATE TABLE IF NOT EXISTS scenario_step (" +
+                    " id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    " scenario_id INTEGER NOT NULL," +
+                    " order_index INTEGER NOT NULL," +
+                    " test_tcid TEXT NOT NULL," +
+                    " wait_time INTEGER DEFAULT 0," +
+                    " tags TEXT," +
+                    " FOREIGN KEY(scenario_id) REFERENCES scenario(id) ON DELETE CASCADE ON UPDATE CASCADE" +
+                    ");";
+            stmt.execute(stepSql);
+
+            // Create scenario_schedule table
+            String schedSql = "CREATE TABLE IF NOT EXISTS scenario_schedule (" +
+                    " id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    " scenario_id INTEGER NOT NULL," +
+                    " cron_expr TEXT NOT NULL," +
+                    " next_run_at TEXT," +
+                    " enabled BOOLEAN DEFAULT 1," +
+                    " FOREIGN KEY(scenario_id) REFERENCES scenario(id) ON DELETE CASCADE ON UPDATE CASCADE" +
+                    ");";
+            stmt.execute(schedSql);
             
             System.out.println("Database schema initialized. All tables are up to date.");
         } catch (SQLException e) {

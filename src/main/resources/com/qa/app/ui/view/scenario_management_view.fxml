@@ -30,6 +30,8 @@
             </GridPane>
 
             <!-- Case List && Scenario Steps -->
+            <TitledPane text="Scenario Details" expanded="true">
+                <content>
             <SplitPane orientation="HORIZONTAL" prefHeight="320.0" maxHeight="320.0" minHeight="320.0">
                 <items>
                     <!-- Case list -->
@@ -40,9 +42,9 @@
                             <HBox spacing="8.0" alignment="CENTER_LEFT">
                                 <children>
                                     <Label text="Suite:" />
-                                    <ComboBox fx:id="suiteFilterCombo" promptText="All" prefWidth="120.0" />
+                                    <ComboBox fx:id="suiteFilterCombo" promptText="All" prefWidth="175.0" />
                                     <Label text="Tag:" />
-                                    <TextField fx:id="tagFilterField" promptText="Tag keyword" prefWidth="120.0" />
+                                    <TextField fx:id="tagFilterField" promptText="Tag keyword" prefWidth="185.0" />
                                     <Button text="Filter" onAction="#handleFilterCases" />
                                     <Button text="Reset" onAction="#handleResetFilter" />
                                 </children>
@@ -95,6 +97,8 @@
                     </VBox>
                 </items>
             </SplitPane>
+                </content>
+            </TitledPane>
 
             <!-- Scheduler settings -->
             <TitledPane text="Scheduler Settings" expanded="false">
@@ -104,6 +108,16 @@
                         <children>
                             <Label text="Start Time:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
                             <DatePicker fx:id="startDatePicker" GridPane.rowIndex="0" GridPane.columnIndex="1" />
+                            <Label text="Time:" GridPane.rowIndex="0" GridPane.columnIndex="2" />
+                            <HBox spacing="4.0" GridPane.rowIndex="0" GridPane.columnIndex="3">
+                                <children>
+                                    <Spinner fx:id="hourSpinner" prefWidth="60" />
+                                    <Label text=":" />
+                                    <Spinner fx:id="minuteSpinner" prefWidth="60" />
+                                    <Label text=":" />
+                                    <Spinner fx:id="secondSpinner" prefWidth="60" />
+                                </children>
+                            </HBox>
                             <Label text="Frequency:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
                             <ComboBox fx:id="frequencyCombo" promptText="Once / Daily / Weekly" GridPane.rowIndex="1" GridPane.columnIndex="1" />
                             <Label text="Load Model:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
@@ -120,6 +134,7 @@
                 <Button text="Update" onAction="#handleSaveScenario" />
                 <Button text="Duplicate" onAction="#handleDuplicateScenario" />
                 <Button text="Delete" onAction="#handleDeleteScenario" />
+                <Button text="Clear" onAction="#handleClearScenarioForm" />
                 <Separator orientation="VERTICAL" />
                 <Button text="Run Now" onAction="#handleRunScenario" />
                 <Button text="Schedule" onAction="#handleScheduleScenario" />
