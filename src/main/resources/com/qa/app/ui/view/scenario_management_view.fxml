@@ -198,11 +198,11 @@
                                     <Label text="Time:" GridPane.rowIndex="0" GridPane.columnIndex="2" />
                                     <HBox spacing="4.0" GridPane.rowIndex="0" GridPane.columnIndex="3">
                                         <children>
-                                            <Spinner fx:id="hourSpinner" prefWidth="60" />
+                                            <Spinner fx:id="hourSpinner" prefWidth="60" editable="true" />
                                             <Label text=":" />
-                                            <Spinner fx:id="minuteSpinner" prefWidth="60" />
+                                            <Spinner fx:id="minuteSpinner" prefWidth="60" editable="true" />
                                             <Label text=":" />
-                                            <Spinner fx:id="secondSpinner" prefWidth="60" />
+                                            <Spinner fx:id="secondSpinner" prefWidth="60" editable="true" />
                                         </children>
                                     </HBox>
                                     <Label text="Frequency:" GridPane.rowIndex="1" GridPane.columnIndex="0" />

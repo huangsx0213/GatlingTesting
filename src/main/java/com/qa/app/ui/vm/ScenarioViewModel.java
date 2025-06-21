@@ -20,6 +20,8 @@ import java.util.stream.Collectors;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.util.converter.IntegerStringConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalTime;
+import java.time.LocalDateTime;
 
 public class ScenarioViewModel {
 
@@ -298,6 +300,8 @@ public class ScenarioViewModel {
         if (threadGroupCombo != null) threadGroupCombo.getSelectionModel().clearSelection();
 
         resetLoadModelDefaults();
+
+        setCurrentTimeDefaults();
     }
 
     private void resetLoadModelDefaults() {
@@ -334,10 +338,12 @@ public class ScenarioViewModel {
         try {
             com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
             sc.setThreadGroupJson(om.writeValueAsString(buildLoadParameters()));
+            sc.setScheduleJson(buildScheduleJson());
         } catch(Exception ex){ sc.setThreadGroupJson("{}"); }
-        sc.setScheduleJson("{}");
         try {
             scenarioService.createScenario(sc, new ArrayList<>(steps));
+            // save scheduler cron after id generated
+            saveSchedulerToDb(sc.getId());
             scenarios.add(0, sc);
             showInfo("scenario created successfully");
             reloadScenarios();
@@ -355,7 +361,10 @@ public class ScenarioViewModel {
         try {
             com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
             selected.setThreadGroupJson(om.writeValueAsString(buildLoadParameters()));
+            selected.setScheduleJson(buildScheduleJson());
             scenarioService.updateScenario(selected, new ArrayList<>(steps));
+            // save scheduler cron after id generated
+            saveSchedulerToDb(selected.getId());
             showInfo("save successfully");
             reloadScenarios();
         } catch (ServiceException se) {
@@ -470,6 +479,27 @@ public class ScenarioViewModel {
                com.fasterxml.jackson.databind.ObjectMapper om=new com.fasterxml.jackson.databind.ObjectMapper();
                var p=om.readValue(sc.getThreadGroupJson(), com.qa.app.model.GatlingLoadParameters.class);
                populateLoadModelFromParams(p);
+            }
+        }catch(Exception ignore){}
+
+        // populate schedule UI
+        try{
+            String schedJson=sc.getScheduleJson();
+            if(schedJson!=null && !schedJson.isBlank()){
+                com.fasterxml.jackson.databind.ObjectMapper om=new com.fasterxml.jackson.databind.ObjectMapper();
+                java.util.Map map=om.readValue(schedJson, java.util.Map.class);
+                Object dtObj=map.get("startDateTime");
+                if(dtObj!=null){
+                    LocalDateTime ldt=LocalDateTime.parse(dtObj.toString());
+                    startDatePicker.setValue(ldt.toLocalDate());
+                    hourSpinner.getValueFactory().setValue(ldt.getHour());
+                    minuteSpinner.getValueFactory().setValue(ldt.getMinute());
+                    secondSpinner.getValueFactory().setValue(ldt.getSecond());
+                }
+                Object freqObj=map.get("frequency");
+                if(freqObj!=null){
+                    frequencyCombo.setValue(freqObj.toString());
+                }
             }
         }catch(Exception ignore){}
     }
@@ -605,5 +635,42 @@ public class ScenarioViewModel {
                 ultimateSteps.setAll(ut.getSteps());
             }
         }
+    }
+
+    private void setCurrentTimeDefaults() {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        if(startDatePicker!=null) startDatePicker.setValue(today);
+        LocalTime now = LocalTime.now();
+        hourSpinner.getValueFactory().setValue(now.getHour());
+        minuteSpinner.getValueFactory().setValue(now.getMinute());
+        secondSpinner.getValueFactory().setValue(now.getSecond());
+    }
+
+    private void saveSchedulerToDb(int scenarioId){
+        try{
+            LocalDate date=startDatePicker.getValue();
+            if(date==null) return;
+            LocalTime t=LocalTime.of(hourSpinner.getValue(), minuteSpinner.getValue(), secondSpinner.getValue());
+            LocalDateTime dt=LocalDateTime.of(date,t);
+            String freq=frequencyCombo.getValue();
+            String cron="";
+            if("Daily".equals(freq)) cron="0 "+t.getMinute()+" "+t.getHour()+" * * ?";
+            else if("Weekly".equals(freq)) cron="0 "+t.getMinute()+" "+t.getHour()+" ? * MON";
+            // Once 无 cron
+            scenarioService.upsertSchedule(scenarioId, cron, true);
+            // update scheduleJson
+        }catch(Exception ignore){}
+    }
+
+    private String buildScheduleJson(){
+        java.util.Map<String,Object> map=new java.util.HashMap<>();
+        if(startDatePicker.getValue()!=null){
+           LocalTime lt=LocalTime.of(hourSpinner.getValue(),minuteSpinner.getValue(),secondSpinner.getValue());
+           map.put("startDateTime",java.time.LocalDateTime.of(startDatePicker.getValue(),lt).toString());
+        }
+        map.put("frequency",frequencyCombo.getValue());
+        try{
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(map);
+        }catch(Exception e){return "{}";}
     }
 } 
