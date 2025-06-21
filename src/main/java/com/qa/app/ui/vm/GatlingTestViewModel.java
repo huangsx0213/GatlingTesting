@@ -122,6 +122,10 @@ public class GatlingTestViewModel implements Initializable {
     private TextArea generatedHeadersArea;
     @FXML
     private TextArea generatedBodyArea;
+    @FXML
+    private Accordion testAccordion;
+    @FXML
+    private TitledPane apiConfigPane;
 
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
@@ -155,6 +159,8 @@ public class GatlingTestViewModel implements Initializable {
     private final Map<GatlingTest, BooleanProperty> selectionMap = new HashMap<>();
     private final CheckBox selectAllCheckBox = new CheckBox();
 
+    private boolean isUpdatingSelection = false;
+
     // =====================
     // 1. Initialize related
     // =====================
@@ -183,6 +189,10 @@ public class GatlingTestViewModel implements Initializable {
 
         // TagHandler initialization
         setupTagHandler();
+
+        if(testAccordion!=null && apiConfigPane!=null){
+            testAccordion.setExpandedPane(apiConfigPane);
+        }
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -468,23 +478,11 @@ public class GatlingTestViewModel implements Initializable {
 
         // Listener for multi-selection changes to update checkboxes
         testTable.getSelectionModel().getSelectedItems().addListener((ListChangeListener<GatlingTest>) c -> {
-            while (c.next()) {
-                if (c.wasAdded()) {
-                    for (GatlingTest test : c.getAddedSubList()) {
-                        if (selectionMap.containsKey(test)) {
-                            selectionMap.get(test).set(true);
-                        }
-                    }
-                }
-                if (c.wasRemoved()) {
-                    for (GatlingTest test : c.getRemoved()) {
-                        if (selectionMap.containsKey(test)) {
-                            selectionMap.get(test).set(false);
-                        }
-                    }
-                }
-            }
+            if (isUpdatingSelection) return;
+            isUpdatingSelection = true;
+            syncSelectionProperties();
             updateSelectAllCheckBoxState();
+            isUpdatingSelection = false;
         });
 
         selectAllCheckBox.setOnAction(e -> {
@@ -493,7 +491,6 @@ public class GatlingTestViewModel implements Initializable {
             } else {
                 testTable.getSelectionModel().clearSelection();
             }
-            syncSelectionProperties();
             testTable.refresh();
         });
     }
@@ -509,13 +506,13 @@ public class GatlingTestViewModel implements Initializable {
         } else {
             selectAllCheckBox.setIndeterminate(true);
         }
-        syncSelectionProperties();
     }
 
     /**
      * Ensure the BooleanProperty bound to each checkbox row reflects the actual selection model.
      */
     private void syncSelectionProperties() {
+        isUpdatingSelection = true;
         for (GatlingTest t : testList) {
             BooleanProperty prop = selectionMap.get(t);
             if (prop != null) {
@@ -525,6 +522,7 @@ public class GatlingTestViewModel implements Initializable {
                 }
             }
         }
+        isUpdatingSelection = false;
     }
 
     // =====================
@@ -612,6 +610,7 @@ public class GatlingTestViewModel implements Initializable {
                 for (GatlingTest test : tests) {
                     BooleanProperty selected = new SimpleBooleanProperty(false);
                     selected.addListener((obs, wasSelected, isSelected) -> {
+                        if (isUpdatingSelection) return;
                         if (isSelected) {
                             testTable.getSelectionModel().select(test);
                         } else {
@@ -862,15 +861,16 @@ public class GatlingTestViewModel implements Initializable {
             testService.createTest(newTest);
 
             BooleanProperty selected = new SimpleBooleanProperty(false);
-            selected.addListener((obs, wasSelected, isSelected) -> {
-                if (isSelected) {
+            selected.addListener((obs, wasSel, isSel) -> {
+                if (isUpdatingSelection) return;
+                if (isSel) {
                     testTable.getSelectionModel().select(newTest);
                 } else {
                     testTable.getSelectionModel().clearSelection(testList.indexOf(newTest));
                 }
             });
             selectionMap.put(newTest, selected);
-            
+
             testList.add(newTest);
             clearFields();
             testTable.getSelectionModel().select(newTest);

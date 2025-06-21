@@ -104,6 +104,11 @@ public class ScenarioViewModel {
 
     private com.qa.app.util.UserPreferences loadPrefs;
 
+    private final java.util.Map<Scenario, javafx.beans.property.BooleanProperty> selectionMap = new java.util.HashMap<>();
+    private final javafx.scene.control.CheckBox selectAllCheckBoxSc = new javafx.scene.control.CheckBox();
+
+    private boolean isUpdatingSelection = false;
+
     public void setMainViewModel(MainViewModel vm) {
         this.mainViewModel = vm;
     }
@@ -178,6 +183,43 @@ public class ScenarioViewModel {
 
         // ----- Load Model Pane initialization -----
         initLoadModelPane();
+
+        // 设置多选表格及复选框列
+        scenarioTable.setEditable(true);
+        scenarioTable.getSelectionModel().setSelectionMode(javafx.scene.control.SelectionMode.MULTIPLE);
+
+        // ---- 添加选择列 ----
+        javafx.scene.control.TableColumn<Scenario, Boolean> selectColumn = new javafx.scene.control.TableColumn<>();
+        selectColumn.setGraphic(selectAllCheckBoxSc);
+        selectColumn.setPrefWidth(40);
+        selectColumn.setMinWidth(40);
+        selectColumn.setMaxWidth(40);
+        selectColumn.setSortable(false);
+        selectColumn.setCellValueFactory(cd -> {
+            Scenario sc = cd.getValue();
+            return selectionMap.computeIfAbsent(sc, k -> new javafx.beans.property.SimpleBooleanProperty(false));
+        });
+        selectColumn.setCellFactory(javafx.scene.control.cell.CheckBoxTableCell.forTableColumn(selectColumn));
+        scenarioTable.getColumns().add(0, selectColumn);
+
+        // 监听表格多选变化以同步 selectionMap
+        scenarioTable.getSelectionModel().getSelectedItems().addListener((javafx.collections.ListChangeListener<Scenario>) c -> {
+            if (isUpdatingSelection) return;
+            isUpdatingSelection = true;
+            syncSelectionProperties();
+            updateSelectAllCheckBoxState();
+            isUpdatingSelection = false;
+        });
+
+        // selectAll 逻辑
+        selectAllCheckBoxSc.setOnAction(e -> {
+            if (selectAllCheckBoxSc.isSelected()) {
+                scenarioTable.getSelectionModel().selectAll();
+            } else {
+                scenarioTable.getSelectionModel().clearSelection();
+            }
+            scenarioTable.refresh();
+        });
     }
 
     private void updateSuiteFilterOptions() {
@@ -202,8 +244,21 @@ public class ScenarioViewModel {
 
     private void reloadScenarios() {
         try {
-            scenarios.clear();
-            scenarios.addAll(scenarioService.findAllScenarios());
+            selectionMap.clear();
+            scenarios.setAll(scenarioService.findAllScenarios());
+            for (Scenario sc : scenarios) {
+                javafx.beans.property.BooleanProperty selected = new javafx.beans.property.SimpleBooleanProperty(false);
+                selected.addListener((obs, wasSel, isSel) -> {
+                    if (isUpdatingSelection) return;
+                    if (isSel) {
+                        scenarioTable.getSelectionModel().select(sc);
+                    } else {
+                        scenarioTable.getSelectionModel().clearSelection(scenarios.indexOf(sc));
+                    }
+                });
+                selectionMap.put(sc, selected);
+            }
+            updateSelectAllCheckBoxState();
         } catch (ServiceException e) {
             showError("load scenarios failed: " + e.getMessage());
         }
@@ -345,6 +400,16 @@ public class ScenarioViewModel {
             // save scheduler cron after id generated
             saveSchedulerToDb(sc.getId());
             scenarios.add(0, sc);
+            javafx.beans.property.BooleanProperty selProp = new javafx.beans.property.SimpleBooleanProperty(false);
+            selProp.addListener((obs, wasSel, isSel) -> {
+                if (isUpdatingSelection) return;
+                if (isSel) {
+                    scenarioTable.getSelectionModel().select(sc);
+                } else {
+                    scenarioTable.getSelectionModel().clearSelection(scenarios.indexOf(sc));
+                }
+            });
+            selectionMap.put(sc, selProp);
             showInfo("scenario created successfully");
             reloadScenarios();
         } catch (ServiceException e) {
@@ -381,6 +446,16 @@ public class ScenarioViewModel {
         try {
             Scenario dup = scenarioService.duplicateScenario(sel.getId());
             scenarios.add(0, dup);
+            javafx.beans.property.BooleanProperty dupSel = new javafx.beans.property.SimpleBooleanProperty(false);
+            dupSel.addListener((obs, wasSel, isSel) -> {
+                if (isUpdatingSelection) return;
+                if (isSel) {
+                    scenarioTable.getSelectionModel().select(dup);
+                } else {
+                    scenarioTable.getSelectionModel().clearSelection(scenarios.indexOf(dup));
+                }
+            });
+            selectionMap.put(dup, dupSel);
             showInfo("duplicate successfully");
         } catch (ServiceException e) {
             showError(e.getMessage());
@@ -389,11 +464,14 @@ public class ScenarioViewModel {
 
     @FXML
     private void handleDeleteScenario(ActionEvent evt) {
-        Scenario sel = scenarioTable.getSelectionModel().getSelectedItem();
-        if (sel == null) return;
+        javafx.collections.ObservableList<Scenario> selectedScenarios = scenarioTable.getSelectionModel().getSelectedItems();
+        if (selectedScenarios.isEmpty()) return;
         try {
-            scenarioService.deleteScenario(sel.getId());
-            scenarios.remove(sel);
+            for (Scenario sc : new java.util.ArrayList<>(selectedScenarios)) {
+                scenarioService.deleteScenario(sc.getId());
+                selectionMap.remove(sc);
+            }
+            scenarios.removeAll(selectedScenarios);
             showInfo("delete successfully");
         } catch (ServiceException e) {
             showError(e.getMessage());
@@ -672,5 +750,32 @@ public class ScenarioViewModel {
         try{
             return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(map);
         }catch(Exception e){return "{}";}
+    }
+
+    private void updateSelectAllCheckBoxState() {
+        int selectedCount = scenarioTable.getSelectionModel().getSelectedItems().size();
+        if (selectedCount == 0) {
+            selectAllCheckBoxSc.setSelected(false);
+            selectAllCheckBoxSc.setIndeterminate(false);
+        } else if (selectedCount == scenarios.size() && !scenarios.isEmpty()) {
+            selectAllCheckBoxSc.setSelected(true);
+            selectAllCheckBoxSc.setIndeterminate(false);
+        } else {
+            selectAllCheckBoxSc.setIndeterminate(true);
+        }
+    }
+
+    private void syncSelectionProperties() {
+        isUpdatingSelection = true;
+        for (Scenario sc : scenarios) {
+            javafx.beans.property.BooleanProperty prop = selectionMap.get(sc);
+            if (prop != null) {
+                boolean shouldSelect = scenarioTable.getSelectionModel().getSelectedItems().contains(sc);
+                if (prop.get() != shouldSelect) {
+                    prop.set(shouldSelect);
+                }
+            }
+        }
+        isUpdatingSelection = false;
     }
 } 
