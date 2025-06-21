@@ -205,10 +205,29 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.inheritIO();
 
-            int exitCode = pb.start().waitFor();
-            if (exitCode != 0) {
-                throw new ServiceException("Gatling multi-scenario execution failed, exit code: " + exitCode);
-            }
+            // 在独立线程中启动并等待 Gatling 进程，避免阻塞调用线程
+            new Thread(() -> {
+                try {
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Multi-scenario Starting", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+
+                    int exitCode;
+                    java.lang.Process p = pb.start();
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Multi-scenario Running", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+
+                    exitCode = p.waitFor();
+                    if (exitCode != 0) {
+                        System.err.println("Gatling multi-scenario execution failed, exit code: " + exitCode);
+                        com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Multi-scenario Failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+                    } else {
+                        System.out.println("Gatling multi-scenario execution completed.");
+                        com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Multi-scenario Completed", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
+                    }
+                } catch (Exception ex) {
+                    System.err.println("Failed to execute Gatling multi-scenario: " + ex.getMessage());
+                    ex.printStackTrace();
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Multi-scenario Exception: " + ex.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+                }
+            }, "gatling-multi-scenario-runner").start();
 
         } catch(ServiceException se){
             throw se;

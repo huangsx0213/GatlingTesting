@@ -491,7 +491,11 @@ public class ScenarioViewModel {
             } else {
                 scenarioService.runScenarios(new java.util.ArrayList<>(selected));
             }
-            showInfo("scenario(s) started");
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Scenario is running", MainViewModel.StatusType.INFO);
+            } else {
+                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Scenario is running", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+            }
         } catch (ServiceException e) {
             showError(e.getMessage());
         }

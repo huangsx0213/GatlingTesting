@@ -12,10 +12,10 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * 在运行时渲染请求/Headers 模板的工具类。
- * 与 UI 层的 {@link com.qa.app.ui.vm.gatling.TemplateHandler} 类似，
- * 但该类侧重于在 Gatling 的每一次请求之前重新生成动态变量，
- * 从而保证多次循环请求时变量都是实时生成的。
+ * A utility class for rendering request and headers templates at runtime.
+ * Similar to the UI layer's {@link com.qa.app.ui.vm.gatling.TemplateHandler},
+ * but this class focuses on regenerating dynamic variables before each Gatling request,
+ * ensuring variables are generated in real-time for multiple loop requests.
  */
 public class RuntimeTemplateProcessor {
 
@@ -34,7 +34,7 @@ public class RuntimeTemplateProcessor {
     private static final Pattern AT_PLACEHOLDER = Pattern.compile("@\\{([^}]+)}");
 
     /**
-     * 对模板预处理，将用户使用的 @{var} 占位符转换为 FreeMarker 可识别的 [=var] 形式。
+     * Pre-process the template, converting user-defined @{var} placeholders to FreeMarker-compatible [=var] form.
      */
     private static String preprocessForFreeMarker(String content) {
         if (content == null) return null;
@@ -42,11 +42,11 @@ public class RuntimeTemplateProcessor {
     }
 
     /**
-     * 渲染内容模板。
+     * Render the content template.
      *
-     * @param templateStr           模板字符串（可能包含 @{var} 占位符）
-     * @param variableExpressionMap 变量表达式映射，value 中可能也包含 @{...} 语法
-     * @return 渲染后的结果字符串
+     * @param templateStr           The template string (may contain @{var} placeholders)
+     * @param variableExpressionMap Map of variable expressions, where values may also contain @{...} syntax
+     * @return The rendered result string
      */
     public static String render(String templateStr, Map<String, String> variableExpressionMap) {
         if (templateStr == null || templateStr.isBlank()) {
@@ -54,11 +54,11 @@ public class RuntimeTemplateProcessor {
         }
         String fmTemplateStr = preprocessForFreeMarker(templateStr);
 
-        // 构造数据模型
+        // Construct the data model
         Map<String, Object> dataModel = new HashMap<>();
         if (variableExpressionMap != null) {
             for (Map.Entry<String, String> entry : variableExpressionMap.entrySet()) {
-                // 对变量表达式再次调用 VariableGenerator.generate，以实现真正的***动态***效果
+                // Call VariableGenerator.generate on variable expressions again to achieve true dynamic effects
                 String value = VariableGenerator.generate(entry.getValue());
                 dataModel.put(entry.getKey(), value);
             }
@@ -70,7 +70,7 @@ public class RuntimeTemplateProcessor {
             template.process(dataModel, out);
             return out.toString();
         } catch (TemplateException | java.io.IOException e) {
-            // 运行时渲染失败时返回错误信息，避免整个压测崩溃
+            // Return an error message if runtime rendering fails, to prevent the entire stress test from crashing
             return "TEMPLATE_RUNTIME_ERROR: " + e.getMessage();
         }
     }

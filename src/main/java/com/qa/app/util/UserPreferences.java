@@ -11,8 +11,8 @@ import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * 简单的 JSON 文件持久化首选项，存放上一次填写的负载配置，
- * 便于下次打开对话框时自动填充。
+ * Simple JSON file for persisting user preferences, storing the last entered load configuration,
+ * to auto-fill the dialog on next open.
  */
 public class UserPreferences {
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -30,10 +30,10 @@ public class UserPreferences {
             if (PREF_FILE.exists()) {
                 return MAPPER.readValue(PREF_FILE, UserPreferences.class);
             }
-            // 新增：先用 properties 文件初始化默认值
+            // Added: First initialize defaults from properties file
             UserPreferences defaults = new UserPreferences();
             loadDefaultsFromProperties(defaults);
-            // 继续读取 classpath 默认 JSON 文件
+            // Continue reading default JSON file from classpath
             java.io.InputStream in = UserPreferences.class.getClassLoader().getResourceAsStream("gatling_load_prefs.json");
             if (in != null) {
                 defaults = MAPPER.readValue(in, UserPreferences.class);
@@ -69,9 +69,9 @@ public class UserPreferences {
                 if (props.getProperty("stepping.duration") != null) {
                     prefs.stepping.setHoldLoad(Integer.parseInt(props.getProperty("stepping.duration")));
                 }
-                // ultimate（只做简单示例，实际可按需扩展）
-                // 例如 ultimate.step.0.startTime=0, ultimate.step.0.initialLoad=1 ...
-                // 这里只做一个简单的单步配置
+                // ultimate (just a simple example, extend as needed in practice)
+                // For example, ultimate.step.0.startTime=0, ultimate.step.0.initialLoad=1 ...
+                // Here, only a simple single-step configuration is implemented
                 if (prefs.ultimate != null && props.getProperty("ultimate.step.0.startTime") != null) {
                     com.qa.app.model.threadgroups.UltimateThreadGroupStep step = new com.qa.app.model.threadgroups.UltimateThreadGroupStep();
                     step.setStartTime(Integer.parseInt(props.getProperty("ultimate.step.0.startTime")));

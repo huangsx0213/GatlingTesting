@@ -166,7 +166,8 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         }
 
         try {
-            GatlingTestExecutor.executeBatchSync(tests, params, endpoints);
+            // 异步执行，避免阻塞调用线程（如 JavaFX UI 线程）
+            GatlingTestExecutor.executeBatch(tests, params, endpoints);
         } catch (Exception e) {
             throw new ServiceException("Failed to run Gatling batch tests: " + e.getMessage(), e);
         }

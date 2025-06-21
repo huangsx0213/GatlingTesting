@@ -63,7 +63,12 @@ public class MainViewModel implements Initializable {
 
     public static void showGlobalStatus(String message, StatusType type) {
         if (instance != null) {
-            instance.updateStatus(message, type);
+            // 确保在 JavaFX Application Thread 上更新 UI
+            if (javafx.application.Platform.isFxApplicationThread()) {
+                instance.updateStatus(message, type);
+            } else {
+                javafx.application.Platform.runLater(() -> instance.updateStatus(message, type));
+            }
         }
     }
 

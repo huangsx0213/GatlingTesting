@@ -1001,18 +1001,14 @@ public class GatlingTestViewModel implements Initializable {
                 }
 
                 if (mainViewModel != null) {
-                    mainViewModel.updateStatus("Running " + testsToRun.size() + " test(s)...", MainViewModel.StatusType.INFO);
+                    mainViewModel.updateStatus("Starting to run " + testsToRun.size() + " tests", MainViewModel.StatusType.INFO);
                 }
 
                 // Execute all selected tests sequentially within the same thread group configuration
                 try {
                     testService.runTests(testsToRun, params);
+                    // refresh table view
                     testTable.refresh();
-                    if (mainViewModel != null) {
-                        mainViewModel.updateStatus(testsToRun.size() + " test(s) completed.",
-                                MainViewModel.StatusType.SUCCESS);
-                    }
-                    refreshAll();
                 } catch (ServiceException ex) {
                     if (mainViewModel != null) {
                         mainViewModel.updateStatus("Failed to run test(s): " + ex.getMessage(), MainViewModel.StatusType.ERROR);
@@ -1031,7 +1027,7 @@ public class GatlingTestViewModel implements Initializable {
     private void handleRunSuite() {
         // The Run Suite feature is deprecated and no longer available.
         if (mainViewModel != null) {
-            mainViewModel.updateStatus("Run Suite 功能已移除，请使用场景(Scenario)运行。", MainViewModel.StatusType.INFO);
+            mainViewModel.updateStatus("Run Suite feature is deprecated, please use Scenario to run.", MainViewModel.StatusType.INFO);
         }
     }
 

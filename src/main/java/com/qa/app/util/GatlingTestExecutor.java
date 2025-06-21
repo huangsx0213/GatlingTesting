@@ -76,6 +76,9 @@ public class GatlingTestExecutor {
             System.out.println("Wait time (seconds): " + test.getWaitTime());
             System.out.println("===================================");
 
+            // ===== 状态栏：已开始 =====
+            com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test " + test.getTcid() + " Starting", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+
             // Execute Gatling in a separate process to avoid System.exit() in the main app
             String javaHome = System.getProperty("java.home");
             String javaBin = Paths.get(javaHome, "bin", "java").toString();
@@ -124,6 +127,8 @@ public class GatlingTestExecutor {
             // Run the process in a new thread to avoid blocking the caller (e.g., UI thread)
             new Thread(() -> {
                 try {
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test " + test.getTcid() + " Running", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+
                     ProcessBuilder processBuilder = new ProcessBuilder(command);
                     processBuilder.inheritIO();
 
@@ -132,14 +137,17 @@ public class GatlingTestExecutor {
 
                     if (exitCode == 0) {
                         System.out.println("Gatling test execution completed.");
+                        com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test " + test.getTcid() + " Completed", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
                     } else {
                         System.out.println("Gatling test execution failed, exit code: " + exitCode);
+                        com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test " + test.getTcid() + " Failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
                     }
                 } catch (Exception e) {
                     System.err.println("Gatling test execution failed: " + e.getMessage());
                     e.printStackTrace();
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test " + test.getTcid() + " Exception: " + e.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
                 }
-            }).start();
+            }, "gatling-test-runner").start();
 
         } catch (Exception e) {
             System.err.println("Failed to initialize Gatling test execution: " + e.getMessage());
@@ -306,5 +314,94 @@ public class GatlingTestExecutor {
             e.printStackTrace();
             throw new RuntimeException("Failed to start Gatling batch test process", e);
         }
+    }
+
+    // Async batch execution, avoid blocking the caller (e.g., JavaFX UI thread)
+    public static void executeBatch(java.util.List<GatlingTest> tests, GatlingLoadParameters params, java.util.List<Endpoint> endpoints) {
+        // Reuse the same code as executeBatchSync but run the process in a new thread and wait for it to finish.
+        new Thread(() -> {
+            try {
+                if (tests == null || endpoints == null || tests.size() != endpoints.size()) {
+                    throw new IllegalArgumentException("Tests and Endpoints list size mismatch or null");
+                }
+
+                String javaHome = System.getProperty("java.home");
+                String javaBin = java.nio.file.Paths.get(javaHome, "bin", "java").toString();
+                String classpath = assembleClasspath();
+                String gatlingMain = "io.gatling.app.Gatling";
+                String simulationClass = DynamicJavaSimulation.class.getName();
+                String resultsPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
+
+                com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+                // Build BatchItem list
+                java.util.List<java.util.Map<String, Object>> batchItems = new java.util.ArrayList<>();
+                for (int i = 0; i < tests.size(); i++) {
+                    java.util.Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("test", tests.get(i));
+                    map.put("endpoint", endpoints.get(i));
+                    batchItems.add(map);
+                }
+
+                java.io.File batchFile = java.io.File.createTempFile("gatling_batch_tests_", ".json");
+                batchFile.deleteOnExit();
+                try (java.io.BufferedWriter writer = new java.io.BufferedWriter(new java.io.FileWriter(batchFile))) {
+                    writer.write(objectMapper.writeValueAsString(batchItems));
+                }
+
+                java.io.File paramsFile = java.io.File.createTempFile("gatling_params_", ".json");
+                paramsFile.deleteOnExit();
+                try (java.io.BufferedWriter writer = new java.io.BufferedWriter(new java.io.FileWriter(paramsFile))) {
+                    writer.write(objectMapper.writeValueAsString(params));
+                }
+
+                java.util.List<String> command = new java.util.ArrayList<>();
+                command.add(javaBin);
+                command.add("--add-opens");
+                command.add("java.base/java.lang=ALL-UNNAMED");
+                command.add("-cp");
+                command.add(classpath);
+                command.add("-Dgatling.tests.file=" + batchFile.getAbsolutePath());
+                command.add("-Dgatling.params.file=" + paramsFile.getAbsolutePath());
+                command.add(gatlingMain);
+                command.add("-s");
+                command.add(simulationClass);
+                command.add("-rf");
+                command.add(resultsPath);
+
+                // Status bar: running
+                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Batch test is running", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+
+                System.out.println("========== Gatling Batch Execution (Async) ==========");
+                for (int i = 0; i < tests.size(); i++) {
+                    System.out.println(String.format("  %d) %s [ %s %s ]", i + 1,
+                            tests.get(i).getTcid(),
+                            endpoints.get(i).getMethod(),
+                            endpoints.get(i).getUrl()));
+                }
+                System.out.println("Starting Gatling batch test in background...");
+
+                // Status bar: running
+                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Batch test is running", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+
+                java.lang.ProcessBuilder processBuilder = new java.lang.ProcessBuilder(command);
+                processBuilder.inheritIO();
+
+                java.lang.Process process = processBuilder.start();
+                int exitCode = process.waitFor();
+
+                if (exitCode == 0) {
+                    System.out.println("Gatling batch execution completed.");
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Batch test is completed", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
+                } else {
+                    System.out.println("Gatling batch execution failed, exit code: " + exitCode);
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Batch test failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to start Gatling batch process: " + e.getMessage());
+                e.printStackTrace();
+                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Batch test exception: " + e.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+            }
+        }, "gatling-batch-runner").start();
     }
 } 

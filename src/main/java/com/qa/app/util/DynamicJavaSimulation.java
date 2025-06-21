@@ -80,15 +80,15 @@ public class DynamicJavaSimulation extends Simulation {
         } else if (params.getType() == ThreadGroupType.STEPPING) {
             SteppingThreadGroup steppingConfig = params.getSteppingThreadGroup();
 
-            // 根据 JMeter Stepping TG 语义：initialDelay + 总 rampUp 时长 + holdLoad
+            // Based on JMeter Stepping TG semantics: initialDelay + total rampUp duration + holdLoad
             long totalRampUp = 0;
 
-            // 初始用户 ramp 时间（只有当 startUsers > 0 时才计）
+            // Initial user ramp time (only counted if startUsers > 0)
             if (steppingConfig.getStartUsers() > 0) {
                 totalRampUp += steppingConfig.getIncrementTime();
             }
 
-            // 计算后续增量批次数量
+            // Calculate the number of subsequent increment batches
             int remainingUsers = steppingConfig.getNumThreads() - steppingConfig.getStartUsers();
             if (remainingUsers > 0 && steppingConfig.getIncrementUsers() > 0) {
                 int numberOfSteps = (int) Math.ceil((double) remainingUsers / steppingConfig.getIncrementUsers());
@@ -133,7 +133,7 @@ public class DynamicJavaSimulation extends Simulation {
                 int rampDurationSec = Math.max(1, steppingConfig.getIncrementTime());
                 steps.add(rampUsers(steppingConfig.getStartUsers()).during(Duration.ofSeconds(rampDurationSec)));
 
-                // 3. Subsequent increments – 每个批次用户在线性 ramp-up 过程中被逐步拉起
+                // 3. Subsequent increments – Each batch of users is gradually ramped up in a linear ramp-up process
                 int remainingUsers = steppingConfig.getNumThreads() - steppingConfig.getStartUsers();
                 if (remainingUsers > 0 && steppingConfig.getIncrementUsers() > 0) {
                     int numberOfSteps = (int) Math.ceil((double) remainingUsers / steppingConfig.getIncrementUsers());
@@ -310,8 +310,8 @@ public class DynamicJavaSimulation extends Simulation {
                 break;
         }
 
-        // ---------------- 处理 Headers ----------------
-        // 先解析模板以获取所有 Header Key，随后为每一个 Key 设置一个动态 Expression
+        // ---------------- Handle Headers ----------------
+        // First parse the template to get all Header Keys, then set a dynamic Expression for each Key
         java.util.Map<String, String> rawHeaderMap = parseHeaders(test.getHeaders());
         for (java.util.Map.Entry<String, String> entry : rawHeaderMap.entrySet()) {
             String headerKey = entry.getKey();
