@@ -184,13 +184,15 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             // ===== 3. 启动 Gatling =====
             String javaHome = System.getProperty("java.home");
             String javaBin = java.nio.file.Paths.get(javaHome, "bin", "java").toString();
-            String classpath = System.getProperty("java.class.path");
+            String classpath = assembleClasspath();
             String gatlingMain = "io.gatling.app.Gatling";
             String simulationClass = com.qa.app.util.MultiScenarioSimulation.class.getName();
             String resultsPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
 
             java.util.List<String> command = new java.util.ArrayList<>();
             command.add(javaBin);
+            command.add("--add-opens");
+            command.add("java.base/java.lang=ALL-UNNAMED");
             command.add("-cp");
             command.add(classpath);
             command.add("-Dgatling.multiscenario.file=" + multiFile.getAbsolutePath());
@@ -231,5 +233,17 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
         } catch (Exception e) {
             throw new ServiceException("Failed to load schedule", e);
         }
+    }
+
+    private static String assembleClasspath() {
+        String cp = System.getProperty("java.class.path");
+        try {
+            String selfPath = new java.io.File(GatlingScenarioServiceImpl.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI()).getPath();
+            if (!cp.contains(selfPath)) {
+                cp += java.io.File.pathSeparator + selfPath;
+            }
+        } catch (Exception ignored) { }
+        return cp;
     }
 } 

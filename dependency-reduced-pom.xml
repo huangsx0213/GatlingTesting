@@ -12,19 +12,16 @@
         <version>${gatling.version}</version>
         <configuration>
           <simulationClass>com.qa.app.util.DynamicJavaSimulation</simulationClass>
+          <jvmArgs>
+            <jvmArg>--add-opens=java.base/java.lang=ALL-UNNAMED</jvmArg>
+            <jvmArg>--add-opens=java.base/java.util=ALL-UNNAMED</jvmArg>
+          </jvmArgs>
         </configuration>
       </plugin>
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
         <version>4.8.1</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -40,6 +37,10 @@
         <version>0.0.8</version>
         <configuration>
           <mainClass>com.qa.app.App</mainClass>
+          <options>
+            <option>--add-opens=java.base/java.lang=ALL-UNNAMED</option>
+            <option>--add-opens=java.base/java.util=ALL-UNNAMED</option>
+          </options>
         </configuration>
       </plugin>
       <plugin>
@@ -78,7 +79,7 @@
     <maven.compiler.source>17</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <javafx.version>17.0.2</javafx.version>
-    <gatling.version>3.11.3</gatling.version>
+    <gatling.version>3.14.3</gatling.version>
     <scala.version>2.13.14</scala.version>
   </properties>
 </project>

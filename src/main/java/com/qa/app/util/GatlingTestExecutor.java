@@ -16,6 +16,18 @@ import java.util.List;
 
 public class GatlingTestExecutor {
 
+    private static String assembleClasspath() {
+        String cp = System.getProperty("java.class.path");
+        try {
+            String selfPath = new java.io.File(GatlingTestExecutor.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI()).getPath();
+            if (!cp.contains(selfPath)) {
+                cp += java.io.File.pathSeparator + selfPath;
+            }
+        } catch (Exception ignored) { }
+        return cp;
+    }
+
     public static void execute(GatlingTest test, GatlingLoadParameters params, Endpoint endpoint) {
         try {
             // print test details
@@ -67,7 +79,7 @@ public class GatlingTestExecutor {
             // Execute Gatling in a separate process to avoid System.exit() in the main app
             String javaHome = System.getProperty("java.home");
             String javaBin = Paths.get(javaHome, "bin", "java").toString();
-            String classpath = System.getProperty("java.class.path");
+            String classpath = assembleClasspath();
             String gatlingMain = "io.gatling.app.Gatling";
             String simulationClass = DynamicJavaSimulation.class.getName();
             String resultsPath = Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
@@ -95,6 +107,8 @@ public class GatlingTestExecutor {
 
             List<String> command = new ArrayList<>();
             command.add(javaBin);
+            command.add("--add-opens");
+            command.add("java.base/java.lang=ALL-UNNAMED");
             command.add("-cp");
             command.add(classpath);
             command.add("-Dgatling.test.file=" + testFile.getAbsolutePath());
@@ -159,7 +173,7 @@ public class GatlingTestExecutor {
 
             String javaHome = System.getProperty("java.home");
             String javaBin = Paths.get(javaHome, "bin", "java").toString();
-            String classpath = System.getProperty("java.class.path");
+            String classpath = assembleClasspath();
             String gatlingMain = "io.gatling.app.Gatling";
             String simulationClass = DynamicJavaSimulation.class.getName();
             String resultsPath = Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
@@ -186,6 +200,8 @@ public class GatlingTestExecutor {
 
             List<String> command = new ArrayList<>();
             command.add(javaBin);
+            command.add("--add-opens");
+            command.add("java.base/java.lang=ALL-UNNAMED");
             command.add("-cp");
             command.add(classpath);
             command.add("-Dgatling.test.file=" + testFile.getAbsolutePath());
@@ -224,7 +240,7 @@ public class GatlingTestExecutor {
 
             String javaHome = System.getProperty("java.home");
             String javaBin = Paths.get(javaHome, "bin", "java").toString();
-            String classpath = System.getProperty("java.class.path");
+            String classpath = assembleClasspath();
             String gatlingMain = "io.gatling.app.Gatling";
             String simulationClass = DynamicJavaSimulation.class.getName();
             String resultsPath = Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
@@ -254,6 +270,8 @@ public class GatlingTestExecutor {
 
             List<String> command = new ArrayList<>();
             command.add(javaBin);
+            command.add("--add-opens");
+            command.add("java.base/java.lang=ALL-UNNAMED");
             command.add("-cp");
             command.add(classpath);
             command.add("-Dgatling.tests.file=" + batchFile.getAbsolutePath());

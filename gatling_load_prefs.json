@@ -3,7 +3,7 @@
     "numThreads" : 1,
     "rampUp" : 0,
     "loops" : 1,
-    "scheduler" : true,
+    "scheduler" : false,
     "duration" : 30,
     "delay" : 0
   },
