@@ -9,7 +9,7 @@ public class StandardThreadGroup implements Serializable {
     private int rampUp = 0;
     private int loops = 1;
     private boolean scheduler = false;
-    private int duration = 60;
+    private int duration = 10;
     private int delay = 0;
 
     public int getNumThreads() {

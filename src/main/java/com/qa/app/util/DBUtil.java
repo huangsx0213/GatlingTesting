@@ -125,7 +125,7 @@ public class DBUtil {
                     + " description TEXT"
                     + ");";
             stmt.execute(projectSql);
-
+            
             // Create scenarios table
             String scenarioSql = "CREATE TABLE IF NOT EXISTS scenario (" +
                     " id INTEGER PRIMARY KEY AUTOINCREMENT," +

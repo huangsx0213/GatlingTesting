@@ -9,8 +9,8 @@ public class SteppingThreadGroup implements Serializable {
     private int initialDelay = 0;
     private int startUsers = 0;
     private int incrementUsers = 1;
-    private int incrementTime = 30;
-    private int holdLoad = 60;
+    private int incrementTime = 10;
+    private int holdLoad = 10;
 
     public int getNumThreads() {
         return numThreads;

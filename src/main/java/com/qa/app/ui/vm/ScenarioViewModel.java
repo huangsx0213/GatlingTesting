@@ -17,6 +17,9 @@ import java.util.ArrayList;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
+import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.util.converter.IntegerStringConverter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class ScenarioViewModel {
 
@@ -42,6 +45,8 @@ public class ScenarioViewModel {
 
     @FXML private TableColumn<Scenario, String> scNameCol;
     @FXML private TableColumn<Scenario, String> scDescCol;
+    @FXML private TableColumn<Scenario, String> scTypeCol;
+    @FXML private TableColumn<Scenario, Number> scStepCountCol;
 
     @FXML private ComboBox<String> frequencyCombo;
     @FXML private ComboBox<String> threadGroupCombo;
@@ -49,6 +54,10 @@ public class ScenarioViewModel {
     @FXML private Spinner<Integer> hourSpinner;
     @FXML private Spinner<Integer> minuteSpinner;
     @FXML private Spinner<Integer> secondSpinner;
+
+    @FXML private javafx.scene.control.Accordion scenarioAccordion;
+    @FXML private javafx.scene.control.TitledPane scenarioDetailsPane; // fx:id must match
+    // note: ensure FXML gives fx:id="scenarioDetailsPane" to first titles pane
 
     // ----------------- data -------------------
     private final ObservableList<GatlingTest> availableTests = FXCollections.observableArrayList();
@@ -60,6 +69,38 @@ public class ScenarioViewModel {
 
     // for MainViewModel to inject reference
     private MainViewModel mainViewModel;
+
+    // ------------ Load Model Pane Controls -------------
+    @FXML private TabPane loadModelTabPane;
+    @FXML private Tab standardLoadTab;
+    @FXML private Spinner<Integer> standardNumThreadsSpinner;
+    @FXML private Spinner<Integer> standardRampUpSpinner;
+    @FXML private Spinner<Integer> standardLoopsSpinner;
+    @FXML private CheckBox standardSchedulerCheckBox;
+    @FXML private Spinner<Integer> standardDurationSpinner;
+    @FXML private Spinner<Integer> standardDelaySpinner;
+
+    @FXML private Tab steppingLoadTab;
+    @FXML private Spinner<Integer> steppingNumThreadsSpinner;
+    @FXML private Spinner<Integer> steppingInitialDelaySpinner;
+    @FXML private Spinner<Integer> steppingStartUsersSpinner;
+    @FXML private Spinner<Integer> steppingIncrementUsersSpinner;
+    @FXML private Spinner<Integer> steppingIncrementTimeSpinner;
+    @FXML private Spinner<Integer> steppingHoldLoadSpinner;
+
+    @FXML private Tab ultimateTab;
+    @FXML private TableView<com.qa.app.model.threadgroups.UltimateThreadGroupStep> ultimateStepsTable;
+    @FXML private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateStartTimeCol;
+    @FXML private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateInitialLoadCol;
+    @FXML private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateStartupTimeCol;
+    @FXML private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateHoldTimeCol;
+    @FXML private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateShutdownTimeCol;
+    @FXML private Button addUltimateStepButton;
+    @FXML private Button removeUltimateStepButton;
+
+    private final ObservableList<com.qa.app.model.threadgroups.UltimateThreadGroupStep> ultimateSteps = FXCollections.observableArrayList();
+
+    private com.qa.app.util.UserPreferences loadPrefs;
 
     public void setMainViewModel(MainViewModel vm) {
         this.mainViewModel = vm;
@@ -86,12 +127,37 @@ public class ScenarioViewModel {
         scNameCol.setCellValueFactory(cell -> cell.getValue().nameProperty());
         scDescCol.setCellValueFactory(cell -> cell.getValue().descriptionProperty());
 
+        // Type column shows load model type
+        scTypeCol.setCellValueFactory(cell -> {
+            String type="";
+            try {
+                String json = cell.getValue().getThreadGroupJson();
+                if(json!=null && !json.isBlank()){
+                    com.fasterxml.jackson.databind.ObjectMapper om=new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.qa.app.model.GatlingLoadParameters p = om.readValue(json, com.qa.app.model.GatlingLoadParameters.class);
+                    if(p.getType()!=null) type = p.getType().name();
+                }
+            } catch(Exception ignore){}
+            return new javafx.beans.property.SimpleStringProperty(type);
+        });
+
+        // Steps count column
+        scStepCountCol.setCellValueFactory(cell -> {
+            int count=0;
+            try {
+                count = scenarioService.findStepsByScenarioId(cell.getValue().getId()).size();
+            } catch(Exception ignore){}
+            return new javafx.beans.property.SimpleIntegerProperty(count);
+        });
+
         // table selection listener same as endpoint
         scenarioTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showScenarioDetails(newSel));
 
         // init combos
         frequencyCombo.setItems(FXCollections.observableArrayList("Once", "Daily", "Weekly"));
-        threadGroupCombo.setItems(FXCollections.observableArrayList("Standard", "Stepping", "Ultimate"));
+        if (threadGroupCombo != null) {
+            threadGroupCombo.setItems(FXCollections.observableArrayList("Standard", "Stepping", "Ultimate"));
+        }
 
         // init time spinners
         hourSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 23, 0));
@@ -102,6 +168,14 @@ public class ScenarioViewModel {
         reloadScenarios();
 
         updateSuiteFilterOptions();
+
+        // set default expanded pane
+        if (scenarioAccordion != null && scenarioDetailsPane != null) {
+            scenarioAccordion.setExpandedPane(scenarioDetailsPane);
+        }
+
+        // ----- Load Model Pane initialization -----
+        initLoadModelPane();
     }
 
     private void updateSuiteFilterOptions() {
@@ -221,7 +295,25 @@ public class ScenarioViewModel {
         scenarioTable.getSelectionModel().clearSelection();
         startDatePicker.setValue(null);
         frequencyCombo.getSelectionModel().clearSelection();
-        threadGroupCombo.getSelectionModel().clearSelection();
+        if (threadGroupCombo != null) threadGroupCombo.getSelectionModel().clearSelection();
+
+        resetLoadModelDefaults();
+    }
+
+    private void resetLoadModelDefaults() {
+        // Create default parameter object based on model defaults
+        com.qa.app.model.GatlingLoadParameters def = new com.qa.app.model.GatlingLoadParameters();
+        def.setType(com.qa.app.model.threadgroups.ThreadGroupType.STANDARD);
+        def.setStandardThreadGroup(new com.qa.app.model.threadgroups.StandardThreadGroup());
+        def.setSteppingThreadGroup(new com.qa.app.model.threadgroups.SteppingThreadGroup());
+        com.qa.app.model.threadgroups.UltimateThreadGroup ut = new com.qa.app.model.threadgroups.UltimateThreadGroup();
+        java.util.List<com.qa.app.model.threadgroups.UltimateThreadGroupStep> stepsDef = new java.util.ArrayList<>();
+        stepsDef.add(new com.qa.app.model.threadgroups.UltimateThreadGroupStep());
+        ut.setSteps(stepsDef);
+        def.setUltimateThreadGroup(ut);
+
+        // apply to UI
+        populateLoadModelFromParams(def);
     }
 
     // TODO: schedule/thread group dialog
@@ -239,7 +331,10 @@ public class ScenarioViewModel {
         Scenario sc = new Scenario();
         sc.setName(name);
         sc.setDescription(scenarioDescArea.getText());
-        sc.setThreadGroupJson("{}"); // default empty JSON
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+            sc.setThreadGroupJson(om.writeValueAsString(buildLoadParameters()));
+        } catch(Exception ex){ sc.setThreadGroupJson("{}"); }
         sc.setScheduleJson("{}");
         try {
             scenarioService.createScenario(sc, new ArrayList<>(steps));
@@ -258,11 +353,15 @@ public class ScenarioViewModel {
         selected.setName(scenarioNameField.getText());
         selected.setDescription(scenarioDescArea.getText());
         try {
+            com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+            selected.setThreadGroupJson(om.writeValueAsString(buildLoadParameters()));
             scenarioService.updateScenario(selected, new ArrayList<>(steps));
             showInfo("save successfully");
             reloadScenarios();
-        } catch (ServiceException e) {
-            showError(e.getMessage());
+        } catch (ServiceException se) {
+            showError(se.getMessage());
+        } catch (Exception ex){
+            showError("save failed: "+ex.getMessage());
         }
     }
 
@@ -365,6 +464,146 @@ public class ScenarioViewModel {
             steps.setAll(scenarioService.findStepsByScenarioId(sc.getId()));
         } catch (ServiceException e) {
             steps.clear();
+        }
+        try {
+            if(sc.getThreadGroupJson()!=null && !sc.getThreadGroupJson().isBlank()){
+               com.fasterxml.jackson.databind.ObjectMapper om=new com.fasterxml.jackson.databind.ObjectMapper();
+               var p=om.readValue(sc.getThreadGroupJson(), com.qa.app.model.GatlingLoadParameters.class);
+               populateLoadModelFromParams(p);
+            }
+        }catch(Exception ignore){}
+    }
+
+    private void initLoadModelPane() {
+        // load user preferences
+        loadPrefs = com.qa.app.util.UserPreferences.load();
+
+        // Ultimate table setup
+        if (ultimateStepsTable != null) {
+            ultimateStepsTable.setItems(ultimateSteps);
+            ultimateStartTimeCol.setCellValueFactory(cd -> cd.getValue().startTimeProperty().asObject());
+            ultimateInitialLoadCol.setCellValueFactory(cd -> cd.getValue().initialLoadProperty().asObject());
+            ultimateStartupTimeCol.setCellValueFactory(cd -> cd.getValue().startupTimeProperty().asObject());
+            ultimateHoldTimeCol.setCellValueFactory(cd -> cd.getValue().holdTimeProperty().asObject());
+            ultimateShutdownTimeCol.setCellValueFactory(cd -> cd.getValue().shutdownTimeProperty().asObject());
+
+            ultimateStartTimeCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
+            ultimateInitialLoadCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
+            ultimateStartupTimeCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
+            ultimateHoldTimeCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
+            ultimateShutdownTimeCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
+
+            if (addUltimateStepButton != null)
+                addUltimateStepButton.setOnAction(e -> ultimateSteps.add(new com.qa.app.model.threadgroups.UltimateThreadGroupStep()));
+            if (removeUltimateStepButton != null)
+                removeUltimateStepButton.setOnAction(e -> {
+                    var sel = ultimateStepsTable.getSelectionModel().getSelectedItem();
+                    if (sel != null) ultimateSteps.remove(sel);
+                });
+        }
+
+        // Standard field bindings
+        if (standardSchedulerCheckBox != null) {
+            standardDurationSpinner.disableProperty().bind(standardSchedulerCheckBox.selectedProperty().not());
+            standardDelaySpinner.disableProperty().bind(standardSchedulerCheckBox.selectedProperty().not());
+            standardLoopsSpinner.disableProperty().bind(standardSchedulerCheckBox.selectedProperty());
+        }
+
+        // apply prefs to UI
+        if (loadPrefs != null) applyPrefsToUI();
+    }
+
+    private void applyPrefsToUI() {
+        if (loadPrefs == null) return;
+        // Standard
+        var s = loadPrefs.standard;
+        if (s != null) {
+            standardNumThreadsSpinner.getValueFactory().setValue(s.getNumThreads());
+            standardRampUpSpinner.getValueFactory().setValue(s.getRampUp());
+            standardLoopsSpinner.getValueFactory().setValue(s.getLoops());
+            standardSchedulerCheckBox.setSelected(s.isScheduler());
+            standardDurationSpinner.getValueFactory().setValue(s.getDuration());
+            standardDelaySpinner.getValueFactory().setValue(s.getDelay());
+        }
+        // Stepping
+        var st = loadPrefs.stepping;
+        if (st != null) {
+            steppingNumThreadsSpinner.getValueFactory().setValue(st.getNumThreads());
+            steppingInitialDelaySpinner.getValueFactory().setValue(st.getInitialDelay());
+            steppingStartUsersSpinner.getValueFactory().setValue(st.getStartUsers());
+            steppingIncrementUsersSpinner.getValueFactory().setValue(st.getIncrementUsers());
+            steppingIncrementTimeSpinner.getValueFactory().setValue(st.getIncrementTime());
+            steppingHoldLoadSpinner.getValueFactory().setValue(st.getHoldLoad());
+        }
+        // Ultimate
+        if (loadPrefs.ultimate != null && loadPrefs.ultimate.getSteps() != null) {
+            ultimateSteps.setAll(loadPrefs.ultimate.getSteps());
+        }
+    }
+
+    private com.qa.app.model.GatlingLoadParameters buildLoadParameters() {
+        com.qa.app.model.GatlingLoadParameters params = new com.qa.app.model.GatlingLoadParameters();
+
+        javafx.scene.control.Tab sel = loadModelTabPane != null ? loadModelTabPane.getSelectionModel().getSelectedItem() : null;
+        int selIndex = loadModelTabPane != null ? loadModelTabPane.getSelectionModel().getSelectedIndex() : 0;
+
+        if ((sel != null && sel == standardLoadTab) || selIndex==0) {
+            params.setType(com.qa.app.model.threadgroups.ThreadGroupType.STANDARD);
+            com.qa.app.model.threadgroups.StandardThreadGroup stdCfg = new com.qa.app.model.threadgroups.StandardThreadGroup();
+            stdCfg.setNumThreads(standardNumThreadsSpinner.getValue());
+            stdCfg.setRampUp(standardRampUpSpinner.getValue());
+            stdCfg.setLoops(standardLoopsSpinner.getValue());
+            stdCfg.setScheduler(standardSchedulerCheckBox.isSelected());
+            stdCfg.setDuration(standardDurationSpinner.getValue());
+            stdCfg.setDelay(standardDelaySpinner.getValue());
+            params.setStandardThreadGroup(stdCfg);
+        } else if ((sel != null && sel == steppingLoadTab) || selIndex==1) {
+            params.setType(com.qa.app.model.threadgroups.ThreadGroupType.STEPPING);
+            com.qa.app.model.threadgroups.SteppingThreadGroup stepCfg = new com.qa.app.model.threadgroups.SteppingThreadGroup();
+            stepCfg.setNumThreads(steppingNumThreadsSpinner.getValue());
+            stepCfg.setInitialDelay(steppingInitialDelaySpinner.getValue());
+            stepCfg.setStartUsers(steppingStartUsersSpinner.getValue());
+            stepCfg.setIncrementUsers(steppingIncrementUsersSpinner.getValue());
+            stepCfg.setIncrementTime(steppingIncrementTimeSpinner.getValue());
+            stepCfg.setHoldLoad(steppingHoldLoadSpinner.getValue());
+            params.setSteppingThreadGroup(stepCfg);
+        } else {
+            params.setType(com.qa.app.model.threadgroups.ThreadGroupType.ULTIMATE);
+            com.qa.app.model.threadgroups.UltimateThreadGroup ultCfg = new com.qa.app.model.threadgroups.UltimateThreadGroup();
+            ultCfg.setSteps(new java.util.ArrayList<>(ultimateSteps));
+            params.setUltimateThreadGroup(ultCfg);
+        }
+        return params;
+    }
+
+    private void populateLoadModelFromParams(com.qa.app.model.GatlingLoadParameters p){
+        if (p == null) return;
+        switch(p.getType()){
+            case STANDARD -> {
+                loadModelTabPane.getSelectionModel().select(standardLoadTab);
+                var s=p.getStandardThreadGroup(); if(s==null) return;
+                standardNumThreadsSpinner.getValueFactory().setValue(s.getNumThreads());
+                standardRampUpSpinner.getValueFactory().setValue(s.getRampUp());
+                standardLoopsSpinner.getValueFactory().setValue(s.getLoops());
+                standardSchedulerCheckBox.setSelected(s.isScheduler());
+                standardDurationSpinner.getValueFactory().setValue(s.getDuration());
+                standardDelaySpinner.getValueFactory().setValue(s.getDelay());
+            }
+            case STEPPING -> {
+                loadModelTabPane.getSelectionModel().select(steppingLoadTab);
+                var st=p.getSteppingThreadGroup(); if(st==null) return;
+                steppingNumThreadsSpinner.getValueFactory().setValue(st.getNumThreads());
+                steppingInitialDelaySpinner.getValueFactory().setValue(st.getInitialDelay());
+                steppingStartUsersSpinner.getValueFactory().setValue(st.getStartUsers());
+                steppingIncrementUsersSpinner.getValueFactory().setValue(st.getIncrementUsers());
+                steppingIncrementTimeSpinner.getValueFactory().setValue(st.getIncrementTime());
+                steppingHoldLoadSpinner.getValueFactory().setValue(st.getHoldLoad());
+            }
+            case ULTIMATE -> {
+                loadModelTabPane.getSelectionModel().select(ultimateTab);
+                var ut=p.getUltimateThreadGroup(); if(ut==null) return;
+                ultimateSteps.setAll(ut.getSteps());
+            }
         }
     }
 } 

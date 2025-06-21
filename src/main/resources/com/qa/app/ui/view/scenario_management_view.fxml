@@ -30,103 +30,189 @@
             </GridPane>
 
             <!-- Case List && Scenario Steps -->
-            <TitledPane text="Scenario Details" expanded="true">
-                <content>
-            <SplitPane orientation="HORIZONTAL" prefHeight="320.0" maxHeight="320.0" minHeight="320.0">
-                <items>
-                    <!-- Case list -->
-                    <VBox spacing="8.0">
-                        <children>
-                            <Label text="Case List" style="-fx-font-weight: bold;" />
-                            <!-- Filter bar -->
-                            <HBox spacing="8.0" alignment="CENTER_LEFT">
-                                <children>
-                                    <Label text="Suite:" />
-                                    <ComboBox fx:id="suiteFilterCombo" promptText="All" prefWidth="175.0" />
-                                    <Label text="Tag:" />
-                                    <TextField fx:id="tagFilterField" promptText="Tag keyword" prefWidth="185.0" />
-                                    <Button text="Filter" onAction="#handleFilterCases" />
-                                    <Button text="Reset" onAction="#handleResetFilter" />
-                                </children>
-                            </HBox>
-                            <TableView fx:id="availableTestTable" prefWidth="400.0" VBox.vgrow="ALWAYS" editable="false">
-                                <columns>
-                                    <TableColumn fx:id="tcidCol" text="TCID" prefWidth="80.0" />
-                                    <TableColumn fx:id="suiteCol" text="Suite" prefWidth="120.0" />
-                                    <TableColumn fx:id="availableTagsCol" text="Tags" prefWidth="120.0" />
-                                    <TableColumn fx:id="availableDescCol" text="Description" prefWidth="200.0" />
-                                </columns>
-                                <columnResizePolicy>
-                                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                </columnResizePolicy>
-                            </TableView>
-                        </children>
-                    </VBox>
+            <Accordion fx:id="scenarioAccordion" VBox.vgrow="ALWAYS">
+                <panes>
+                    <TitledPane fx:id="scenarioDetailsPane" text="Scenario Details" expanded="true">
+                        <content>
+                            <SplitPane orientation="HORIZONTAL" prefHeight="320.0" maxHeight="320.0" minHeight="320.0">
+                                <items>
+                                    <!-- Case list -->
+                                    <VBox spacing="8.0">
+                                        <children>
+                                            <Label text="Case List" style="-fx-font-weight: bold;" />
+                                            <!-- Filter bar -->
+                                            <HBox spacing="8.0" alignment="CENTER_LEFT">
+                                                <children>
+                                                    <Label text="Suite:" />
+                                                    <ComboBox fx:id="suiteFilterCombo" promptText="All" prefWidth="175.0" />
+                                                    <Label text="Tag:" />
+                                                    <TextField fx:id="tagFilterField" promptText="Tag keyword" prefWidth="185.0" />
+                                                    <Button text="Filter" onAction="#handleFilterCases" />
+                                                    <Button text="Reset" onAction="#handleResetFilter" />
+                                                </children>
+                                            </HBox>
+                                            <TableView fx:id="availableTestTable" prefWidth="400.0" VBox.vgrow="ALWAYS" editable="false">
+                                                <columns>
+                                                    <TableColumn fx:id="tcidCol" text="TCID" prefWidth="80.0" />
+                                                    <TableColumn fx:id="suiteCol" text="Suite" prefWidth="120.0" />
+                                                    <TableColumn fx:id="availableTagsCol" text="Tags" prefWidth="120.0" />
+                                                    <TableColumn fx:id="availableDescCol" text="Description" prefWidth="200.0" />
+                                                </columns>
+                                                <columnResizePolicy>
+                                                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                </columnResizePolicy>
+                                            </TableView>
+                                        </children>
+                                    </VBox>
 
-                    <!-- Operation buttons -->
-                    <VBox spacing="10.0" alignment="CENTER" prefWidth="90.0">
-                        <children>
-                            <Button text="→" fx:id="addButton" onAction="#handleAddToSteps" prefWidth="30" minWidth="30" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
-                            <Button text="←" fx:id="removeButton" onAction="#handleRemoveFromSteps" prefWidth="30" minWidth="30" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
-                            <Button text="↑" fx:id="moveUpButton" onAction="#handleMoveStepUp" prefWidth="30" minWidth="30" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
-                            <Button text="↓" fx:id="moveDownButton" onAction="#handleMoveStepDown" prefWidth="30" minWidth="30" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
-                            <Button text="✕" fx:id="clearStepsButton" onAction="#handleClearSteps" prefWidth="30" minWidth="30" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
-                        </children>
-                    </VBox>
+                                    <!-- Operation buttons -->
+                                    <VBox spacing="10.0" alignment="CENTER" prefWidth="90.0">
+                                        <children>
+                                            <Button text="→" fx:id="addButton" onAction="#handleAddToSteps" prefWidth="30" minWidth="30" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
+                                            <Button text="←" fx:id="removeButton" onAction="#handleRemoveFromSteps" prefWidth="30" minWidth="30" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
+                                            <Button text="↑" fx:id="moveUpButton" onAction="#handleMoveStepUp" prefWidth="30" minWidth="30" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
+                                            <Button text="↓" fx:id="moveDownButton" onAction="#handleMoveStepDown" prefWidth="30" minWidth="30" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
+                                            <Button text="✕" fx:id="clearStepsButton" onAction="#handleClearSteps" prefWidth="30" minWidth="30" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
+                                        </children>
+                                    </VBox>
 
-                    <!-- Scenario steps -->
-                    <VBox spacing="5.0">
-                        <children>
-                            <HBox spacing="10" alignment="CENTER_LEFT">
-                                <children>
-                                    <Label text="Scenario Steps" style="-fx-font-weight: bold;" />
-                                </children>
-                            </HBox>
-                            <TableView fx:id="scenarioStepTable" prefWidth="600.0" VBox.vgrow="ALWAYS">
-                                <columns>
-                                    <TableColumn fx:id="orderCol" text="#" prefWidth="60.0" />
-                                    <TableColumn fx:id="stepTcidCol" text="TCID" prefWidth="150.0" />
-                                    <TableColumn fx:id="waitCol" text="Wait(s)" prefWidth="80.0" />
-                                    <TableColumn fx:id="stepTagsCol" text="Tags" prefWidth="200.0" />
-                                </columns>
-                                <columnResizePolicy>
-                                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                </columnResizePolicy>
-                            </TableView>
-                        </children>
-                    </VBox>
-                </items>
-            </SplitPane>
-                </content>
-            </TitledPane>
+                                    <!-- Scenario steps -->
+                                    <VBox spacing="5.0">
+                                        <children>
+                                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                                <children>
+                                                    <Label text="Scenario Steps" style="-fx-font-weight: bold;" />
+                                                </children>
+                                            </HBox>
+                                            <TableView fx:id="scenarioStepTable" prefWidth="600.0" VBox.vgrow="ALWAYS">
+                                                <columns>
+                                                    <TableColumn fx:id="orderCol" text="#" prefWidth="60.0" />
+                                                    <TableColumn fx:id="stepTcidCol" text="TCID" prefWidth="150.0" />
+                                                    <TableColumn fx:id="waitCol" text="Wait(s)" prefWidth="80.0" />
+                                                    <TableColumn fx:id="stepTagsCol" text="Tags" prefWidth="200.0" />
+                                                </columns>
+                                                <columnResizePolicy>
+                                                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                </columnResizePolicy>
+                                            </TableView>
+                                        </children>
+                                    </VBox>
+                                </items>
+                            </SplitPane>
+                        </content>
+                    </TitledPane>
+                    <!-- Load Model Configuration -->
+                    <TitledPane text="Load Model" expanded="false">
+                        <content>
+                            <VBox spacing="10.0">
+                                <TabPane fx:id="loadModelTabPane" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS" prefHeight="450.0">
+                                    <Tab fx:id="standardLoadTab" text="Standard Load">
+                                        <content>
+                                            <VBox spacing="10">
+                                                <GridPane hgap="10" vgap="10">
+                                                    <padding><Insets top="20" right="20" bottom="10" left="20"/></padding>
+                                                    <Label text="Number of Users:" GridPane.rowIndex="0" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
+                                                    <Spinner fx:id="standardNumThreadsSpinner" editable="true" initialValue="1" min="1" max="10000" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
-            <!-- Scheduler settings -->
-            <TitledPane text="Scheduler Settings" expanded="false">
-                <content>
-                    <GridPane hgap="10" vgap="8">
-                        <padding><Insets top="10" right="10" left="10" bottom="10"/></padding>
-                        <children>
-                            <Label text="Start Time:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
-                            <DatePicker fx:id="startDatePicker" GridPane.rowIndex="0" GridPane.columnIndex="1" />
-                            <Label text="Time:" GridPane.rowIndex="0" GridPane.columnIndex="2" />
-                            <HBox spacing="4.0" GridPane.rowIndex="0" GridPane.columnIndex="3">
+                                                    <Label text="Ramp-up Period (s):" GridPane.rowIndex="1" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
+                                                    <Spinner fx:id="standardRampUpSpinner" editable="true" initialValue="0" min="0" max="3600" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                                                    <Label text="Loop Count:" GridPane.rowIndex="2" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
+                                                    <Spinner fx:id="standardLoopsSpinner" editable="true" initialValue="1" min="-1" max="10000" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                                                    <Label text="Scheduler:" GridPane.rowIndex="3" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
+                                                    <CheckBox fx:id="standardSchedulerCheckBox" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                                                    <Label text="Startup Delay (s):" GridPane.rowIndex="4" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
+                                                    <Spinner fx:id="standardDelaySpinner" editable="true" initialValue="0" min="0" max="3600" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                                                    <Label text="Duration (s):" GridPane.rowIndex="5" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
+                                                    <Spinner fx:id="standardDurationSpinner" editable="true" initialValue="60" min="1" max="86400" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                                                </GridPane>
+                                            </VBox>
+                                        </content>
+                                    </Tab>
+                                    <Tab fx:id="steppingLoadTab" text="Stepping Load">
+                                        <content>
+                                            <VBox spacing="10">
+                                                <GridPane hgap="10" vgap="10">
+                                                    <padding><Insets top="20" right="20" bottom="10" left="20"/></padding>
+                                                    <Label text="Target Number of Users:" GridPane.rowIndex="0" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
+                                                    <Spinner fx:id="steppingNumThreadsSpinner" editable="true" initialValue="100" min="1" max="10000" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                                                    <Label text="Initial Delay:" GridPane.rowIndex="1" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
+                                                    <Spinner fx:id="steppingInitialDelaySpinner" editable="true" initialValue="0" min="0" max="3600" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                                                    <Label text="seconds," GridPane.rowIndex="1" GridPane.columnIndex="2"/>
+
+                                                    <Label text="Then, start:" GridPane.rowIndex="2" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
+                                                    <Spinner fx:id="steppingStartUsersSpinner" editable="true" initialValue="10" min="1" max="10000" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                                                    <Label text="users." GridPane.rowIndex="2" GridPane.columnIndex="2"/>
+
+                                                    <Label text="Next, add:" GridPane.rowIndex="3" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
+                                                    <Spinner fx:id="steppingIncrementUsersSpinner" editable="true" initialValue="10" min="1" max="1000" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                                                    <Label text="users," GridPane.rowIndex="3" GridPane.columnIndex="2"/>
+
+                                                    <Label text="every:" GridPane.rowIndex="4" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
+                                                    <Spinner fx:id="steppingIncrementTimeSpinner" editable="true" initialValue="30" min="1" max="3600" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+                                                    <Label text="seconds." GridPane.rowIndex="4" GridPane.columnIndex="2"/>
+
+                                                    <Label text="Then, hold load for:" GridPane.rowIndex="5" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
+                                                    <Spinner fx:id="steppingHoldLoadSpinner" editable="true" initialValue="60" min="0" max="86400" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                                                    <Label text="seconds." GridPane.rowIndex="5" GridPane.columnIndex="2"/>
+                                                </GridPane>
+                                            </VBox>
+                                        </content>
+                                    </Tab>
+                                    <Tab fx:id="ultimateTab" text="Ultimate Load">
+                                        <content>
+                                            <VBox spacing="10">
+                                                <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+                                                <TableView fx:id="ultimateStepsTable" editable="true" prefHeight="200">
+                                                    <columns>
+                                                        <TableColumn fx:id="ultimateStartTimeCol" text="Start Time (s)" prefWidth="100"/>
+                                                        <TableColumn fx:id="ultimateInitialLoadCol" text="Initial Load (users)" prefWidth="120"/>
+                                                        <TableColumn fx:id="ultimateStartupTimeCol" text="Startup Time (s)" prefWidth="110"/>
+                                                        <TableColumn fx:id="ultimateHoldTimeCol" text="Hold Time (s)" prefWidth="100"/>
+                                                        <TableColumn fx:id="ultimateShutdownTimeCol" text="Shutdown Time (s)" prefWidth="120"/>
+                                                    </columns>
+                                                </TableView>
+                                                <HBox spacing="10">
+                                                    <Button text="Add Step" fx:id="addUltimateStepButton"/>
+                                                    <Button text="Remove Step" fx:id="removeUltimateStepButton"/>
+                                                </HBox>
+                                            </VBox>
+                                        </content>
+                                    </Tab>
+                                </TabPane>
+                            </VBox>
+                        </content>
+                    </TitledPane>
+                    <!-- Scheduler settings -->
+                    <TitledPane text="Scheduler Settings" expanded="false">
+                        <content>
+                            <GridPane hgap="10" vgap="8">
+                                <padding><Insets top="10" right="10" left="10" bottom="10"/></padding>
                                 <children>
-                                    <Spinner fx:id="hourSpinner" prefWidth="60" />
-                                    <Label text=":" />
-                                    <Spinner fx:id="minuteSpinner" prefWidth="60" />
-                                    <Label text=":" />
-                                    <Spinner fx:id="secondSpinner" prefWidth="60" />
+                                    <Label text="Start Time:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+                                    <DatePicker fx:id="startDatePicker" GridPane.rowIndex="0" GridPane.columnIndex="1" />
+                                    <Label text="Time:" GridPane.rowIndex="0" GridPane.columnIndex="2" />
+                                    <HBox spacing="4.0" GridPane.rowIndex="0" GridPane.columnIndex="3">
+                                        <children>
+                                            <Spinner fx:id="hourSpinner" prefWidth="60" />
+                                            <Label text=":" />
+                                            <Spinner fx:id="minuteSpinner" prefWidth="60" />
+                                            <Label text=":" />
+                                            <Spinner fx:id="secondSpinner" prefWidth="60" />
+                                        </children>
+                                    </HBox>
+                                    <Label text="Frequency:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
+                                    <ComboBox fx:id="frequencyCombo" promptText="Once / Daily / Weekly" GridPane.rowIndex="1" GridPane.columnIndex="1" />
                                 </children>
-                            </HBox>
-                            <Label text="Frequency:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
-                            <ComboBox fx:id="frequencyCombo" promptText="Once / Daily / Weekly" GridPane.rowIndex="1" GridPane.columnIndex="1" />
-                            <Label text="Load Model:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
-                            <ComboBox fx:id="threadGroupCombo" promptText="Standard / Stepping / Ultimate" GridPane.rowIndex="2" GridPane.columnIndex="1" />
-                            <Button text="Edit..." onAction="#openLoadDialog" GridPane.rowIndex="2" GridPane.columnIndex="2" />
-                        </children>
-                    </GridPane>
-                </content>
-            </TitledPane>
+                            </GridPane>
+                        </content>
+                    </TitledPane>
+                </panes>
+            </Accordion>
 
             <!-- Action buttons -->
             <HBox alignment="CENTER_LEFT" spacing="10.0">
@@ -144,7 +230,9 @@
             <Label text="Scenario List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
             <TableView fx:id="scenarioTable" VBox.vgrow="ALWAYS" styleClass="table-view">
                 <columns>
-                    <TableColumn fx:id="scNameCol" text="Name" prefWidth="200.0" />
+                    <TableColumn fx:id="scNameCol" text="Name" prefWidth="100.0" />
+                    <TableColumn fx:id="scTypeCol" text="Model Type" prefWidth="100.0" />
+                    <TableColumn fx:id="scStepCountCol" text="#Steps" prefWidth="100.0" />
                     <TableColumn fx:id="scDescCol" text="Description" prefWidth="300.0" />
                 </columns>
                 <columnResizePolicy>
