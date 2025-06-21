@@ -190,6 +190,12 @@ public class GatlingTestViewModel implements Initializable {
         // TagHandler initialization
         setupTagHandler();
 
+        // Hide Run Suite button as the feature is removed
+        if (runSuiteButton != null) {
+            runSuiteButton.setVisible(false);
+            runSuiteButton.setManaged(false);
+        }
+
         if(testAccordion!=null && apiConfigPane!=null){
             testAccordion.setExpandedPane(apiConfigPane);
         }
@@ -1023,29 +1029,9 @@ public class GatlingTestViewModel implements Initializable {
 
     @FXML
     private void handleRunSuite() {
-        String suite = suiteComboBox.getEditor().getText().trim();
-        if (suite.isEmpty()) {
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus("Input Error: Please enter a suite name to run.",
-                        MainViewModel.StatusType.ERROR);
-            }
-            return;
-        }
-
-        try {
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus("Running test suite: " + suite, MainViewModel.StatusType.INFO);
-            }
-            testService.runTestSuite(suite);
-            refreshAll();
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus("Test suite completed: " + suite, MainViewModel.StatusType.SUCCESS);
-            }
-        } catch (ServiceException e) {
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus("Failed to run test suite: " + e.getMessage(),
-                        MainViewModel.StatusType.ERROR);
-            }
+        // The Run Suite feature is deprecated and no longer available.
+        if (mainViewModel != null) {
+            mainViewModel.updateStatus("Run Suite 功能已移除，请使用场景(Scenario)运行。", MainViewModel.StatusType.INFO);
         }
     }
 

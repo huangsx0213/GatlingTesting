@@ -21,8 +21,8 @@ public class GroovyVariable {
     private final Pattern pattern;
     private final int expectedArgCount;
 
-    // 脚本编译缓存
     private static final GroovyClassLoader GLOBAL_GROOVY_CLASS_LOADER = new GroovyClassLoader();
+
     private Class<? extends Script> compiledScriptClass;
 
     @JsonCreator
@@ -48,7 +48,9 @@ public class GroovyVariable {
 
         // 预编译脚本，若失败仍可在 generate 时退回原脚本字符串
         try {
-            this.compiledScriptClass = GLOBAL_GROOVY_CLASS_LOADER.parseClass(groovyScript);
+            @SuppressWarnings("unchecked")
+            Class<? extends Script> cls = (Class<? extends Script>) GLOBAL_GROOVY_CLASS_LOADER.parseClass(groovyScript).asSubclass(Script.class);
+            this.compiledScriptClass = cls;
         } catch (Exception e) {
             System.err.println("[GroovyVariable] 脚本预编译失败: " + e.getMessage());
             this.compiledScriptClass = null;
@@ -74,7 +76,9 @@ public class GroovyVariable {
 
         // 预编译脚本，若失败仍可在 generate 时退回原脚本字符串
         try {
-            this.compiledScriptClass = GLOBAL_GROOVY_CLASS_LOADER.parseClass(groovyScript);
+            @SuppressWarnings("unchecked")
+            Class<? extends Script> cls = (Class<? extends Script>) GLOBAL_GROOVY_CLASS_LOADER.parseClass(groovyScript).asSubclass(Script.class);
+            this.compiledScriptClass = cls;
         } catch (Exception e) {
             System.err.println("[GroovyVariable] 脚本预编译失败: " + e.getMessage());
             this.compiledScriptClass = null;
@@ -126,13 +130,15 @@ public class GroovyVariable {
                 // 如果预编译失败，则回退到即时解析
                 Binding binding = new Binding();
                 binding.setVariable("args", args);
-                Object result = new GroovyClassLoader().parseClass(groovyScript).newInstance();
-                if (result instanceof Script script) {
-                    script.setBinding(binding);
-                    return String.valueOf(script.run());
-                } else {
-                    return format;
+                try (GroovyClassLoader cl = new GroovyClassLoader()) {
+                    Class<?> tmp = cl.parseClass(groovyScript);
+                    if (Script.class.isAssignableFrom(tmp)) {
+                        Script script = (Script) tmp.getDeclaredConstructor().newInstance();
+                        script.setBinding(binding);
+                        return String.valueOf(script.run());
+                    }
                 }
+                return format;
             } else {
                 Script scriptInstance = compiledScriptClass.getDeclaredConstructor().newInstance();
                 scriptInstance.setProperty("args", args);

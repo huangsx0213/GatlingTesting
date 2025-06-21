@@ -6,7 +6,6 @@ import com.qa.app.model.Endpoint;
 import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.GatlingTest;
 import com.qa.app.model.threadgroups.*;
-import com.qa.app.util.RuntimeTemplateProcessor;
 import io.gatling.javaapi.core.*;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;

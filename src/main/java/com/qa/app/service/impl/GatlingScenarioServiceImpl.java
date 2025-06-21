@@ -7,6 +7,7 @@ import com.qa.app.model.*;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IGatlingScenarioService;
 import com.qa.app.service.api.IGatlingTestService;
+import com.qa.app.service.api.IEndpointService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -115,6 +116,102 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             throw e;
         } catch (Exception e) {
             throw new ServiceException("Failed to run scenario", e);
+        }
+    }
+
+    @Override
+    public void runScenarios(java.util.List<Scenario> scenarios) throws ServiceException {
+        if (scenarios == null || scenarios.isEmpty()) return;
+
+        try {
+            // ===== 1. 准备数据 =====
+            class ScenarioRunItem {
+                @SuppressWarnings("unused")
+                public Scenario scenario;
+                @SuppressWarnings("unused")
+                public GatlingLoadParameters params;
+                @SuppressWarnings("unused")
+                public java.util.List<java.util.Map<String, Object>> items;
+            }
+
+            java.util.List<ScenarioRunItem> runItems = new java.util.ArrayList<>();
+
+            IEndpointService endpointService = new EndpointServiceImpl();
+
+            for (Scenario sc : scenarios) {
+                ScenarioRunItem sri = new ScenarioRunItem();
+                sri.scenario = sc;
+                sri.params = objectMapper.readValue(sc.getThreadGroupJson(), GatlingLoadParameters.class);
+
+                java.util.List<ScenarioStep> steps = scenarioDao.getStepsByScenarioId(sc.getId());
+                java.util.List<java.util.Map<String, Object>> batchItems = new java.util.ArrayList<>();
+                for (ScenarioStep step : steps) {
+                    GatlingTest gt = testService.findTestByTcid(step.getTestTcid());
+                    if (gt == null) {
+                        throw new ServiceException("Test not found for tcid: " + step.getTestTcid());
+                    }
+                    gt.setWaitTime(step.getWaitTime());
+
+                    // enrich templates (same logic as GatlingTestServiceImpl)
+                    try {
+                        if ((gt.getBody() == null || gt.getBody().isEmpty()) && gt.getBodyTemplateId() > 0) {
+                            com.qa.app.model.BodyTemplate bt = new com.qa.app.service.impl.BodyTemplateServiceImpl().findBodyTemplateById(gt.getBodyTemplateId());
+                            if (bt != null) gt.setBody(bt.getContent());
+                        }
+                    } catch (Exception ignored) { }
+
+                    try {
+                        if ((gt.getHeaders() == null || gt.getHeaders().isEmpty()) && gt.getHeadersTemplateId() > 0) {
+                            com.qa.app.model.HeadersTemplate ht = new com.qa.app.service.impl.HeadersTemplateServiceImpl().getHeadersTemplateById(gt.getHeadersTemplateId());
+                            if (ht != null) gt.setHeaders(ht.getContent());
+                        }
+                    } catch (Exception ignored) { }
+
+                    java.util.Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("test", gt);
+                    map.put("endpoint", endpointService.getEndpointByName(gt.getEndpointName()));
+                    batchItems.add(map);
+                }
+                sri.items = batchItems;
+                runItems.add(sri);
+            }
+
+            // ===== 2. 序列化到临时文件 =====
+            java.io.File multiFile = java.io.File.createTempFile("gatling_multiscenario_", ".json");
+            multiFile.deleteOnExit();
+            new ObjectMapper().writeValue(multiFile, runItems);
+
+            // ===== 3. 启动 Gatling =====
+            String javaHome = System.getProperty("java.home");
+            String javaBin = java.nio.file.Paths.get(javaHome, "bin", "java").toString();
+            String classpath = System.getProperty("java.class.path");
+            String gatlingMain = "io.gatling.app.Gatling";
+            String simulationClass = com.qa.app.util.MultiScenarioSimulation.class.getName();
+            String resultsPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
+
+            java.util.List<String> command = new java.util.ArrayList<>();
+            command.add(javaBin);
+            command.add("-cp");
+            command.add(classpath);
+            command.add("-Dgatling.multiscenario.file=" + multiFile.getAbsolutePath());
+            command.add(gatlingMain);
+            command.add("-s");
+            command.add(simulationClass);
+            command.add("-rf");
+            command.add(resultsPath);
+
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.inheritIO();
+
+            int exitCode = pb.start().waitFor();
+            if (exitCode != 0) {
+                throw new ServiceException("Gatling multi-scenario execution failed, exit code: " + exitCode);
+            }
+
+        } catch(ServiceException se){
+            throw se;
+        } catch(Exception e){
+            throw new ServiceException("Failed to run multi-scenario", e);
         }
     }
 

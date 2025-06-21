@@ -145,7 +145,7 @@
                                                     <Label text="seconds," GridPane.rowIndex="1" GridPane.columnIndex="2"/>
 
                                                     <Label text="Then, start:" GridPane.rowIndex="2" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
-                                                    <Spinner fx:id="steppingStartUsersSpinner" editable="true" initialValue="10" min="1" max="10000" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                                                    <Spinner fx:id="steppingStartUsersSpinner" editable="true" initialValue="10" min="0" max="10000" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
                                                     <Label text="users." GridPane.rowIndex="2" GridPane.columnIndex="2"/>
 
                                                     <Label text="Next, add:" GridPane.rowIndex="3" GridPane.columnIndex="0" GridPane.halignment="RIGHT"/>
@@ -222,7 +222,7 @@
                 <Button text="Delete" onAction="#handleDeleteScenario" />
                 <Button text="Clear" onAction="#handleClearScenarioForm" />
                 <Separator orientation="VERTICAL" />
-                <Button text="Run Now" onAction="#handleRunScenario" />
+                <Button text="Run Selected Scenario(s)" onAction="#handleRunScenario" />
                 <Button text="Schedule" onAction="#handleScheduleScenario" />
             </HBox>
 

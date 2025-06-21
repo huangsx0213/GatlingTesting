@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.util.converter.IntegerStringConverter;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
 
@@ -70,6 +69,7 @@ public class ScenarioViewModel {
     private final IGatlingScenarioService scenarioService = new GatlingScenarioServiceImpl();
 
     // for MainViewModel to inject reference
+    @SuppressWarnings("unused")
     private MainViewModel mainViewModel;
 
     // ------------ Load Model Pane Controls -------------
@@ -375,7 +375,6 @@ public class ScenarioViewModel {
         populateLoadModelFromParams(def);
     }
 
-    // TODO: schedule/thread group dialog
     @FXML private void openLoadDialog(ActionEvent evt) {
         showInfo("this feature is not implemented yet");
     }
@@ -480,11 +479,19 @@ public class ScenarioViewModel {
 
     @FXML
     private void handleRunScenario(ActionEvent evt) {
-        Scenario sel = scenarioTable.getSelectionModel().getSelectedItem();
-        if (sel == null) { showError("please select a scenario"); return; }
+        javafx.collections.ObservableList<Scenario> selected = scenarioTable.getSelectionModel().getSelectedItems();
+        if (selected == null || selected.isEmpty()) {
+            showError("please select at least one scenario");
+            return;
+        }
+
         try {
-            scenarioService.runScenario(sel.getId());
-            showInfo("scenario started");
+            if (selected.size() == 1) {
+                scenarioService.runScenario(selected.get(0).getId());
+            } else {
+                scenarioService.runScenarios(new java.util.ArrayList<>(selected));
+            }
+            showInfo("scenario(s) started");
         } catch (ServiceException e) {
             showError(e.getMessage());
         }
@@ -565,7 +572,7 @@ public class ScenarioViewModel {
             String schedJson=sc.getScheduleJson();
             if(schedJson!=null && !schedJson.isBlank()){
                 com.fasterxml.jackson.databind.ObjectMapper om=new com.fasterxml.jackson.databind.ObjectMapper();
-                java.util.Map map=om.readValue(schedJson, java.util.Map.class);
+                java.util.Map<String,Object> map = om.readValue(schedJson, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String,Object>>(){});
                 Object dtObj=map.get("startDateTime");
                 if(dtObj!=null){
                     LocalDateTime ldt=LocalDateTime.parse(dtObj.toString());
@@ -729,7 +736,6 @@ public class ScenarioViewModel {
             LocalDate date=startDatePicker.getValue();
             if(date==null) return;
             LocalTime t=LocalTime.of(hourSpinner.getValue(), minuteSpinner.getValue(), secondSpinner.getValue());
-            LocalDateTime dt=LocalDateTime.of(date,t);
             String freq=frequencyCombo.getValue();
             String cron="";
             if("Daily".equals(freq)) cron="0 "+t.getMinute()+" "+t.getHour()+" * * ?";

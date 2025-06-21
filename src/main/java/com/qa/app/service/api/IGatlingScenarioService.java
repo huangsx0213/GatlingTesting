@@ -16,6 +16,16 @@ public interface IGatlingScenarioService {
 
     void runScenario(int scenarioId) throws ServiceException;
 
+    /**
+     * Run multiple scenarios in one go. The implementation should ensure that each scenario is executed
+     * with its own thread group configuration so that they can run concurrently, similar to multiple thread
+     * groups in JMeter.
+     *
+     * @param scenarios the scenario list to run
+     * @throws ServiceException if any underlying error occurs
+     */
+    void runScenarios(java.util.List<com.qa.app.model.Scenario> scenarios) throws ServiceException;
+
     void upsertSchedule(int scenarioId, String cronExpr, boolean enabled) throws ServiceException;
     com.qa.app.model.ScenarioSchedule getSchedule(int scenarioId) throws ServiceException;
 } 

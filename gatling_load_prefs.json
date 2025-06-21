@@ -10,7 +10,7 @@
   "stepping" : {
     "numThreads" : 5,
     "initialDelay" : 0,
-    "startUsers" : 1,
+    "startUsers" : 0,
     "incrementUsers" : 1,
     "incrementTime" : 10,
     "holdLoad" : 20
