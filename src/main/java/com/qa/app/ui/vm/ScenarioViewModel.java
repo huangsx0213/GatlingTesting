@@ -376,7 +376,7 @@ public class ScenarioViewModel {
     }
 
     @FXML private void openLoadDialog(ActionEvent evt) {
-        showInfo("this feature is not implemented yet");
+        showInfo("Load dialog feature is not implemented yet.");
     }
 
     @FXML
@@ -409,7 +409,7 @@ public class ScenarioViewModel {
                 }
             });
             selectionMap.put(sc, selProp);
-            showInfo("scenario created successfully");
+            showInfo("Scenario '" + sc.getName() + "' created successfully.");
             reloadScenarios();
         } catch (ServiceException e) {
             showError(e.getMessage());
@@ -429,7 +429,7 @@ public class ScenarioViewModel {
             scenarioService.updateScenario(selected, new ArrayList<>(steps));
             // save scheduler cron after id generated
             saveSchedulerToDb(selected.getId());
-            showInfo("save successfully");
+            showInfo("Scenario '" + selected.getName() + "' saved successfully.");
             reloadScenarios();
         } catch (ServiceException se) {
             showError(se.getMessage());
@@ -455,7 +455,7 @@ public class ScenarioViewModel {
                 }
             });
             selectionMap.put(dup, dupSel);
-            showInfo("duplicate successfully");
+            showInfo("Scenario '" + sel.getName() + "' duplicated successfully as '" + dup.getName() + "'.");
         } catch (ServiceException e) {
             showError(e.getMessage());
         }
@@ -471,7 +471,7 @@ public class ScenarioViewModel {
                 selectionMap.remove(sc);
             }
             scenarios.removeAll(selectedScenarios);
-            showInfo("delete successfully");
+            showInfo(selectedScenarios.size() + " scenario(s) deleted successfully.");
         } catch (ServiceException e) {
             showError(e.getMessage());
         }
@@ -491,10 +491,11 @@ public class ScenarioViewModel {
             } else {
                 scenarioService.runScenarios(new java.util.ArrayList<>(selected));
             }
+            String runMsg = "Running " + selected.size() + " scenario(s).";
             if (mainViewModel != null) {
-                mainViewModel.updateStatus("Scenario is running", MainViewModel.StatusType.INFO);
+                mainViewModel.updateStatus(runMsg, MainViewModel.StatusType.INFO);
             } else {
-                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Scenario is running", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+                com.qa.app.ui.vm.MainViewModel.showGlobalStatus(runMsg, com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
             }
         } catch (ServiceException e) {
             showError(e.getMessage());
@@ -531,7 +532,7 @@ public class ScenarioViewModel {
             // 更新 scenario.scheduleJson
             sel.setScheduleJson("{\"startDateTime\":\""+startDateTime.toString()+"\",\"frequency\":\""+freq+"\"}");
             scenarioService.updateScenario(sel, scenarioService.findStepsByScenarioId(sel.getId()));
-            showInfo("schedule saved");
+            showInfo("Schedule saved for scenario '" + sel.getName() + "'.");
         } catch (ServiceException e) {
             showError(e.getMessage());
         }
@@ -539,13 +540,19 @@ public class ScenarioViewModel {
 
     // ----------- utility methods ------------
     private void showError(String msg) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK);
-        alert.showAndWait();
+        if (mainViewModel != null) {
+            mainViewModel.updateStatus(msg, MainViewModel.StatusType.ERROR);
+        } else {
+            com.qa.app.ui.vm.MainViewModel.showGlobalStatus(msg, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+        }
     }
 
     private void showInfo(String msg) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK);
-        alert.showAndWait();
+        if (mainViewModel != null) {
+            mainViewModel.updateStatus(msg, MainViewModel.StatusType.SUCCESS);
+        } else {
+            com.qa.app.ui.vm.MainViewModel.showGlobalStatus(msg, com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
+        }
     }
 
     // 新增显示详情
