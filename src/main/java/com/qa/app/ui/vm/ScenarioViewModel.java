@@ -41,7 +41,7 @@ public class ScenarioViewModel {
 
     @FXML private TableColumn<ScenarioStep, Number> orderCol;
     @FXML private TableColumn<ScenarioStep, String> stepTcidCol;
-    @FXML private TableColumn<ScenarioStep, Number> waitCol;
+    @FXML private TableColumn<ScenarioStep, Integer> waitCol;
     @FXML private TableColumn<ScenarioStep, String> stepTagsCol;
 
     @FXML private TableColumn<Scenario, String> scNameCol;
@@ -128,7 +128,15 @@ public class ScenarioViewModel {
 
         orderCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().getOrder()));
         stepTcidCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTestTcid()));
-        waitCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().getWaitTime()));
+        waitCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().getWaitTime()).asObject());
+        waitCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
+        waitCol.setOnEditCommit(evt -> {
+            ScenarioStep step = evt.getRowValue();
+            Integer newVal = evt.getNewValue();
+            if (newVal != null) {
+                step.setWaitTime(newVal);
+            }
+        });
         stepTagsCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTags()));
 
         scNameCol.setCellValueFactory(cell -> cell.getValue().nameProperty());
@@ -220,6 +228,11 @@ public class ScenarioViewModel {
             }
             scenarioTable.refresh();
         });
+
+        // 使步骤表格可编辑，以便用户可双击修改等待时间
+        if (scenarioStepTable != null) {
+            scenarioStepTable.setEditable(true);
+        }
     }
 
     private void updateSuiteFilterOptions() {
@@ -293,7 +306,7 @@ public class ScenarioViewModel {
     private void handleAddToSteps(ActionEvent evt) {
         GatlingTest selected = availableTestTable.getSelectionModel().getSelectedItem();
         if (selected == null) return;
-        ScenarioStep step = new ScenarioStep(steps.size() + 1, selected.getTcid(), 0, selected.getTags());
+        ScenarioStep step = new ScenarioStep(steps.size() + 1, selected.getTcid(), selected.getWaitTime(), selected.getTags());
         steps.add(step);
     }
 
