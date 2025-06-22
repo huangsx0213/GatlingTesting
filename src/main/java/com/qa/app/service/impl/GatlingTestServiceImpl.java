@@ -7,8 +7,6 @@ import com.qa.app.dao.api.IGatlingTestDao;
 import com.qa.app.dao.impl.GatlingTestDaoImpl;
 import com.qa.app.model.GatlingTest;
 import com.qa.app.model.GatlingLoadParameters;
-import com.qa.app.model.threadgroups.StandardThreadGroup;
-import com.qa.app.model.threadgroups.ThreadGroupType;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IEndpointService;
@@ -170,32 +168,6 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             GatlingTestExecutor.executeBatch(tests, params, endpoints);
         } catch (Exception e) {
             throw new ServiceException("Failed to run Gatling batch tests: " + e.getMessage(), e);
-        }
-    }
-
-    @Override
-    public void runTestSuite(String suite) throws ServiceException {
-        try {
-            List<GatlingTest> tests = testDao.getTestsBySuite(suite);
-            if (tests.isEmpty()) {
-                throw new ServiceException("No tests found for suite: " + suite);
-            }
-
-            for (GatlingTest test : tests) {
-                if (test.isEnabled()) {
-                    // This will run with default parameters.
-                    GatlingLoadParameters defaultParams = new GatlingLoadParameters();
-                    defaultParams.setType(ThreadGroupType.STANDARD);
-                    StandardThreadGroup standardThreadGroup = new StandardThreadGroup();
-                    standardThreadGroup.setNumThreads(1);
-                    standardThreadGroup.setRampUp(0);
-                    standardThreadGroup.setDuration(1);
-                    defaultParams.setStandardThreadGroup(standardThreadGroup);
-                    runTest(test, defaultParams);
-                }
-            }
-        } catch (SQLException e) {
-            throw new ServiceException("Database error while running test suite: " + e.getMessage(), e);
         }
     }
 

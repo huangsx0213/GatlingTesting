@@ -225,33 +225,30 @@ public class DynamicJavaSimulation extends Simulation {
 
     private ScenarioBuilder createScenario() {
         ChainBuilder chain = createHttpChain();
+
+        // Use fixed name for debugging
+        String scenarioName = "TempScenario";
+
         StandardThreadGroup standardConfig = null;
         if (params.getType() == ThreadGroupType.STANDARD) {
             standardConfig = params.getStandardThreadGroup();
         }
 
         // For time-based scenarios (Standard with scheduler, Stepping, Ultimate), loop forever until maxDuration
-        if ((standardConfig != null && standardConfig.isScheduler()) 
-            || params.getType() == ThreadGroupType.STEPPING
-            || params.getType() == ThreadGroupType.ULTIMATE) {
-            return scenario("Dynamic Test Scenario")
-                    .forever().on(
-                    chain
-            );
+        if ((standardConfig != null && standardConfig.isScheduler())
+                || params.getType() == ThreadGroupType.STEPPING
+                || params.getType() == ThreadGroupType.ULTIMATE) {
+            return scenario(scenarioName)
+                    .forever().on(chain);
         }
 
         // If standard config is not using scheduler and has a loop count, apply it.
         if (standardConfig != null && !standardConfig.isScheduler() && standardConfig.getLoops() != -1) {
-            return scenario("Dynamic Test Scenario")
-                    .exec(
-                repeat(standardConfig.getLoops()).on(
-                    chain
-                )
-            );
+            return scenario(scenarioName)
+                    .exec(repeat(standardConfig.getLoops()).on(chain));
         }
 
-        return scenario("Dynamic Test Scenario")
-                .exec(chain);
+        return scenario(scenarioName).exec(chain);
     }
 
     private ChainBuilder createHttpChain() {

@@ -9,7 +9,6 @@ import com.qa.app.service.api.IGatlingScenarioService;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IEndpointService;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
@@ -96,22 +95,10 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
         try {
             Scenario sc = scenarioDao.getScenarioById(scenarioId);
             if (sc == null) throw new ServiceException("Scenario not found");
-            List<ScenarioStep> steps = scenarioDao.getStepsByScenarioId(scenarioId);
-            // convert steps to tests
-            List<GatlingTest> tests = new ArrayList<>();
-            for (ScenarioStep step : steps) {
-                GatlingTest gt = testService.findTestByTcid(step.getTestTcid());
-                if (gt == null) {
-                    throw new ServiceException("Test not found for tcid: " + step.getTestTcid());
-                }
-                // inject waitTime to GatlingTest
-                gt.setWaitTime(step.getWaitTime());
-                tests.add(gt);
-            }
-            // parse thread group
-            GatlingLoadParameters params = objectMapper.readValue(sc.getThreadGroupJson(), GatlingLoadParameters.class);
-            // run tests by testService
-            testService.runTests(tests, params);
+
+            // Use runScenarios(List) method even if there is only one element, to follow MultiScenarioSimulation logic
+            java.util.List<Scenario> list = java.util.Collections.singletonList(sc);
+            runScenarios(list);
         } catch (ServiceException e) {
             throw e;
         } catch (Exception e) {

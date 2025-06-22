@@ -16,7 +16,6 @@ public interface IGatlingTestService {
     void removeTest(int id) throws ServiceException;
     void toggleTestRunStatus(int id) throws ServiceException;
     void runTest(GatlingTest test, GatlingLoadParameters params) throws ServiceException;
-    void runTestSuite(String suite) throws ServiceException;
     void runTests(java.util.List<com.qa.app.model.GatlingTest> tests, com.qa.app.model.GatlingLoadParameters params) throws ServiceException;
     List<GatlingTest> findTestsByProjectId(Integer projectId) throws ServiceException;
 }

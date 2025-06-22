@@ -69,7 +69,6 @@ public class ScenarioViewModel {
     private final IGatlingScenarioService scenarioService = new GatlingScenarioServiceImpl();
 
     // for MainViewModel to inject reference
-    @SuppressWarnings("unused")
     private MainViewModel mainViewModel;
 
     // ------------ Load Model Pane Controls -------------

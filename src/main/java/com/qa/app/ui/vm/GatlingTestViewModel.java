@@ -85,8 +85,6 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private Button runTestButton;
     @FXML
-    private Button runSuiteButton;
-    @FXML
     private TableView<GatlingTest> testTable;
     @FXML
     private TableColumn<GatlingTest, Boolean> isEnabledColumn;
@@ -189,12 +187,6 @@ public class GatlingTestViewModel implements Initializable {
 
         // TagHandler initialization
         setupTagHandler();
-
-        // Hide Run Suite button as the feature is removed
-        if (runSuiteButton != null) {
-            runSuiteButton.setVisible(false);
-            runSuiteButton.setManaged(false);
-        }
 
         if(testAccordion!=null && apiConfigPane!=null){
             testAccordion.setExpandedPane(apiConfigPane);
@@ -1020,14 +1012,6 @@ public class GatlingTestViewModel implements Initializable {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to open run dialog: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
-        }
-    }
-
-    @FXML
-    private void handleRunSuite() {
-        // The Run Suite feature is deprecated and no longer available.
-        if (mainViewModel != null) {
-            mainViewModel.updateStatus("Run Suite feature is deprecated, please use Scenario to run.", MainViewModel.StatusType.INFO);
         }
     }
 

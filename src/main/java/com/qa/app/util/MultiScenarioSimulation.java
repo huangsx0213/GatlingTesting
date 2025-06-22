@@ -19,10 +19,10 @@ import static io.gatling.javaapi.core.CoreDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
-/**
- * 动态生成多场景、多线程组的 Simulation，用于一次进程并发运行多个 Scenario。
- * System property: -Dgatling.multiscenario.file=/path/to/json
- */
+    /**
+     * Dynamically generate Simulation for multiple scenarios and thread groups, for concurrent execution of multiple Scenarios in one process.
+     * System property: -Dgatling.multiscenario.file=/path/to/json
+     */
 public class MultiScenarioSimulation extends Simulation {
 
     private static class ScenarioRunItem {
@@ -90,8 +90,29 @@ public class MultiScenarioSimulation extends Simulation {
             }
         }
         if (chain == null) chain = exec(pause(1));
-        return scenario(Optional.ofNullable(sri.scenario.getName()).orElse("Scenario"+sri.scenario.getId()))
-                .exec(chain);
+
+        // determine loop strategy based on thread group type
+        StandardThreadGroup stdCfg = null;
+        if (sri.params.getType() == ThreadGroupType.STANDARD) {
+            stdCfg = sri.params.getStandardThreadGroup();
+        }
+
+        ScenarioBuilder base = scenario(Optional.ofNullable(sri.scenario.getName()).orElse("Scenario" + sri.scenario.getId()));
+
+        // for time-based thread groups (Scheduler/Stepping/Ultimate), use forever() to continuously send requests until maxDuration
+        if ((stdCfg != null && stdCfg.isScheduler())
+                || sri.params.getType() == ThreadGroupType.STEPPING
+                || sri.params.getType() == ThreadGroupType.ULTIMATE) {
+            return base.forever().on(chain);
+        }
+
+        // for Standard thread group with specified loop count
+        if (stdCfg != null && !stdCfg.isScheduler() && stdCfg.getLoops() != -1) {
+            return base.exec(repeat(stdCfg.getLoops()).on(chain));
+        }
+
+        // default: each virtual user only executes once
+        return base.exec(chain);
     }
 
     private HttpRequestActionBuilder buildRequest(GatlingTest test, Endpoint ep) {
