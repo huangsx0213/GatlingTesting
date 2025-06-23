@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
+import javafx.scene.control.ComboBox;
 
 public class GatlingTestViewModel implements Initializable {
 
@@ -145,6 +146,7 @@ public class GatlingTestViewModel implements Initializable {
 
     @FXML private ComboBox<String> suiteFilterCombo; // Filter dropdown
     @FXML private TextField tagFilterField;          // Tag keyword filter field
+    @FXML private ComboBox<String> enabledFilterCombo; // Enabled status filter
 
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
@@ -215,6 +217,12 @@ public class GatlingTestViewModel implements Initializable {
         }
 
         setupResponseChecksTable();
+
+        // 初始化启用状态过滤下拉
+        if (enabledFilterCombo != null) {
+            enabledFilterCombo.setItems(FXCollections.observableArrayList("All", "Enabled", "Disabled"));
+            enabledFilterCombo.setValue("All");
+        }
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -1226,6 +1234,7 @@ public class GatlingTestViewModel implements Initializable {
         if (suiteFilterCombo == null || tagFilterField == null) return;
         String suite = suiteFilterCombo.getValue();
         String tagKw = tagFilterField.getText();
+        String enabledOpt = enabledFilterCombo == null ? null : enabledFilterCombo.getValue();
         loadTests(); // reload all tests first
         testList.removeIf(t -> {
             boolean ok = true;
@@ -1234,6 +1243,13 @@ public class GatlingTestViewModel implements Initializable {
             }
             if (ok && tagKw != null && !tagKw.isBlank()) {
                 ok = t.getTags() != null && t.getTags().contains(tagKw);
+            }
+            if (ok && enabledOpt != null && !"All".equals(enabledOpt)) {
+                if ("Enabled".equals(enabledOpt)) {
+                    ok = t.isEnabled();
+                } else if ("Disabled".equals(enabledOpt)) {
+                    ok = !t.isEnabled();
+                }
             }
             return !ok;
         });
@@ -1245,6 +1261,7 @@ public class GatlingTestViewModel implements Initializable {
     private void handleResetFilter(javafx.event.ActionEvent evt) {
         if (suiteFilterCombo != null) suiteFilterCombo.setValue("All");
         if (tagFilterField != null) tagFilterField.clear();
+        if (enabledFilterCombo != null) enabledFilterCombo.setValue("All");
         loadTests();
         updateSuiteFilterOptions();
         updateSelectAllCheckBoxState();
