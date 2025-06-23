@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.stream.Collectors;
 
 public class GatlingTestViewModel implements Initializable {
 
@@ -141,6 +142,9 @@ public class GatlingTestViewModel implements Initializable {
     private TableColumn<ResponseCheck, String> checkExpectColumn;
     @FXML
     private TableColumn<ResponseCheck, String> checkSaveAsColumn;
+
+    @FXML private ComboBox<String> suiteFilterCombo; // Filter dropdown
+    @FXML private TextField tagFilterField;          // Tag keyword filter field
 
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
@@ -619,11 +623,9 @@ public class GatlingTestViewModel implements Initializable {
             Integer projectId = AppConfig.getCurrentProjectId();
             if (projectId != null) {
                 List<GatlingTest> tests = testService.findTestsByProjectId(projectId);
-                
                 // Clear old selection states before loading new tests
                 selectionMap.clear();
                 testList.setAll(tests);
-
                 // Initialize selection properties for the new tests
                 for (GatlingTest test : tests) {
                     BooleanProperty selected = new SimpleBooleanProperty(false);
@@ -637,6 +639,7 @@ public class GatlingTestViewModel implements Initializable {
                     });
                     selectionMap.put(test, selected);
                 }
+                updateSuiteFilterOptions();
                 updateSelectAllCheckBoxState();
             }
         } catch (ServiceException e) {
@@ -1205,5 +1208,45 @@ public class GatlingTestViewModel implements Initializable {
             String defaultStatus = "200";
             responseChecks.add(0,new ResponseCheck(CheckType.STATUS,"", Operator.IS, defaultStatus, null));
         }
+    }
+
+    private void updateSuiteFilterOptions() {
+        if (suiteFilterCombo == null) return;
+        List<String> suites = testList.stream()
+                .map(GatlingTest::getSuite)
+                .filter(s -> s != null && !s.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
+        suites.add(0, "All");
+        suiteFilterCombo.setItems(FXCollections.observableArrayList(suites));
+    }
+
+    @FXML
+    private void handleFilterTests(javafx.event.ActionEvent evt) {
+        if (suiteFilterCombo == null || tagFilterField == null) return;
+        String suite = suiteFilterCombo.getValue();
+        String tagKw = tagFilterField.getText();
+        loadTests(); // reload all tests first
+        testList.removeIf(t -> {
+            boolean ok = true;
+            if (suite != null && !"All".equals(suite) && !suite.isBlank()) {
+                ok = ok && suite.equals(t.getSuite());
+            }
+            if (ok && tagKw != null && !tagKw.isBlank()) {
+                ok = t.getTags() != null && t.getTags().contains(tagKw);
+            }
+            return !ok;
+        });
+        updateSuiteFilterOptions();
+        updateSelectAllCheckBoxState();
+    }
+
+    @FXML
+    private void handleResetFilter(javafx.event.ActionEvent evt) {
+        if (suiteFilterCombo != null) suiteFilterCombo.setValue("All");
+        if (tagFilterField != null) tagFilterField.clear();
+        loadTests();
+        updateSuiteFilterOptions();
+        updateSelectAllCheckBoxState();
     }
 }

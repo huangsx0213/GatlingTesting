@@ -249,6 +249,17 @@
                 <VBox spacing="5.0" VBox.vgrow="ALWAYS">
                     <children>
                         <Label text="Test Cases List" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
+                        <!-- Filter bar -->
+                        <HBox spacing="8.0" alignment="CENTER_LEFT">
+                            <children>
+                                <Label text="Suite:" />
+                                <ComboBox fx:id="suiteFilterCombo" promptText="All" prefWidth="175.0" />
+                                <Label text="Tag:" />
+                                <TextField fx:id="tagFilterField" promptText="Tag keyword" prefWidth="185.0" />
+                                <Button text="Filter" onAction="#handleFilterTests" />
+                                <Button text="Reset" onAction="#handleResetFilter" />
+                            </children>
+                        </HBox>
                         <TableView fx:id="testTable" prefHeight="300.0" VBox.vgrow="ALWAYS" styleClass="table-view">
                     <columns>
                         <TableColumn fx:id="isEnabledColumn" prefWidth="70.0" text="Enabled" />
