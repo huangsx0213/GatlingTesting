@@ -22,6 +22,9 @@ import static io.gatling.javaapi.core.CoreDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
+import com.qa.app.model.ResponseCheck;
+import com.qa.app.model.CheckType;
+
 public class DynamicJavaSimulation extends Simulation {
 
     private final GatlingLoadParameters params;
@@ -318,7 +321,21 @@ public class DynamicJavaSimulation extends Simulation {
                     RuntimeTemplateProcessor.render(headerValueTemplate, test.getHeadersDynamicVariables()));
         }
 
-        return request.check(status().is(Integer.parseInt(test.getExpStatus())));
+        int expected = 200;
+        try {
+            String json = test.getResponseChecks();
+            if (json != null && !json.isBlank()) {
+                List<ResponseCheck> list = new ObjectMapper().readValue(json, new TypeReference<List<ResponseCheck>>(){});
+                for (ResponseCheck rc : list) {
+                    if (rc.getType() == CheckType.STATUS) {
+                        expected = Integer.parseInt(rc.getExpect());
+                        break;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        return request.check(status().is(expected));
     }
 
     private Map<String, String> parseHeaders(String headersString) {

@@ -9,6 +9,8 @@ import com.qa.app.model.threadgroups.*;
 import io.gatling.javaapi.core.*;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
+import com.qa.app.model.ResponseCheck;
+import com.qa.app.model.CheckType;
 
 import java.io.File;
 import java.io.IOException;
@@ -142,7 +144,21 @@ public class MultiScenarioSimulation extends Simulation {
             req = req.header(entry.getKey(), session -> RuntimeTemplateProcessor.render(entry.getValue(), test.getHeadersDynamicVariables()));
         }
 
-        return req.check(status().is(Integer.parseInt(test.getExpStatus())));
+        int expected = 200;
+        try {
+            String json = test.getResponseChecks();
+            if(json!=null && !json.isBlank()){
+                List<ResponseCheck> list = new ObjectMapper().readValue(json, new TypeReference<List<ResponseCheck>>(){});
+                for(ResponseCheck rc: list){
+                    if(rc.getType()== CheckType.STATUS){
+                        expected = Integer.parseInt(rc.getExpect());
+                        break;
+                    }
+                }
+            }
+        }catch(Exception ignored){}
+
+        return req.check(status().is(expected));
     }
 
     private Map<String,String> parseHeaders(String str){

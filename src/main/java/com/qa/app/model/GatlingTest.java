@@ -12,9 +12,7 @@ public class GatlingTest {
     private final StringProperty tcid = new SimpleStringProperty();
     private final StringProperty descriptions = new SimpleStringProperty();
     private final StringProperty conditions = new SimpleStringProperty();
-    private final StringProperty expStatus = new SimpleStringProperty();
-    private final StringProperty expResult = new SimpleStringProperty();
-    private final StringProperty saveFields = new SimpleStringProperty();
+    private final StringProperty responseChecks = new SimpleStringProperty();
     private final IntegerProperty endpointId = new SimpleIntegerProperty();
     private final StringProperty headers = new SimpleStringProperty();
     private final StringProperty body = new SimpleStringProperty();
@@ -26,6 +24,8 @@ public class GatlingTest {
     private final IntegerProperty projectId = new SimpleIntegerProperty();
     private Map<String, String> dynamicVariables = new HashMap<>();
     private Map<String, String> headersDynamicVariables = new HashMap<>();
+
+    // Deprecated fields removed: expStatus, saveFields
 
     public GatlingTest() {
     }
@@ -43,8 +43,8 @@ public class GatlingTest {
     }
 
     public GatlingTest(int id, boolean isEnabled, String suite, String tcid, String descriptions,
-                      String conditions, String expStatus, String expResult,
-                      String saveFields, int endpointId, String headers, String body,
+                      String conditions, String responseChecks,
+                      int endpointId, String headers, String body,
                       String tags, int waitTime, int bodyTemplateId, int headersTemplateId, Map<String, String> dynamicVariables, Map<String, String> headersDynamicVariables) {
         this.id.set(id);
         this.isEnabled.set(isEnabled);
@@ -52,9 +52,7 @@ public class GatlingTest {
         this.tcid.set(tcid);
         this.descriptions.set(descriptions);
         this.conditions.set(conditions);
-        this.expStatus.set(expStatus);
-        this.expResult.set(expResult);
-        this.saveFields.set(saveFields);
+        this.responseChecks.set(responseChecks);
         this.endpointId.set(endpointId);
         this.headers.set(headers);
         this.body.set(body);
@@ -91,17 +89,9 @@ public class GatlingTest {
     public void setConditions(String conditions) { this.conditions.set(conditions); }
     public StringProperty conditionsProperty() { return conditions; }
 
-    public String getExpStatus() { return expStatus.get(); }
-    public void setExpStatus(String expStatus) { this.expStatus.set(expStatus); }
-    public StringProperty expStatusProperty() { return expStatus; }
-
-    public String getExpResult() { return expResult.get(); }
-    public void setExpResult(String expResult) { this.expResult.set(expResult); }
-    public StringProperty expResultProperty() { return expResult; }
-
-    public String getSaveFields() { return saveFields.get(); }
-    public void setSaveFields(String saveFields) { this.saveFields.set(saveFields); }
-    public StringProperty saveFieldsProperty() { return saveFields; }
+    public String getResponseChecks() { return responseChecks.get(); }
+    public void setResponseChecks(String responseChecks) { this.responseChecks.set(responseChecks); }
+    public StringProperty responseChecksProperty() { return responseChecks; }
 
     public int getEndpointId() { return endpointId.get(); }
     public void setEndpointId(int endpointId) { this.endpointId.set(endpointId); }

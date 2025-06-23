@@ -24,6 +24,11 @@ import javafx.stage.Stage;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import javafx.scene.control.cell.TextFieldTableCell;
+import com.qa.app.model.ResponseCheck;
+import com.qa.app.model.CheckType;
+import com.qa.app.model.Operator;
 
 import java.io.IOException;
 import java.net.URL;
@@ -115,8 +120,6 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private FlowPane tagsFlowPane;
     @FXML
-    private ComboBox<String> expStatusComboBox;
-    @FXML
     private TextArea generatedHeadersArea;
     @FXML
     private TextArea generatedBodyArea;
@@ -124,6 +127,20 @@ public class GatlingTestViewModel implements Initializable {
     private Accordion testAccordion;
     @FXML
     private TitledPane apiConfigPane;
+
+    // Response Checks UI Elements
+    @FXML
+    private TableView<ResponseCheck> responseChecksTable;
+    @FXML
+    private TableColumn<ResponseCheck, CheckType> checkTypeColumn;
+    @FXML
+    private TableColumn<ResponseCheck, String> checkExpressionColumn;
+    @FXML
+    private TableColumn<ResponseCheck, Operator> checkOperatorColumn;
+    @FXML
+    private TableColumn<ResponseCheck, String> checkExpectColumn;
+    @FXML
+    private TableColumn<ResponseCheck, String> checkSaveAsColumn;
 
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
@@ -136,6 +153,9 @@ public class GatlingTestViewModel implements Initializable {
     private Map<String, String> headersTemplates = new HashMap<>();
     private final ObservableList<Endpoint> endpointList = FXCollections.observableArrayList();
     private final ObservableList<String> endpointNameList = FXCollections.observableArrayList();
+
+    // Response checks data list
+    private final ObservableList<ResponseCheck> responseChecks = FXCollections.observableArrayList();
 
     private MainViewModel mainViewModel;
     private final ObservableList<String> allTcids = FXCollections.observableArrayList();
@@ -159,6 +179,8 @@ public class GatlingTestViewModel implements Initializable {
 
     private boolean isUpdatingSelection = false;
 
+    private final ObjectMapper mapper = new ObjectMapper();
+
     // =====================
     // 1. Initialize related
     // =====================
@@ -171,10 +193,6 @@ public class GatlingTestViewModel implements Initializable {
         testIdField.setManaged(false);
 
         setupTemplateHandlers();
-
-        expStatusComboBox.setItems(FXCollections.observableArrayList(
-                "200", "400", "401", "403", "404", "408", "500", "501", "503", "504"));
-        expStatusComboBox.setValue("200");
 
         setupConditionsTable();
 
@@ -191,6 +209,8 @@ public class GatlingTestViewModel implements Initializable {
         if(testAccordion!=null && apiConfigPane!=null){
             testAccordion.setExpandedPane(apiConfigPane);
         }
+
+        setupResponseChecksTable();
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -717,7 +737,6 @@ public class GatlingTestViewModel implements Initializable {
         headersTemplateVariables.clear();
         tagHandler.setTagsFromString("");
         waitTimeSpinner.getValueFactory().setValue(0);
-        expStatusComboBox.setValue("200");
         conditionHandler.getConditionRows().clear();
         updateGeneratedBody();
         updateGeneratedHeaders();
@@ -741,8 +760,7 @@ public class GatlingTestViewModel implements Initializable {
             tcidField.setText(test.getTcid());
             descriptionsArea.setText(test.getDescriptions());
             conditionHandler.deserializeConditions(test.getConditions());
-            expResultArea.setText(test.getExpResult());
-            saveFieldsArea.setText(test.getSaveFields());
+            expResultArea.setText(test.getResponseChecks());
             String display = null;
             for (Endpoint ep : endpointList) {
                 if (ep.getName().equals(test.getEndpointName())) {
@@ -773,8 +791,18 @@ public class GatlingTestViewModel implements Initializable {
             }
             tagHandler.setTagsFromString(test.getTags());
             waitTimeSpinner.getValueFactory().setValue(test.getWaitTime());
-            expStatusComboBox.setValue(
-                    test.getExpStatus() == null || test.getExpStatus().isEmpty() ? "200" : test.getExpStatus());
+
+            // Load response checks from test.responseChecks JSON list
+            responseChecks.clear();
+            if(test.getResponseChecks()!=null && !test.getResponseChecks().isEmpty()){
+                try{
+                    java.util.List<ResponseCheck> list = mapper.readValue(test.getResponseChecks(), new com.fasterxml.jackson.core.type.TypeReference<java.util.List<ResponseCheck>>(){});
+                    responseChecks.addAll(list);
+                }catch(Exception ignored){}
+            }
+            // Ensure default status row
+            ensureDefaultStatusCheck();
+
             updateGeneratedBody();
             updateGeneratedHeaders();
         } else {
@@ -794,16 +822,14 @@ public class GatlingTestViewModel implements Initializable {
         test.setTcid(tcid);
         test.setDescriptions(descriptions);
         test.setConditions(serializeConditions());
-        test.setExpResult(expResultArea.getText());
-        test.setSaveFields(saveFieldsArea.getText());
+        test.setResponseChecks(expResultArea.getText());
         test.setEndpointName(endpointName);
         test.setBodyTemplateId(getBodyTemplateIdByName(bodyTemplateComboBox.getSelectionModel().getSelectedItem()));
         test.setHeadersTemplateId(
                 getHeadersTemplateIdByName(headersTemplateComboBox.getSelectionModel().getSelectedItem()));
         test.setTags(getTagsString());
         test.setWaitTime(waitTimeSpinner.getValue());
-        test.setExpStatus(expStatusComboBox.getValue());
-        
+
         Map<String, String> bodyVars = new HashMap<>();
         bodyTemplateVariables.forEach(dv -> bodyVars.put(dv.getKey(), dv.getValue()));
         test.setDynamicVariables(bodyVars);
@@ -828,6 +854,14 @@ public class GatlingTestViewModel implements Initializable {
         }
 
         test.setProjectId(AppConfig.getCurrentProjectId());
+
+        // Serialize response checks to JSON and set to expResult field
+        try{
+            String json = mapper.writeValueAsString(responseChecks);
+            test.setResponseChecks(json);
+        }catch(Exception e){
+            test.setResponseChecks(null);
+        }
 
         // new suite auto-add to dropdown
         if (suite != null && !suite.isEmpty() && !suiteComboBox.getItems().contains(suite)) {
@@ -1076,5 +1110,100 @@ public class GatlingTestViewModel implements Initializable {
         if (headersTemplateVarsTable != null) headersTemplateVarsTable.refresh();
         if (bodyTemplateComboBox != null) bodyTemplateComboBox.setItems(FXCollections.observableArrayList(bodyTemplateIdNameMap.values()));
         if (headersTemplateComboBox != null) headersTemplateComboBox.setItems(FXCollections.observableArrayList(headersTemplateIdNameMap.values()));
+    }
+
+    // =====================
+    // Response Check event handling
+    // =====================
+    @FXML
+    private void handleAddResponseCheck() {
+        responseChecks.add(new ResponseCheck(CheckType.JSON_PATH, "", Operator.IS, "", ""));
+    }
+
+    @FXML
+    private void handleRemoveResponseCheck() {
+        int selectedIdx = responseChecksTable.getSelectionModel().getSelectedIndex();
+        if(selectedIdx>=0){
+            responseChecks.remove(selectedIdx);
+            ensureDefaultStatusCheck();
+        }
+    }
+
+    @FXML
+    private void handleDuplicateResponseCheck() {
+        ResponseCheck sel = responseChecksTable.getSelectionModel().getSelectedItem();
+        if(sel!=null){
+            ResponseCheck copy = new ResponseCheck(sel.getType(), sel.getExpression(), sel.getOperator(), sel.getExpect(), sel.getSaveAs());
+            responseChecks.add(copy);
+        }
+    }
+
+    private void setupResponseChecksTable(){
+        if(responseChecksTable==null) return;
+        responseChecksTable.setItems(responseChecks);
+
+        // Type column
+        checkTypeColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleObjectProperty<>(cellData.getValue().getType()));
+        checkTypeColumn.setCellFactory(col -> new ComboBoxTableCell<ResponseCheck, CheckType>() {
+            {
+                getItems().addAll(CheckType.values());
+            }
+            @Override
+            public void updateItem(CheckType item, boolean empty) {
+                super.updateItem(item, empty);
+                int row = getIndex();
+                setEditable(!(row == 0));
+            }
+        });
+        checkTypeColumn.setOnEditCommit(e -> e.getRowValue().setType(e.getNewValue()));
+
+        // Expression column
+        checkExpressionColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getExpression()));
+        checkExpressionColumn.setCellFactory(column -> new TextFieldTableCell<ResponseCheck, String>() {
+            @Override
+            public void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                int row = getIndex();
+                setEditable(!(row == 0));
+            }
+        });
+        checkExpressionColumn.setOnEditCommit(e -> e.getRowValue().setExpression(e.getNewValue()));
+
+        // Operator column
+        checkOperatorColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleObjectProperty<>(cellData.getValue().getOperator()));
+        checkOperatorColumn.setCellFactory(col -> new ComboBoxTableCell<ResponseCheck, Operator>() {
+            {
+                getItems().addAll(Operator.values());
+            }
+            @Override
+            public void updateItem(Operator item, boolean empty) {
+                super.updateItem(item, empty);
+                int row = getIndex();
+                setEditable(!(row == 0));
+            }
+        });
+        checkOperatorColumn.setOnEditCommit(e -> e.getRowValue().setOperator(e.getNewValue()));
+
+        // Expect column
+        checkExpectColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getExpect()));
+        checkExpectColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        checkExpectColumn.setOnEditCommit(e -> e.getRowValue().setExpect(e.getNewValue()));
+
+        // SaveAs column
+        checkSaveAsColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getSaveAs()));
+        checkSaveAsColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        checkSaveAsColumn.setOnEditCommit(e -> e.getRowValue().setSaveAs(e.getNewValue()));
+
+        responseChecksTable.setEditable(true);
+
+        // ensure at least status row exists
+        ensureDefaultStatusCheck();
+    }
+
+    private void ensureDefaultStatusCheck(){
+        if(responseChecks.stream().noneMatch(rc -> rc.getType()==CheckType.STATUS)){
+            String defaultStatus = "200";
+            responseChecks.add(0,new ResponseCheck(CheckType.STATUS,"", Operator.IS, defaultStatus, null));
+        }
     }
 }

@@ -179,39 +179,49 @@
                                 <!-- Response Configuration Pane -->
                                 <TitledPane fx:id="responsePane" text="Response Configuration" expanded="false">
                                     <content>
-                                        <VBox spacing="10.0" VBox.vgrow="ALWAYS">
+                                        <HBox spacing="5.0" alignment="TOP_LEFT">
                                             <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
-                                            <!-- Expected Result and Save Fields -->
-                                            <HBox spacing="15.0" alignment="TOP_LEFT" VBox.vgrow="ALWAYS">
-                                                <children>
-                                                    <!-- Expected Status -->
-                                                    <VBox spacing="5.0" VBox.vgrow="ALWAYS">
-                                                        <children>
-                                                            <Label text="Expected Status:" style="-fx-font-weight: bold;" />
-                                                            <ComboBox fx:id="expStatusComboBox" promptText="Select status code" prefWidth="150.0" editable="true" />
-                                                        </children>
-                                                    </VBox>
-                                                    <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
-                                                        <children>
-                                                            <Label text="Expected Result:" style="-fx-font-weight: bold;" />
-                                                            <TextArea fx:id="expResultArea" promptText="Describe expected response content or format" VBox.vgrow="ALWAYS" />
-                                                        </children>
-                                                    </VBox>
-                                                    <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
-                                                        <children>
-                                                            <Label text="Save Fields:" style="-fx-font-weight: bold;" />
-                                                            <TextArea fx:id="saveFieldsArea" promptText="Specify fields to save from response" VBox.vgrow="ALWAYS" />
-                                                        </children>
-                                                    </VBox>
-                                                </children>
-                                            </HBox>
-                                        </VBox>
+                                            <children>
+                                                <TableView fx:id="responseChecksTable" editable="true" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" styleClass="table-view">
+                                                    <columns>
+                                                        <TableColumn fx:id="checkTypeColumn" text="Type" prefWidth="100.0" />
+                                                        <TableColumn fx:id="checkExpressionColumn" text="Expression" prefWidth="200.0" />
+                                                        <TableColumn fx:id="checkOperatorColumn" text="Operator" prefWidth="100.0" />
+                                                        <TableColumn fx:id="checkExpectColumn" text="Expect" prefWidth="150.0" />
+                                                        <TableColumn fx:id="checkSaveAsColumn" text="Save As" prefWidth="100.0" />
+                                                    </columns>
+                                                    <columnResizePolicy>
+                                                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                    </columnResizePolicy>
+                                                </TableView>
+                                                <VBox spacing="5.0" alignment="TOP_CENTER" prefWidth="40.0" maxWidth="40.0" minWidth="40.0">
+                                                    <children>
+                                                        <Button fx:id="addResponseCheckButton" text="+" onAction="#handleAddResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0" />
+                                                        <Button fx:id="removeResponseCheckButton" text="-" onAction="#handleRemoveResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0" />
+                                                        <Button fx:id="duplicateResponseCheckButton" text="⎘" onAction="#handleDuplicateResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0">
+                                                            <tooltip><Tooltip text="Duplicate selected check"/></tooltip>
+                                                        </Button>
+                                                    </children>
+                                                </VBox>
+                                            </children>
+                                        </HBox>
                                     </content>
                                 </TitledPane>
                             </panes>
                         </Accordion>
                         <!-- Hidden field for ID -->
                         <TextField fx:id="testIdField" visible="false" managed="false" />
+                        <!-- Hidden legacy fields to keep ViewModel compatibility -->
+                        <VBox visible="false" managed="false">
+                            <children>
+                                <TextArea fx:id="expResultArea" />
+                            </children>
+                        </VBox>
+                        <VBox visible="false" managed="false">
+                            <children>
+                                <TextArea fx:id="saveFieldsArea" />
+                            </children>
+                        </VBox>
                     </children>
                 </VBox>
                 

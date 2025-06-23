@@ -3,4 +3,18 @@ description:
 globs: 
 alwaysApply: false
 ---
-The coding and commenting language should always be in English.
+Code Development Guidelines:
+
+Language Requirement: All code and comments must be written in English only.
+Pre-coding Review: Before writing any new code, always review the entire existing architecture and codebase structure.
+Consistency Requirement: When adding new code, the framework and structure must follow and reference the existing coding style and patterns.
+Style Adherence: Maintain consistency with established conventions including:
+
+Naming conventions
+Code organization patterns
+Comment formatting
+Function/class structure
+Error handling approaches
+
+
+Please ensure all code contributions align with these guidelines to maintain codebase coherence and readability.

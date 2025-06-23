@@ -72,7 +72,7 @@ public class GatlingTestExecutor {
                     }
                     break;
             }
-            System.out.println("Expected status code: " + test.getExpStatus());
+            // Expected status code will be determined from responseChecks at runtime
             System.out.println("Wait time (seconds): " + test.getWaitTime());
             System.out.println("===================================");
 
