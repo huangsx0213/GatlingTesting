@@ -9,6 +9,8 @@ import com.qa.app.model.threadgroups.*;
 import io.gatling.javaapi.core.*;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
+import io.gatling.javaapi.http.HttpDsl;
+import io.gatling.javaapi.core.CheckBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,8 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import static io.gatling.javaapi.core.CoreDsl.*;
-import static io.gatling.javaapi.http.HttpDsl.http;
-import static io.gatling.javaapi.http.HttpDsl.status;
+import static io.gatling.javaapi.http.HttpDsl.*;
 
 import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
@@ -321,21 +322,61 @@ public class DynamicJavaSimulation extends Simulation {
                     RuntimeTemplateProcessor.render(headerValueTemplate, test.getHeadersDynamicVariables()));
         }
 
-        int expected = 200;
-        try {
-            String json = test.getResponseChecks();
-            if (json != null && !json.isBlank()) {
-                List<ResponseCheck> list = new ObjectMapper().readValue(json, new TypeReference<List<ResponseCheck>>(){});
-                for (ResponseCheck rc : list) {
-                    if (rc.getType() == CheckType.STATUS) {
-                        expected = Integer.parseInt(rc.getExpect());
-                        break;
+        // ---------------- Response Checks ----------------
+        java.util.List<CheckBuilder> checkBuilders = new java.util.ArrayList<>();
+        boolean statusCheckExists = false;
+
+        String checksJson = test.getResponseChecks();
+        if (checksJson != null && !checksJson.isBlank()) {
+            try {
+                java.util.List<ResponseCheck> rcList = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readValue(checksJson, new com.fasterxml.jackson.core.type.TypeReference<java.util.List<ResponseCheck>>() {});
+
+                for (ResponseCheck rc : rcList) {
+                    if (rc == null || rc.getType() == null) continue;
+
+                    switch (rc.getType()) {
+                        case STATUS -> {
+                            int code = 200;
+                            try { code = Integer.parseInt(rc.getExpect()); } catch (Exception ignored) {}
+                            checkBuilders.add(status().is(code));
+                            statusCheckExists = true;
+                        }
+                        case JSON_PATH -> {
+                            CheckBuilder jp = jsonPath(rc.getExpression()).is(rc.getExpect());
+                            checkBuilders.add(jp);
+                            if (rc.getSaveAs() != null && !rc.getSaveAs().isBlank()) {
+                                checkBuilders.add(jsonPath(rc.getExpression()).saveAs(rc.getSaveAs()));
+                            }
+                        }
+                        case XPATH -> {
+                            CheckBuilder xp = xpath(rc.getExpression()).is(rc.getExpect());
+                            checkBuilders.add(xp);
+                            if (rc.getSaveAs() != null && !rc.getSaveAs().isBlank()) {
+                                checkBuilders.add(xpath(rc.getExpression()).saveAs(rc.getSaveAs()));
+                            }
+                        }
+                        case REGEX -> {
+                            CheckBuilder rg = regex(rc.getExpression()).is(rc.getExpect());
+                            checkBuilders.add(rg);
+                            if (rc.getSaveAs() != null && !rc.getSaveAs().isBlank()) {
+                                checkBuilders.add(regex(rc.getExpression()).saveAs(rc.getSaveAs()));
+                            }
+                        }
                     }
                 }
+            } catch (Exception e) {
+                System.err.println("Failed to parse responseChecks: " + e.getMessage());
             }
-        } catch (Exception ignored) {}
+        }
 
-        return request.check(status().is(expected));
+        // 如果用户未配置 STATUS 校验，默认 200
+        if (!statusCheckExists) {
+            checkBuilders.add(status().is(200));
+        }
+
+        // 把所有校验一次性挂到请求上
+        return request.check(checkBuilders.toArray(new CheckBuilder[0]));
     }
 
     private Map<String, String> parseHeaders(String headersString) {
