@@ -17,6 +17,12 @@ import com.qa.app.model.HeadersTemplate;
 import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.api.IHeadersTemplateService;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.qa.app.model.ResponseCheck;
+import java.io.File;
+import java.util.Map;
+
 public class GatlingTestServiceImpl implements IGatlingTestService {
 
     private final IGatlingTestDao testDao = new GatlingTestDaoImpl(); // In a real app, use dependency injection
@@ -148,10 +154,13 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     }
 
     @Override
-    public void runTests(java.util.List<GatlingTest> tests, GatlingLoadParameters params) throws ServiceException {
+    public void runTests(java.util.List<GatlingTest> tests, GatlingLoadParameters params, Runnable onComplete) throws ServiceException {
         if (tests == null || tests.isEmpty()) {
             throw new ServiceException("Test list cannot be null or empty.");
         }
+
+        // Mark all response checks as pending
+        markTestsPending(tests);
 
         java.util.List<Endpoint> endpoints = new java.util.ArrayList<>();
         for (GatlingTest test : tests) {
@@ -165,7 +174,8 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
 
         try {
             // 异步执行，避免阻塞调用线程（如 JavaFX UI 线程）
-            GatlingTestExecutor.executeBatch(tests, params, endpoints);
+            GatlingTestExecutor.executeBatch(tests, params, endpoints, onComplete);
+            
         } catch (Exception e) {
             throw new ServiceException("Failed to run Gatling batch tests: " + e.getMessage(), e);
         }
@@ -194,5 +204,22 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
                 if (ht != null) test.setHeaders(ht.getContent());
             }
         } catch (Exception ignored) { }
+    }
+
+    @Override
+    public void markTestsPending(List<GatlingTest> tests) throws ServiceException {
+        ObjectMapper mapper = new ObjectMapper();
+        for (GatlingTest test : tests) {
+            try {
+                java.util.List<ResponseCheck> list = mapper.readValue(test.getResponseChecks(), new TypeReference<java.util.List<ResponseCheck>>(){});
+                for (ResponseCheck rc : list) {
+                    rc.setActual("TO_RUN");
+                }
+                test.setResponseChecks(mapper.writeValueAsString(list));
+                testDao.updateTest(test);
+            } catch (Exception ex) {
+                System.err.println("Failed to mark test " + test.getTcid() + " pending: " + ex.getMessage());
+            }
+        }
     }
 }

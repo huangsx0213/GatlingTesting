@@ -1,11 +1,15 @@
 package com.qa.app.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.qa.app.dao.api.IGatlingTestDao;
+import com.qa.app.dao.impl.GatlingTestDaoImpl;
 import com.qa.app.model.Endpoint;
 import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.GatlingTest;
 import com.qa.app.model.threadgroups.SteppingThreadGroup;
 import com.qa.app.model.threadgroups.UltimateThreadGroupStep;
+import com.qa.app.model.ResponseCheck;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -13,6 +17,7 @@ import java.io.FileWriter;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class GatlingTestExecutor {
 
@@ -138,6 +143,8 @@ public class GatlingTestExecutor {
                     if (exitCode == 0) {
                         System.out.println("Gatling test execution completed.");
                         com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test " + test.getTcid() + " Completed", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
+                        // Call result processing
+                        updateTestsWithResults(java.util.Collections.singletonList(test));
                     } else {
                         System.out.println("Gatling test execution failed, exit code: " + exitCode);
                         com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test " + test.getTcid() + " Failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
@@ -230,6 +237,7 @@ public class GatlingTestExecutor {
 
             if (exitCode == 0) {
                 System.out.println("Gatling test execution completed.");
+                updateTestsWithResults(java.util.Collections.singletonList(test));
             } else {
                 System.out.println("Gatling test execution failed, exit code: " + exitCode);
             }
@@ -306,6 +314,7 @@ public class GatlingTestExecutor {
 
             if (exitCode == 0) {
                 System.out.println("Gatling batch execution completed.");
+                updateTestsWithResults(tests);
             } else {
                 System.out.println("Gatling batch execution failed, exit code: " + exitCode);
             }
@@ -317,10 +326,11 @@ public class GatlingTestExecutor {
     }
 
     // Async batch execution, avoid blocking the caller (e.g., JavaFX UI thread)
-    public static void executeBatch(java.util.List<GatlingTest> tests, GatlingLoadParameters params, java.util.List<Endpoint> endpoints) {
-        // Reuse the same code as executeBatchSync but run the process in a new thread and wait for it to finish.
+    public static void executeBatch(java.util.List<GatlingTest> tests, GatlingLoadParameters params, java.util.List<Endpoint> endpoints, Runnable onComplete) {
         new Thread(() -> {
             try {
+                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test Batch Running", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+
                 if (tests == null || endpoints == null || tests.size() != endpoints.size()) {
                     throw new IllegalArgumentException("Tests and Endpoints list size mismatch or null");
                 }
@@ -392,16 +402,63 @@ public class GatlingTestExecutor {
 
                 if (exitCode == 0) {
                     System.out.println("Gatling batch execution completed.");
-                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Batch test is completed", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test Batch Completed", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
+                    updateTestsWithResults(tests);
                 } else {
                     System.out.println("Gatling batch execution failed, exit code: " + exitCode);
-                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Batch test failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test Batch Failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+                }
+
+                // After everything, run the completion hook on the UI thread
+                if (onComplete != null) {
+                    javafx.application.Platform.runLater(onComplete);
                 }
             } catch (Exception e) {
                 System.err.println("Failed to start Gatling batch process: " + e.getMessage());
                 e.printStackTrace();
-                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Batch test exception: " + e.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test Batch Exception: " + e.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
             }
         }, "gatling-batch-runner").start();
+    }
+
+    private static void updateTestsWithResults(List<GatlingTest> executedTests) {
+        String resultFilePath = System.getProperty("gatling.result.file", "response_checks_result.json");
+        File resultFile = new File(resultFilePath);
+
+        if (!resultFile.exists()) {
+            System.err.println("Gatling result file not found: " + resultFilePath);
+            return;
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            IGatlingTestDao testDao = new GatlingTestDaoImpl();
+            List<Map<String, Object>> results = mapper.readValue(resultFile, new TypeReference<List<Map<String, Object>>>() {});
+            
+            Map<String, List<ResponseCheck>> resultsMap = new java.util.HashMap<>();
+            for (Map<String, Object> result : results) {
+                String tcid = (String) result.get("tcid");
+                List<ResponseCheck> checks = mapper.convertValue(result.get("responseChecks"), new TypeReference<List<ResponseCheck>>() {});
+                resultsMap.put(tcid, checks);
+            }
+
+            for (GatlingTest test : executedTests) {
+                if (resultsMap.containsKey(test.getTcid())) {
+                    List<ResponseCheck> updatedChecks = resultsMap.get(test.getTcid());
+                    String updatedJson = mapper.writeValueAsString(updatedChecks);
+                    test.setResponseChecks(updatedJson);
+                    testDao.updateTest(test); // Persist to DB
+                }
+            }
+
+            if (resultFile.delete()) {
+                System.out.println("Gatling result file deleted successfully: " + resultFilePath);
+            } else {
+                System.err.println("Failed to delete Gatling result file: " + resultFilePath);
+            }
+        } catch (Exception e) {
+            System.err.println("Error processing Gatling result file: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 } 

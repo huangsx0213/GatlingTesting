@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static io.gatling.javaapi.core.CoreDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.*;
@@ -31,6 +32,7 @@ public class DynamicJavaSimulation extends Simulation {
     private final GatlingLoadParameters params;
     private final List<BatchItem> batchItems;
     private final boolean isBatchMode;
+    private final Map<String, List<ResponseCheck>> checkResults = new ConcurrentHashMap<>();
 
     private static class BatchItem {
         public GatlingTest test;
@@ -112,6 +114,8 @@ public class DynamicJavaSimulation extends Simulation {
             }
             setup.maxDuration(Duration.ofSeconds(maxDuration));
         }
+
+        // No inline after hook here; see overridden after() method at class bottom.
     }
 
     private PopulationBuilder buildInjectionProfile(ScenarioBuilder scn) {
@@ -259,12 +263,12 @@ public class DynamicJavaSimulation extends Simulation {
         ChainBuilder chain = null;
         for (int i = 0; i < batchItems.size(); i++) {
             BatchItem item = batchItems.get(i);
-            HttpRequestActionBuilder requestBuilder = createRequestBuilder(item);
+            ChainBuilder requestChain = createRequestBuilder(item);
 
             if (chain == null) {
-                chain = exec(requestBuilder);
+                chain = requestChain;
             } else {
-                chain = chain.exec(requestBuilder);
+                chain = chain.exec(requestChain);
             }
 
             if (item.test.getWaitTime() > 0) {
@@ -275,7 +279,7 @@ public class DynamicJavaSimulation extends Simulation {
         return chain;
     }
 
-    private HttpRequestActionBuilder createRequestBuilder(BatchItem item) {
+    private ChainBuilder createRequestBuilder(BatchItem item) {
         GatlingTest test = item.test;
         Endpoint endpoint = item.endpoint;
         String requestName = test.getTcid();
@@ -322,8 +326,9 @@ public class DynamicJavaSimulation extends Simulation {
                     RuntimeTemplateProcessor.render(headerValueTemplate, test.getHeadersDynamicVariables()));
         }
 
-        // ---------------- Response Checks ----------------
+        // 1. Prepare lists for checks and for the logging actions that follow the request
         java.util.List<CheckBuilder> checkBuilders = new java.util.ArrayList<>();
+        java.util.List<ChainBuilder> loggingActions = new java.util.ArrayList<>();
         boolean statusCheckExists = false;
 
         String checksJson = test.getResponseChecks();
@@ -331,37 +336,140 @@ public class DynamicJavaSimulation extends Simulation {
             try {
                 java.util.List<ResponseCheck> rcList = new com.fasterxml.jackson.databind.ObjectMapper()
                         .readValue(checksJson, new com.fasterxml.jackson.core.type.TypeReference<java.util.List<ResponseCheck>>() {});
+                
+                // Store the parsed list in the results map to be updated during the simulation
+                checkResults.put(test.getTcid(), rcList);
 
                 for (ResponseCheck rc : rcList) {
                     if (rc == null || rc.getType() == null) continue;
 
-                    switch (rc.getType()) {
+                    // This check object will be captured by the lambda
+                    final ResponseCheck currentCheck = rc;
+
+                    switch (currentCheck.getType()) {
                         case STATUS -> {
-                            int code = 200;
-                            try { code = Integer.parseInt(rc.getExpect()); } catch (Exception ignored) {}
-                            checkBuilders.add(status().is(code));
-                            statusCheckExists = true;
+                            // For STATUS, we will do the check and save inside a logging action,
+                            // but first we need to save the actual status code.
+                            String statusSaveKey = "status_code_" + currentCheck.hashCode();
+                            checkBuilders.add(status().saveAs(statusSaveKey));
+                            statusCheckExists = true; // Mark that we are handling status
+
+                            loggingActions.add(exec(session -> {
+                                try {
+                                    Object statusObj = session.get(statusSaveKey);
+                                    String actualStatus;
+                                    if (statusObj instanceof Integer) {
+                                        actualStatus = String.valueOf(statusObj);
+                                    } else if (statusObj instanceof char[]) {
+                                        actualStatus = new String((char[]) statusObj);
+                                    } else if (statusObj != null) {
+                                        actualStatus = statusObj.toString();
+                                    } else {
+                                        actualStatus = "<VALUE NOT FOUND>";
+                                    }
+                                    
+                                    currentCheck.setActual(actualStatus);
+
+                                    // 根据操作符选择不同的比较方式
+                                    boolean checkPassed = false;
+                                    switch (currentCheck.getOperator()) {
+                                        case CONTAINS:
+                                            checkPassed = actualStatus.contains(currentCheck.getExpect());
+                                            break;
+                                        case IS:
+                                        default:
+                                            checkPassed = actualStatus.equals(currentCheck.getExpect());
+                                            break;
+                                    }
+
+                                    // Perform the actual check here. It's now non-blocking for other checks.
+                                    if (!checkPassed) {
+                                        System.out.printf("\u001B[31mCHECK_FAIL|%s|%s|%s|%s|%s|%s\u001B[0m%n",
+                                                test.getTcid(), 
+                                                currentCheck.getType(),
+                                                currentCheck.getExpression(), 
+                                                currentCheck.getOperator(),
+                                                currentCheck.getExpect(), 
+                                                actualStatus);
+                                        // IMPORTANT: We need to manually fail the session if the primary check fails
+                                        return session.markAsFailed();
+                                    }
+                                    return session.remove(statusSaveKey);
+                                } catch (Exception e) {
+                                    System.err.println("[ERROR] Exception in STATUS check: " + e.getMessage());
+                                    e.printStackTrace();
+                                    currentCheck.setActual("ERROR: " + e.getMessage());
+                                    return session;
+                                }
+                            }));
                         }
-                        case JSON_PATH -> {
-                            CheckBuilder jp = jsonPath(rc.getExpression()).is(rc.getExpect());
-                            checkBuilders.add(jp);
-                            if (rc.getSaveAs() != null && !rc.getSaveAs().isBlank()) {
-                                checkBuilders.add(jsonPath(rc.getExpression()).saveAs(rc.getSaveAs()));
-                            }
-                        }
-                        case XPATH -> {
-                            CheckBuilder xp = xpath(rc.getExpression()).is(rc.getExpect());
-                            checkBuilders.add(xp);
-                            if (rc.getSaveAs() != null && !rc.getSaveAs().isBlank()) {
-                                checkBuilders.add(xpath(rc.getExpression()).saveAs(rc.getSaveAs()));
-                            }
-                        }
-                        case REGEX -> {
-                            CheckBuilder rg = regex(rc.getExpression()).is(rc.getExpect());
-                            checkBuilders.add(rg);
-                            if (rc.getSaveAs() != null && !rc.getSaveAs().isBlank()) {
-                                checkBuilders.add(regex(rc.getExpression()).saveAs(rc.getSaveAs()));
-                            }
+                        case JSON_PATH, XPATH, REGEX -> {
+                            String saveAsKey = (currentCheck.getSaveAs() != null && !currentCheck.getSaveAs().isBlank())
+                                ? currentCheck.getSaveAs() : "temp_check_var_" + currentCheck.hashCode();
+
+                            CheckBuilder extractor = switch (currentCheck.getType()) {
+                                case JSON_PATH -> jsonPath(currentCheck.getExpression()).saveAs(saveAsKey);
+                                case XPATH -> xpath(currentCheck.getExpression()).saveAs(saveAsKey);
+                                case REGEX -> regex(currentCheck.getExpression()).saveAs(saveAsKey);
+                                default -> throw new IllegalStateException("Unexpected value: " + currentCheck.getType());
+                            };
+                            checkBuilders.add(extractor);
+
+                            // Create the logging action and add it to a list to be processed later.
+                            loggingActions.add(exec(session -> {
+                                if (session.contains(saveAsKey)) {
+                                    Object rawValue = session.get(saveAsKey);
+                                    String actualValue;
+                                    if (rawValue instanceof String) {
+                                        actualValue = (String) rawValue;
+                                    } else if (rawValue instanceof char[]) {
+                                        actualValue = new String((char[]) rawValue);
+                                    } else if (rawValue instanceof String[] arr) {
+                                        actualValue = arr.length > 0 ? arr[0] : "";
+                                    } else {
+                                        actualValue = String.valueOf(rawValue);
+                                    }
+                                    
+                                    // IMPORTANT: Set the actual value on the check object
+                                    currentCheck.setActual(actualValue);
+
+                                    // 根据操作符选择不同的比较方式
+                                    boolean checkPassed = false;
+                                    switch (currentCheck.getOperator()) {
+                                        case CONTAINS:
+                                            checkPassed = actualValue.contains(currentCheck.getExpect());
+                                            break;
+                                        case IS:
+                                        default:
+                                            checkPassed = actualValue.equals(currentCheck.getExpect());
+                                            break;
+                                    }
+
+                                    if (!checkPassed) {
+                                        System.out.printf("\u001B[31mCHECK_FAIL|%s|%s|%s|%s|%s|%s\u001B[0m%n",
+                                                test.getTcid(), 
+                                                currentCheck.getType(),
+                                                currentCheck.getExpression(), 
+                                                currentCheck.getOperator(),
+                                                currentCheck.getExpect(), 
+                                                actualValue);
+                                    }
+                                } else {
+                                    // IMPORTANT: Set actual value when not found
+                                    currentCheck.setActual("<VALUE NOT FOUND>");
+                                    System.out.printf("\u001B[31mCHECK_FAIL|%s|%s|%s|%s|%s|%s\u001B[0m%n",
+                                            test.getTcid(),
+                                            currentCheck.getType(),
+                                            currentCheck.getExpression(),
+                                            currentCheck.getOperator(),
+                                            currentCheck.getExpect(),
+                                            "<VALUE NOT FOUND>");
+                                }
+                                if (saveAsKey.startsWith("temp_check_var_")) {
+                                    return session.remove(saveAsKey);
+                                }
+                                return session;
+                            }));
                         }
                     }
                 }
@@ -370,13 +478,28 @@ public class DynamicJavaSimulation extends Simulation {
             }
         }
 
-        // 如果用户未配置 STATUS 校验，默认 200
-        if (!statusCheckExists) {
-            checkBuilders.add(status().is(200));
+        // 2. Apply all checks to the request builder *before* it's used.
+        // The check() method returns a new builder instance, so we must reassign it.
+        if (!checkBuilders.isEmpty()) {
+            request = request.check(checkBuilders.toArray(new CheckBuilder[0]));
         }
 
-        // 把所有校验一次性挂到请求上
-        return request.check(checkBuilders.toArray(new CheckBuilder[0]));
+        // IMPORTANT: If no status check was defined by the user, we must add a default
+        // blocking check to ensure the request fails on non-200 responses.
+        // This one does not save the actual value, it's just for fail-fast behavior.
+        if (!statusCheckExists) {
+            request = request.check(status().is(200));
+        }
+
+        // 3. Start the chain with the fully configured request.
+        ChainBuilder finalChain = exec(request);
+
+        // 4. Append all the logging actions to the chain.
+        for (ChainBuilder loggingAction : loggingActions) {
+            finalChain = finalChain.exec(loggingAction);
+        }
+
+        return finalChain;
     }
 
     private Map<String, String> parseHeaders(String headersString) {
@@ -399,6 +522,43 @@ public class DynamicJavaSimulation extends Simulation {
                 }
             }
             return headers;
+        }
+    }
+
+    @Override
+    public void after() {
+        try {
+            String outPath = System.getProperty("gatling.result.file", "response_checks_result.json");
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+            if (isBatchMode) {
+                // In batch mode, we create a list of objects, each containing a tcid and its checks
+                java.util.List<java.util.Map<String, Object>> summary = new java.util.ArrayList<>();
+                for (java.util.Map.Entry<String, List<ResponseCheck>> entry : checkResults.entrySet()) {
+                    java.util.Map<String, Object> resultEntry = new java.util.HashMap<>();
+                    resultEntry.put("tcid", entry.getKey());
+                    resultEntry.put("responseChecks", entry.getValue());
+                    summary.add(resultEntry);
+                }
+                mapper.writerWithDefaultPrettyPrinter().writeValue(new java.io.File(outPath), summary);
+            } else {
+                // For single mode, wrap the single test result into the same structure used in batch mode
+                if (!checkResults.isEmpty()) {
+                    java.util.Map<String, Object> entry = new java.util.HashMap<>();
+                    String tcid = checkResults.keySet().iterator().next();
+                    
+                    entry.put("tcid", tcid);
+                    entry.put("responseChecks", checkResults.get(tcid));
+                    java.util.List<java.util.Map<String, Object>> summary = java.util.List.of(entry);
+                    mapper.writerWithDefaultPrettyPrinter().writeValue(new java.io.File(outPath), summary);
+                } else {
+                    System.err.println("No check results found to write.");
+                }
+            }
+            System.out.println("[INFO] Response check results written to " + outPath);
+        } catch (Exception ex) {
+            System.err.println("Failed to write response check results: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
 } 

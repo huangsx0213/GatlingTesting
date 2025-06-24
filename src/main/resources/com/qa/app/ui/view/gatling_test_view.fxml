@@ -186,9 +186,10 @@
                                                     <columns>
                                                         <TableColumn fx:id="checkTypeColumn" text="Type" prefWidth="100.0" />
                                                         <TableColumn fx:id="checkExpressionColumn" text="Expression" prefWidth="200.0" />
-                                                        <TableColumn fx:id="checkOperatorColumn" text="Operator" prefWidth="100.0" />
+                                                        <TableColumn fx:id="checkOperatorColumn" text="Operator" prefWidth="75.0" />
                                                         <TableColumn fx:id="checkExpectColumn" text="Expect" prefWidth="150.0" />
-                                                        <TableColumn fx:id="checkSaveAsColumn" text="Save As" prefWidth="100.0" />
+                                                        <TableColumn fx:id="checkActualColumn" text="Actual" prefWidth="150.0" />
+                                                        <TableColumn fx:id="checkSaveAsColumn" text="Save As" prefWidth="150.0" />
                                                     </columns>
                                                     <columnResizePolicy>
                                                         <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />

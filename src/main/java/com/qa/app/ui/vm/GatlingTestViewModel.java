@@ -29,6 +29,9 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
 import com.qa.app.model.Operator;
+import javafx.util.converter.DefaultStringConverter;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleStringProperty;
 
 import java.io.IOException;
 import java.net.URL;
@@ -141,6 +144,8 @@ public class GatlingTestViewModel implements Initializable {
     private TableColumn<ResponseCheck, Operator> checkOperatorColumn;
     @FXML
     private TableColumn<ResponseCheck, String> checkExpectColumn;
+    @FXML
+    private TableColumn<ResponseCheck, String> checkActualColumn;
     @FXML
     private TableColumn<ResponseCheck, String> checkSaveAsColumn;
 
@@ -1011,6 +1016,15 @@ public class GatlingTestViewModel implements Initializable {
             return;
         }
 
+        // Mark tests as pending in the background immediately on click
+        try {
+            testService.markTestsPending(new ArrayList<>(selectedTests));
+        } catch (ServiceException e) {
+            // Log error but proceed
+            System.err.println("Failed to mark tests as pending: " + e.getMessage());
+            e.printStackTrace();
+        }
+
         try {
             // Create and load the dialog
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/qa/app/ui/view/GatlingLoadDialog.fxml"));
@@ -1023,7 +1037,6 @@ public class GatlingTestViewModel implements Initializable {
             dialog.setTitle("Run Gatling Test(s)");
             Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
             stage.getIcons().add(new javafx.scene.image.Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
-
 
             Optional<ButtonType> result = dialog.showAndWait();
 
@@ -1041,11 +1054,27 @@ public class GatlingTestViewModel implements Initializable {
                     mainViewModel.updateStatus("Starting to run " + testsToRun.size() + " tests", MainViewModel.StatusType.INFO);
                 }
 
+                // Define the UI refresh logic as a callback
+                Runnable onComplete = () -> {
+                    System.out.println("Gatling run finished. Refreshing UI.");
+                    loadTests();
+                    testTable.getSelectionModel().clearSelection();
+                    for(GatlingTest ranTest : testsToRun) {
+                        testTable.getItems().stream()
+                            .filter(t -> t.getId() == ranTest.getId())
+                            .findFirst()
+                            .ifPresent(t -> testTable.getSelectionModel().select(t));
+                    }
+                    if (testTable.getSelectionModel().getSelectedItem() != null) {
+                        showTestDetails(testTable.getSelectionModel().getSelectedItem());
+                    }
+                    testTable.refresh();
+                    mainViewModel.updateStatus("UI refreshed with test results.", MainViewModel.StatusType.SUCCESS);
+                };
+
                 // Execute all selected tests sequentially within the same thread group configuration
                 try {
-                    testService.runTests(testsToRun, params);
-                    // refresh table view
-                    testTable.refresh();
+                    testService.runTests(testsToRun, params, onComplete);
                 } catch (ServiceException ex) {
                     if (mainViewModel != null) {
                         mainViewModel.updateStatus("Failed to run test(s): " + ex.getMessage(), MainViewModel.StatusType.ERROR);
@@ -1170,7 +1199,7 @@ public class GatlingTestViewModel implements Initializable {
 
         // Expression column
         checkExpressionColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getExpression()));
-        checkExpressionColumn.setCellFactory(column -> new TextFieldTableCell<ResponseCheck, String>() {
+        checkExpressionColumn.setCellFactory(column -> new TextFieldTableCell<ResponseCheck, String>(new DefaultStringConverter()) {
             @Override
             public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -1197,13 +1226,15 @@ public class GatlingTestViewModel implements Initializable {
 
         // Expect column
         checkExpectColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getExpect()));
-        checkExpectColumn.setCellFactory(TextFieldTableCell.forTableColumn());
-        checkExpectColumn.setOnEditCommit(e -> e.getRowValue().setExpect(e.getNewValue()));
+        checkExpectColumn.setCellFactory(column -> new TextFieldTableCell<>(new DefaultStringConverter()));
+        checkExpectColumn.setOnEditCommit(event -> event.getRowValue().setExpect(event.getNewValue()));
 
-        // SaveAs column
-        checkSaveAsColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getSaveAs()));
+        checkActualColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getActual()));
+        checkActualColumn.setEditable(false);
+
+        checkSaveAsColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getSaveAs()));
         checkSaveAsColumn.setCellFactory(TextFieldTableCell.forTableColumn());
-        checkSaveAsColumn.setOnEditCommit(e -> e.getRowValue().setSaveAs(e.getNewValue()));
+        checkSaveAsColumn.setOnEditCommit(event -> event.getRowValue().setSaveAs(event.getNewValue()));
 
         responseChecksTable.setEditable(true);
 
