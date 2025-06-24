@@ -4,7 +4,15 @@
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%-5level] %-35.35logger{35} - %msg%n%rEx</pattern>
         </encoder>
-        <immediateFlush>false</immediateFlush>
+        <immediateFlush>true</immediateFlush>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>logs/app.log</file>
+        <append>false</append> <!-- Overwrite log file on each run -->
+        <encoder>
+            <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
     </appender>
 
     <!--
@@ -19,6 +27,7 @@
 
     <root level="INFO">
         <appender-ref ref="CONSOLE" />
+        <appender-ref ref="FILE" />
     </root>
 
 </configuration> 

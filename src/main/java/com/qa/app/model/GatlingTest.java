@@ -64,6 +64,32 @@ public class GatlingTest {
         this.headersDynamicVariables = headersDynamicVariables;
     }
 
+    /**
+     * Copy constructor for duplication.
+     * @param other The GatlingTest to copy.
+     */
+    public GatlingTest(GatlingTest other) {
+        // Do not copy ID to allow for new insertion
+        this.isEnabled.set(false); // Default to disabled
+        this.suite.set(other.getSuite());
+        this.tcid.set(other.getTcid() + "_copy");
+        this.descriptions.set(other.getDescriptions());
+        this.conditions.set(other.getConditions());
+        this.responseChecks.set(other.getResponseChecks());
+        this.endpointId.set(other.getEndpointId());
+        this.headers.set(other.getHeaders());
+        this.body.set(other.getBody());
+        this.tags.set(other.getTags());
+        this.waitTime.set(other.getWaitTime());
+        this.bodyTemplateId.set(other.getBodyTemplateId());
+        this.headersTemplateId.set(other.getHeadersTemplateId());
+        this.endpointName.set(other.getEndpointName());
+        this.projectId.set(other.getProjectId());
+        // Deep copy maps to avoid shared references
+        this.dynamicVariables = new HashMap<>(other.getBodyDynamicVariables());
+        this.headersDynamicVariables = new HashMap<>(other.getHeadersDynamicVariables());
+    }
+
     // Getters and Setters
     public int getId() { return id.get(); }
     public void setId(int id) { this.id.set(id); }

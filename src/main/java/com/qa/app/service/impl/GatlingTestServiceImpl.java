@@ -20,8 +20,7 @@ import com.qa.app.service.api.IHeadersTemplateService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qa.app.model.ResponseCheck;
-import java.io.File;
-import java.util.Map;
+
 
 public class GatlingTestServiceImpl implements IGatlingTestService {
 

@@ -31,15 +31,15 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             pstmt.setString(6, test.getEndpointName());
             pstmt.setString(7, test.getTags());
             pstmt.setInt(8, test.getWaitTime());
-            pstmt.setInt(10, test.getHeadersTemplateId());
-            pstmt.setInt(11, test.getBodyTemplateId());
-            pstmt.setString(12, convertMapToJson(test.getBodyDynamicVariables()));
-            pstmt.setString(13, convertMapToJson(test.getHeadersDynamicVariables()));
-            pstmt.setString(14, test.getResponseChecks());
+            pstmt.setInt(9, test.getHeadersTemplateId());
+            pstmt.setInt(10, test.getBodyTemplateId());
+            pstmt.setString(11, convertMapToJson(test.getBodyDynamicVariables()));
+            pstmt.setString(12, convertMapToJson(test.getHeadersDynamicVariables()));
+            pstmt.setString(13, test.getResponseChecks());
             if (test.getProjectId() != null) {
-                pstmt.setInt(15, test.getProjectId());
+                pstmt.setInt(14, test.getProjectId());
             } else {
-                pstmt.setNull(15, java.sql.Types.INTEGER);
+                pstmt.setNull(14, java.sql.Types.INTEGER);
             }
             pstmt.executeUpdate();
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
@@ -116,7 +116,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     public void updateTest(GatlingTest test) throws SQLException {
         String sql = "UPDATE gatling_tests SET is_enabled = ?, suite = ?, tcid = ?, descriptions = ?, " +
                     "conditions = ?, endpoint_name = ?, tags = ?, wait_time = ?, headers_template_id = ?, " +
-                    "body_template_id = ?, body_dynamic_variables = ?, headers_dynamic_variables = ?, response_checks = ? WHERE id = ?";
+                    "body_template_id = ?, body_dynamic_variables = ?, headers_dynamic_variables = ?, response_checks = ?, project_id = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setBoolean(1, test.isEnabled());
@@ -132,7 +132,12 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             pstmt.setString(11, convertMapToJson(test.getBodyDynamicVariables()));
             pstmt.setString(12, convertMapToJson(test.getHeadersDynamicVariables()));
             pstmt.setString(13, test.getResponseChecks());
-            pstmt.setInt(14, test.getId());
+            if (test.getProjectId() != null) {
+                pstmt.setInt(14, test.getProjectId());
+            } else {
+                pstmt.setNull(14, java.sql.Types.INTEGER);
+            }
+            pstmt.setInt(15, test.getId());
             pstmt.executeUpdate();
         }
     }

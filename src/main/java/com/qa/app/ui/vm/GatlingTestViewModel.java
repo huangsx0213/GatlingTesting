@@ -12,7 +12,6 @@ import com.qa.app.util.VariableGenerator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxTableCell;
@@ -20,7 +19,6 @@ import javafx.scene.control.cell.ComboBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.FlowPane;
 import org.controlsfx.control.CheckComboBox;
-import javafx.stage.Stage;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
@@ -33,20 +31,17 @@ import javafx.util.converter.DefaultStringConverter;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleStringProperty;
 
-import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 import javafx.scene.control.ComboBox;
 import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.threadgroups.StandardThreadGroup;
 import com.qa.app.model.threadgroups.ThreadGroupType;
-import javafx.application.Platform;
 
 public class GatlingTestViewModel implements Initializable {
 
@@ -195,6 +190,9 @@ public class GatlingTestViewModel implements Initializable {
     private boolean isUpdatingSelection = false;
 
     private final ObjectMapper mapper = new ObjectMapper();
+
+    // Clipboard for response checks
+    private static final List<ResponseCheck> responseCheckClipboard = new ArrayList<>();
 
     // =====================
     // 1. Initialize related
@@ -949,7 +947,7 @@ public class GatlingTestViewModel implements Initializable {
         }
         String tcid = tcidField.getText().trim();
         if (tcid.isEmpty()) {
-            if (mainViewModel != null) {
+             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: TCID is required.",
                         MainViewModel.StatusType.ERROR);
             }
@@ -964,11 +962,43 @@ public class GatlingTestViewModel implements Initializable {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Test updated successfully.", MainViewModel.StatusType.SUCCESS);
             }
-            refreshAll();
+             refreshAll();
         } catch (ServiceException e) {
-            if (mainViewModel != null) {
+             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to update test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
+        }
+    }
+
+    @FXML
+    private void handleDuplicateTest() {
+        final GatlingTest selectedTest = testTable.getSelectionModel().getSelectedItem();
+        if (selectedTest == null) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Please select a test to duplicate.", MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
+
+        try {
+            // Create a new test object as a copy
+            GatlingTest duplicate = new GatlingTest(selectedTest);
+            
+            // Add it to the database
+            testService.createTest(duplicate);
+            
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Test " + selectedTest.getTcid() + " duplicated successfully as " + duplicate.getTcid(), MainViewModel.StatusType.SUCCESS);
+            }
+
+            // Refresh the view
+            refreshAll();
+
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Error duplicating test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+            e.printStackTrace();
         }
     }
 
@@ -1148,28 +1178,49 @@ public class GatlingTestViewModel implements Initializable {
     // =====================
     @FXML
     private void handleAddResponseCheck() {
-        responseChecks.add(new ResponseCheck(CheckType.JSON_PATH, "", Operator.IS, "", ""));
+        responseChecks.add(new ResponseCheck());
     }
 
     @FXML
     private void handleRemoveResponseCheck() {
-        int selectedIdx = responseChecksTable.getSelectionModel().getSelectedIndex();
-        if(selectedIdx>=0){
-            responseChecks.remove(selectedIdx);
-            ensureDefaultStatusCheck();
+        List<ResponseCheck> selected = new ArrayList<>(responseChecksTable.getSelectionModel().getSelectedItems());
+        if (!selected.isEmpty()) {
+            responseChecks.removeAll(selected);
+        }
+        ensureDefaultStatusCheck();
+    }
+
+    @FXML
+    private void handleCopyResponseCheck() {
+        List<ResponseCheck> selected = responseChecksTable.getSelectionModel().getSelectedItems();
+        if (!selected.isEmpty()) {
+            responseCheckClipboard.clear();
+            for (ResponseCheck rc : selected) {
+                responseCheckClipboard.add(new ResponseCheck(rc));
+            }
+            // Optional: provide feedback to the user
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus(selected.size() + " check(s) copied to clipboard.", MainViewModel.StatusType.INFO);
+            }
         }
     }
 
     @FXML
-    private void handleDuplicateResponseCheck() {
-        ResponseCheck sel = responseChecksTable.getSelectionModel().getSelectedItem();
-        if(sel!=null){
-            ResponseCheck copy = new ResponseCheck(sel.getType(), sel.getExpression(), sel.getOperator(), sel.getExpect(), sel.getSaveAs());
-            responseChecks.add(copy);
+    private void handlePasteResponseCheck() {
+        if (!responseCheckClipboard.isEmpty()) {
+            for (ResponseCheck rc : responseCheckClipboard) {
+                responseChecks.add(new ResponseCheck(rc)); // Add a new copy
+            }
+            // Optional: provide feedback to the user
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus(responseCheckClipboard.size() + " check(s) pasted.", MainViewModel.StatusType.INFO);
+            }
         }
     }
 
     private void setupResponseChecksTable(){
+        // Allow multiple selections
+        responseChecksTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         if(responseChecksTable==null) return;
         responseChecksTable.setItems(responseChecks);
 

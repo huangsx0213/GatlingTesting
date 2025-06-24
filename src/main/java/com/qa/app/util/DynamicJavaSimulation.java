@@ -9,7 +9,6 @@ import com.qa.app.model.threadgroups.*;
 import io.gatling.javaapi.core.*;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
-import io.gatling.javaapi.http.HttpDsl;
 import io.gatling.javaapi.core.CheckBuilder;
 
 import java.io.File;
@@ -25,7 +24,6 @@ import static io.gatling.javaapi.core.CoreDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.*;
 
 import com.qa.app.model.ResponseCheck;
-import com.qa.app.model.CheckType;
 
 public class DynamicJavaSimulation extends Simulation {
 

@@ -199,8 +199,11 @@
                                                     <children>
                                                         <Button fx:id="addResponseCheckButton" text="+" onAction="#handleAddResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0" />
                                                         <Button fx:id="removeResponseCheckButton" text="-" onAction="#handleRemoveResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0" />
-                                                        <Button fx:id="duplicateResponseCheckButton" text="⎘" onAction="#handleDuplicateResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0">
-                                                            <tooltip><Tooltip text="Duplicate selected check"/></tooltip>
+                                                        <Button fx:id="copyResponseCheckButton" text="⧉" onAction="#handleCopyResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0">
+                                                            <tooltip><Tooltip text="Copy selected check(s)"/></tooltip>
+                                                        </Button>
+                                                        <Button fx:id="pasteResponseCheckButton" text="⎘" onAction="#handlePasteResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0">
+                                                            <tooltip><Tooltip text="Paste check(s) from clipboard"/></tooltip>
                                                         </Button>
                                                     </children>
                                                 </VBox>
@@ -234,6 +237,7 @@
                             <children>
                         <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddTest" text="Add Test" />
                         <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateTest" text="Update Test" />
+                        <Button fx:id="duplicateButton" mnemonicParsing="false" onAction="#handleDuplicateTest" text="Duplicate Test" />
                         <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteTest" text="Delete Test" />
                         <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearFields" text="Clear Form" />
                         <Separator orientation="VERTICAL" />

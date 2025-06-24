@@ -14,6 +14,7 @@ import com.qa.app.model.ResponseCheck;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.net.URL;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -92,6 +93,10 @@ public class GatlingTestExecutor {
             String simulationClass = DynamicJavaSimulation.class.getName();
             String resultsPath = Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
 
+            // Find the logback.xml file in resources
+            URL logbackUrl = GatlingTestExecutor.class.getClassLoader().getResource("logback.xml");
+            String logbackPath = (logbackUrl != null) ? new File(logbackUrl.toURI()).getAbsolutePath() : null;
+
             // Serialize parameters to JSON and write to temp files to avoid command line arg issues
             ObjectMapper objectMapper = new ObjectMapper();
 
@@ -119,6 +124,9 @@ public class GatlingTestExecutor {
             command.add("java.base/java.lang=ALL-UNNAMED");
             command.add("-cp");
             command.add(classpath);
+            if (logbackPath != null) {
+                command.add("-Dlogback.configurationFile=" + logbackPath);
+            }
             command.add("-Dgatling.test.file=" + testFile.getAbsolutePath());
             command.add("-Dgatling.params.file=" + paramsFile.getAbsolutePath());
             command.add("-Dgatling.endpoint.file=" + endpointFile.getAbsolutePath());
@@ -193,6 +201,10 @@ public class GatlingTestExecutor {
             String simulationClass = DynamicJavaSimulation.class.getName();
             String resultsPath = Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
 
+            // Find the logback.xml file in resources
+            URL logbackUrl = GatlingTestExecutor.class.getClassLoader().getResource("logback.xml");
+            String logbackPath = (logbackUrl != null) ? new File(logbackUrl.toURI()).getAbsolutePath() : null;
+
             ObjectMapper objectMapper = new ObjectMapper();
 
             File testFile = File.createTempFile("gatling_test_", ".json");
@@ -219,6 +231,9 @@ public class GatlingTestExecutor {
             command.add("java.base/java.lang=ALL-UNNAMED");
             command.add("-cp");
             command.add(classpath);
+            if (logbackPath != null) {
+                command.add("-Dlogback.configurationFile=" + logbackPath);
+            }
             command.add("-Dgatling.test.file=" + testFile.getAbsolutePath());
             command.add("-Dgatling.params.file=" + paramsFile.getAbsolutePath());
             command.add("-Dgatling.endpoint.file=" + endpointFile.getAbsolutePath());
@@ -261,6 +276,10 @@ public class GatlingTestExecutor {
             String simulationClass = DynamicJavaSimulation.class.getName();
             String resultsPath = Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
 
+            // Find the logback.xml file in resources
+            URL logbackUrl = GatlingTestExecutor.class.getClassLoader().getResource("logback.xml");
+            String logbackPath = (logbackUrl != null) ? new File(logbackUrl.toURI()).getAbsolutePath() : null;
+
             ObjectMapper objectMapper = new ObjectMapper();
 
             // Build BatchItem list
@@ -290,6 +309,9 @@ public class GatlingTestExecutor {
             command.add("java.base/java.lang=ALL-UNNAMED");
             command.add("-cp");
             command.add(classpath);
+            if (logbackPath != null) {
+                command.add("-Dlogback.configurationFile=" + logbackPath);
+            }
             command.add("-Dgatling.tests.file=" + batchFile.getAbsolutePath());
             command.add("-Dgatling.params.file=" + paramsFile.getAbsolutePath());
             command.add(gatlingMain);
@@ -342,6 +364,10 @@ public class GatlingTestExecutor {
                 String simulationClass = DynamicJavaSimulation.class.getName();
                 String resultsPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
 
+                // Find the logback.xml file in resources
+                URL logbackUrl = GatlingTestExecutor.class.getClassLoader().getResource("logback.xml");
+                String logbackPath = (logbackUrl != null) ? new File(logbackUrl.toURI()).getAbsolutePath() : null;
+
                 com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
                 // Build BatchItem list
@@ -371,6 +397,9 @@ public class GatlingTestExecutor {
                 command.add("java.base/java.lang=ALL-UNNAMED");
                 command.add("-cp");
                 command.add(classpath);
+                if (logbackPath != null) {
+                    command.add("-Dlogback.configurationFile=" + logbackPath);
+                }
                 command.add("-Dgatling.tests.file=" + batchFile.getAbsolutePath());
                 command.add("-Dgatling.params.file=" + paramsFile.getAbsolutePath());
                 command.add(gatlingMain);

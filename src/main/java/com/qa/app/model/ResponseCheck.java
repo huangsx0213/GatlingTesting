@@ -29,6 +29,22 @@ public class ResponseCheck {
         this.actual = null;
     }
 
+    /**
+     * Copy constructor.
+     * @param other The object to copy.
+     */
+    public ResponseCheck(ResponseCheck other) {
+        if (other != null) {
+            this.type = other.type;
+            this.expression = other.expression;
+            this.operator = other.operator;
+            this.expect = other.expect;
+            this.saveAs = other.saveAs;
+            this.optional = other.optional;
+            this.actual = null; // Do not copy runtime 'actual' value
+        }
+    }
+
     public CheckType getType() {
         return type;
     }
