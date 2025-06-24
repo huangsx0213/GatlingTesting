@@ -9,11 +9,12 @@ import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.GatlingTest;
 import com.qa.app.model.threadgroups.SteppingThreadGroup;
 import com.qa.app.model.threadgroups.UltimateThreadGroupStep;
-import com.qa.app.model.ResponseCheck;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -21,6 +22,11 @@ import java.util.List;
 import java.util.Map;
 
 public class GatlingTestExecutor {
+
+    /**
+     * Prefix used by DynamicJavaSimulation to output response check results to stdout.
+     */
+    private static final String RESULT_PREFIX = "CHECK_RESULTS_JSON:";
 
     private static String assembleClasspath() {
         String cp = System.getProperty("java.class.path");
@@ -143,16 +149,31 @@ public class GatlingTestExecutor {
                     com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test " + test.getTcid() + " Running", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
 
                     ProcessBuilder processBuilder = new ProcessBuilder(command);
-                    processBuilder.inheritIO();
+                    processBuilder.redirectErrorStream(true); // Capture stderr along with stdout
 
                     Process process = processBuilder.start();
+
+                    String jsonResult = null;
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            System.out.println(line); // Pass Gatling output to our console
+                            if (line.startsWith(RESULT_PREFIX)) {
+                                jsonResult = line.substring(RESULT_PREFIX.length());
+                            }
+                        }
+                    }
+
                     int exitCode = process.waitFor();
 
                     if (exitCode == 0) {
                         System.out.println("Gatling test execution completed.");
                         com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test " + test.getTcid() + " Completed", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
-                        // Call result processing
-                        updateTestsWithResults(java.util.Collections.singletonList(test));
+                        if (jsonResult != null) {
+                            updateTestsWithResultsFromJson(java.util.Collections.singletonList(test), jsonResult);
+                        } else {
+                            System.err.println("Could not find check results in Gatling output. DB results will not be updated.");
+                        }
                     } else {
                         System.out.println("Gatling test execution failed, exit code: " + exitCode);
                         com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test " + test.getTcid() + " Failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
@@ -245,16 +266,32 @@ public class GatlingTestExecutor {
 
             System.out.println("Starting Gatling test synchronously...");
             ProcessBuilder processBuilder = new ProcessBuilder(command);
-            processBuilder.inheritIO();
+            processBuilder.redirectErrorStream(true);
 
             Process process = processBuilder.start();
+
+            String jsonResult = null;
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    System.out.println(line);
+                    if (line.startsWith(RESULT_PREFIX)) {
+                        jsonResult = line.substring(RESULT_PREFIX.length());
+                    }
+                }
+            }
+
             int exitCode = process.waitFor();
 
             if (exitCode == 0) {
-                System.out.println("Gatling test execution completed.");
-                updateTestsWithResults(java.util.Collections.singletonList(test));
+                System.out.println("Gatling test execution completed synchronously.");
+                if (jsonResult != null) {
+                    updateTestsWithResultsFromJson(java.util.Collections.singletonList(test), jsonResult);
+                } else {
+                    System.err.println("Could not find check results in Gatling output. DB results will not be updated.");
+                }
             } else {
-                System.out.println("Gatling test execution failed, exit code: " + exitCode);
+                throw new RuntimeException("Gatling test execution failed, exit code: " + exitCode);
             }
         } catch (Exception e) {
             System.err.println("Failed to initialize Gatling test execution: " + e.getMessage());
@@ -329,29 +366,46 @@ public class GatlingTestExecutor {
             }
             System.out.println("Starting Gatling batch test synchronously...");
             ProcessBuilder processBuilder = new ProcessBuilder(command);
-            processBuilder.inheritIO();
+            processBuilder.redirectErrorStream(true);
 
             Process process = processBuilder.start();
+
+            String jsonResult = null;
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    System.out.println(line);
+                    if (line.startsWith(RESULT_PREFIX)) {
+                        jsonResult = line.substring(RESULT_PREFIX.length());
+                    }
+                }
+            }
+
             int exitCode = process.waitFor();
 
             if (exitCode == 0) {
                 System.out.println("Gatling batch execution completed.");
-                updateTestsWithResults(tests);
+                if (jsonResult != null) {
+                    updateTestsWithResultsFromJson(tests, jsonResult);
+                } else {
+                    System.err.println("Could not find check results in Gatling output. DB results will not be updated.");
+                }
             } else {
-                System.out.println("Gatling batch execution failed, exit code: " + exitCode);
+                throw new RuntimeException("Gatling batch execution failed, exit code: " + exitCode);
             }
         } catch (Exception e) {
-            System.err.println("Failed to start Gatling batch process: " + e.getMessage());
+            System.err.println("Failed to execute Gatling batch: " + e.getMessage());
             e.printStackTrace();
-            throw new RuntimeException("Failed to start Gatling batch test process", e);
+            throw new RuntimeException(e);
         }
     }
 
     // Async batch execution, avoid blocking the caller (e.g., JavaFX UI thread)
     public static void executeBatch(java.util.List<GatlingTest> tests, GatlingLoadParameters params, java.util.List<Endpoint> endpoints, Runnable onComplete) {
+        // Wrap the entire heavy-lifting logic inside a background thread so the JavaFX UI thread stays responsive
         new Thread(() -> {
             try {
-                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test Batch Running", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Running " + tests.size() + " test(s).", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
 
                 if (tests == null || endpoints == null || tests.size() != endpoints.size()) {
                     throw new IllegalArgumentException("Tests and Endpoints list size mismatch or null");
@@ -408,9 +462,6 @@ public class GatlingTestExecutor {
                 command.add("-rf");
                 command.add(resultsPath);
 
-                // Status bar: running
-                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Batch test is running", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
-
                 System.out.println("========== Gatling Batch Execution (Async) ==========");
                 for (int i = 0; i < tests.size(); i++) {
                     System.out.println(String.format("  %d) %s [ %s %s ]", i + 1,
@@ -418,75 +469,81 @@ public class GatlingTestExecutor {
                             endpoints.get(i).getMethod(),
                             endpoints.get(i).getUrl()));
                 }
-                System.out.println("Starting Gatling batch test in background...");
-
-                // Status bar: running
-                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Batch test is running", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+                System.out.println("Starting Gatling batch test in background (separate process)...");
 
                 java.lang.ProcessBuilder processBuilder = new java.lang.ProcessBuilder(command);
-                processBuilder.inheritIO();
+                processBuilder.redirectErrorStream(true);
 
                 java.lang.Process process = processBuilder.start();
+
+                String jsonResult = null;
+                try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        System.out.println(line);
+                        if (line.startsWith(RESULT_PREFIX)) {
+                            jsonResult = line.substring(RESULT_PREFIX.length());
+                        }
+                    }
+                }
+
                 int exitCode = process.waitFor();
 
                 if (exitCode == 0) {
                     System.out.println("Gatling batch execution completed.");
-                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test Batch Completed", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
-                    updateTestsWithResults(tests);
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test(s) completed.", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
+                    if (jsonResult != null) {
+                        updateTestsWithResultsFromJson(tests, jsonResult);
+                    } else {
+                        System.err.println("Could not find check results in Gatling output. DB results will not be updated.");
+                    }
+                    if (onComplete != null) {
+                        // Ensure UI updates are executed on the JavaFX Application Thread
+                        if (javafx.application.Platform.isFxApplicationThread()) {
+                            onComplete.run();
+                        } else {
+                            javafx.application.Platform.runLater(onComplete);
+                        }
+                    }
                 } else {
                     System.out.println("Gatling batch execution failed, exit code: " + exitCode);
-                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test Batch Failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
-                }
-
-                // After everything, run the completion hook on the UI thread
-                if (onComplete != null) {
-                    javafx.application.Platform.runLater(onComplete);
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test(s) Failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
                 }
             } catch (Exception e) {
                 System.err.println("Failed to start Gatling batch process: " + e.getMessage());
                 e.printStackTrace();
-                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test Batch Exception: " + e.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test(s) Exception: " + e.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
             }
         }, "gatling-batch-runner").start();
     }
 
-    private static void updateTestsWithResults(List<GatlingTest> executedTests) {
-        String resultFilePath = System.getProperty("gatling.result.file", "response_checks_result.json");
-        File resultFile = new File(resultFilePath);
-
-        if (!resultFile.exists()) {
-            System.err.println("Gatling result file not found: " + resultFilePath);
-            return;
-        }
-
+    private static void updateTestsWithResultsFromJson(List<GatlingTest> executedTests, String jsonContent) {
         try {
             ObjectMapper mapper = new ObjectMapper();
+            List<Map<String, Object>> results = mapper.readValue(jsonContent, new TypeReference<List<Map<String, Object>>>() {});
+
             IGatlingTestDao testDao = new GatlingTestDaoImpl();
-            List<Map<String, Object>> results = mapper.readValue(resultFile, new TypeReference<List<Map<String, Object>>>() {});
-            
-            Map<String, List<ResponseCheck>> resultsMap = new java.util.HashMap<>();
+
             for (Map<String, Object> result : results) {
                 String tcid = (String) result.get("tcid");
-                List<ResponseCheck> checks = mapper.convertValue(result.get("responseChecks"), new TypeReference<List<ResponseCheck>>() {});
-                resultsMap.put(tcid, checks);
-            }
+                Object checksObj = result.get("responseChecks");
 
-            for (GatlingTest test : executedTests) {
-                if (resultsMap.containsKey(test.getTcid())) {
-                    List<ResponseCheck> updatedChecks = resultsMap.get(test.getTcid());
-                    String updatedJson = mapper.writeValueAsString(updatedChecks);
-                    test.setResponseChecks(updatedJson);
-                    testDao.updateTest(test); // Persist to DB
+                if (tcid == null || checksObj == null) continue;
+
+                String updatedChecksJson = mapper.writeValueAsString(checksObj);
+
+                // Find the corresponding test in the executed list and update it
+                for (GatlingTest test : executedTests) {
+                    if (tcid.equals(test.getTcid())) {
+                        test.setResponseChecks(updatedChecksJson);
+                        testDao.updateTest(test);
+                        System.out.println("Updated response checks for test: " + tcid);
+                        break;
+                    }
                 }
             }
-
-            if (resultFile.delete()) {
-                System.out.println("Gatling result file deleted successfully: " + resultFilePath);
-            } else {
-                System.err.println("Failed to delete Gatling result file: " + resultFilePath);
-            }
         } catch (Exception e) {
-            System.err.println("Error processing Gatling result file: " + e.getMessage());
+            System.err.println("Failed to parse or process response check results from JSON: " + e.getMessage());
             e.printStackTrace();
         }
     }

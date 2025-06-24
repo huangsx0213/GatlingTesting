@@ -1050,16 +1050,39 @@ public class GatlingTestViewModel implements Initializable {
             return;
         }
 
-        // Mark tests as pending in the background immediately on click
+        // Make a stable copy of the selection *before* any refreshes
+        List<GatlingTest> testsToRun = new ArrayList<>(selectedTests);
+
+        // Persist any edits made in the detail pane to the focused test (if it is among the selections)
+        GatlingTest focusedTest = testTable.getSelectionModel().getSelectedItem();
+        if (focusedTest != null && testsToRun.contains(focusedTest)) {
+            populateTestFromFields(focusedTest);
+        }
+
+        // Mark all selected tests as PENDING (set Actual -> "TO_RUN") in DB
         try {
-            testService.markTestsPending(new ArrayList<>(selectedTests));
+            testService.markTestsPending(testsToRun);
         } catch (ServiceException e) {
-            // Log error but proceed
             System.err.println("Failed to mark tests as pending: " + e.getMessage());
             e.printStackTrace();
         }
 
-        // Create default Gatling load parameters directly, bypassing the dialog
+        // Immediately reload data so the UI reflects the new "TO_RUN" status **while keeping the selection**
+        loadTests();
+        testTable.getSelectionModel().clearSelection();
+        for (GatlingTest t : testsToRun) {
+            testTable.getItems().stream()
+                    .filter(uiTest -> uiTest.getId() == t.getId())
+                    .findFirst()
+                    .ifPresent(uiTest -> testTable.getSelectionModel().select(uiTest));
+        }
+        if (testTable.getSelectionModel().getSelectedItem() != null) {
+            showTestDetails(testTable.getSelectionModel().getSelectedItem());
+        }
+        testTable.refresh();
+        updateSelectAllCheckBoxState();
+
+        // ----- Prepare Gatling load parameters (default single-thread run) -----
         GatlingLoadParameters params = new GatlingLoadParameters();
         params.setType(ThreadGroupType.STANDARD);
         StandardThreadGroup config = new StandardThreadGroup();
@@ -1070,34 +1093,27 @@ public class GatlingTestViewModel implements Initializable {
         config.setDelay(0);
         params.setStandardThreadGroup(config);
 
-        List<GatlingTest> testsToRun = new ArrayList<>(selectedTests);
-
-        // Populate the fields for the focused test, to ensure latest data is used
-        GatlingTest focusedTest = testTable.getSelectionModel().getSelectedItem();
-        if (focusedTest != null && testsToRun.contains(focusedTest)) {
-            populateTestFromFields(focusedTest);
-        }
-
         if (mainViewModel != null) {
-            mainViewModel.updateStatus("Starting to run " + testsToRun.size() + " tests with default settings.", MainViewModel.StatusType.INFO);
+            mainViewModel.updateStatus("Starting to run " + testsToRun.size() + " tests with default settings.",
+                    MainViewModel.StatusType.INFO);
         }
 
-        // Define the UI refresh logic as a callback
+        // Callback to execute on test completion – refresh data & keep selection
         Runnable onComplete = () -> {
             System.out.println("Gatling run finished. Refreshing UI.");
             loadTests();
             testTable.getSelectionModel().clearSelection();
-            for(GatlingTest ranTest : testsToRun) {
+            for (GatlingTest ranTest : testsToRun) {
                 testTable.getItems().stream()
-                    .filter(t -> t.getId() == ranTest.getId())
-                    .findFirst()
-                    .ifPresent(t -> testTable.getSelectionModel().select(t));
+                        .filter(t -> t.getId() == ranTest.getId())
+                        .findFirst()
+                        .ifPresent(t -> testTable.getSelectionModel().select(t));
             }
             if (testTable.getSelectionModel().getSelectedItem() != null) {
                 showTestDetails(testTable.getSelectionModel().getSelectedItem());
             }
             testTable.refresh();
-            mainViewModel.updateStatus("UI refreshed with test results.", MainViewModel.StatusType.SUCCESS);
+            updateSelectAllCheckBoxState();
         };
 
         // Execute all selected tests sequentially within the same thread group configuration
@@ -1105,7 +1121,8 @@ public class GatlingTestViewModel implements Initializable {
             testService.runTests(testsToRun, params, onComplete);
         } catch (ServiceException ex) {
             if (mainViewModel != null) {
-                mainViewModel.updateStatus("Failed to run test(s): " + ex.getMessage(), MainViewModel.StatusType.ERROR);
+                mainViewModel.updateStatus("Failed to run test(s): " + ex.getMessage(),
+                        MainViewModel.StatusType.ERROR);
             }
         }
     }

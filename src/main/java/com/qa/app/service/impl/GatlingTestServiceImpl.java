@@ -135,24 +135,6 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     }
 
     @Override
-    public void runTest(GatlingTest test, GatlingLoadParameters params) throws ServiceException {
-        if (test == null) {
-            throw new ServiceException("Test cannot be null.");
-        }
-        Endpoint endpoint = endpointService.getEndpointByName(test.getEndpointName());
-        if (endpoint == null) {
-            throw new ServiceException("Endpoint not found for test.");
-        }
-
-        try {
-            enrichTemplates(test);
-            GatlingTestExecutor.execute(test, params, endpoint);
-        } catch (Exception e) {
-            throw new ServiceException("Failed to run Gatling test: " + e.getMessage(), e);
-        }
-    }
-
-    @Override
     public void runTests(java.util.List<GatlingTest> tests, GatlingLoadParameters params, Runnable onComplete) throws ServiceException {
         if (tests == null || tests.isEmpty()) {
             throw new ServiceException("Test list cannot be null or empty.");

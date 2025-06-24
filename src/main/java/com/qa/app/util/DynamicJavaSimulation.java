@@ -27,6 +27,9 @@ import com.qa.app.model.ResponseCheck;
 
 public class DynamicJavaSimulation extends Simulation {
 
+    // Static holder for results, accessible from within the same JVM
+    public static final Map<String, List<ResponseCheck>> lastRunResults = new ConcurrentHashMap<>();
+
     private final GatlingLoadParameters params;
     private final List<BatchItem> batchItems;
     private final boolean isBatchMode;
@@ -38,6 +41,8 @@ public class DynamicJavaSimulation extends Simulation {
     }
 
     {
+        // Clear results at the beginning of a simulation run.
+        lastRunResults.clear();
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             this.params = objectMapper.readValue(new File(System.getProperty("gatling.params.file")), GatlingLoadParameters.class);
@@ -526,36 +531,38 @@ public class DynamicJavaSimulation extends Simulation {
     @Override
     public void after() {
         try {
-            String outPath = System.getProperty("gatling.result.file", "response_checks_result.json");
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
+            java.util.List<java.util.Map<String, Object>> summary;
+
             if (isBatchMode) {
-                // In batch mode, we create a list of objects, each containing a tcid and its checks
-                java.util.List<java.util.Map<String, Object>> summary = new java.util.ArrayList<>();
+                // Batch mode: build a list of {tcid, responseChecks}
+                summary = new java.util.ArrayList<>();
                 for (java.util.Map.Entry<String, List<ResponseCheck>> entry : checkResults.entrySet()) {
                     java.util.Map<String, Object> resultEntry = new java.util.HashMap<>();
                     resultEntry.put("tcid", entry.getKey());
                     resultEntry.put("responseChecks", entry.getValue());
                     summary.add(resultEntry);
                 }
-                mapper.writerWithDefaultPrettyPrinter().writeValue(new java.io.File(outPath), summary);
             } else {
-                // For single mode, wrap the single test result into the same structure used in batch mode
+                // Single mode – wrap into list for unified structure
+                summary = new java.util.ArrayList<>();
                 if (!checkResults.isEmpty()) {
                     java.util.Map<String, Object> entry = new java.util.HashMap<>();
                     String tcid = checkResults.keySet().iterator().next();
-                    
                     entry.put("tcid", tcid);
                     entry.put("responseChecks", checkResults.get(tcid));
-                    java.util.List<java.util.Map<String, Object>> summary = java.util.List.of(entry);
-                    mapper.writerWithDefaultPrettyPrinter().writeValue(new java.io.File(outPath), summary);
-                } else {
-                    System.err.println("No check results found to write.");
+                    summary.add(entry);
                 }
             }
-            System.out.println("[INFO] Response check results written to " + outPath);
+
+            // Serialize to compact JSON (single line) so the caller process can parse easily.
+            String json = mapper.writeValueAsString(summary);
+
+            // Use a clear prefix so the parent process can detect this line and extract the JSON.
+            System.out.println("CHECK_RESULTS_JSON:" + json);
         } catch (Exception ex) {
-            System.err.println("Failed to write response check results: " + ex.getMessage());
+            System.err.println("Failed to output response check results: " + ex.getMessage());
             ex.printStackTrace();
         }
     }

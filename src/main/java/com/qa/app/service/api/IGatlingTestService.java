@@ -2,7 +2,6 @@ package com.qa.app.service.api;
 
 import java.util.List;
 
-import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.GatlingTest;
 import com.qa.app.service.ServiceException;
 
@@ -15,7 +14,6 @@ public interface IGatlingTestService {
     void updateTest(GatlingTest test) throws ServiceException;
     void removeTest(int id) throws ServiceException;
     void toggleTestRunStatus(int id) throws ServiceException;
-    void runTest(GatlingTest test, GatlingLoadParameters params) throws ServiceException;
     void runTests(java.util.List<com.qa.app.model.GatlingTest> tests, com.qa.app.model.GatlingLoadParameters params, Runnable onComplete) throws ServiceException;
     List<GatlingTest> findTestsByProjectId(Integer projectId) throws ServiceException;
     void markTestsPending(java.util.List<com.qa.app.model.GatlingTest> tests) throws ServiceException;
