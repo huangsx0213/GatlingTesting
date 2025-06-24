@@ -43,6 +43,10 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 import javafx.scene.control.ComboBox;
+import com.qa.app.model.GatlingLoadParameters;
+import com.qa.app.model.threadgroups.StandardThreadGroup;
+import com.qa.app.model.threadgroups.ThreadGroupType;
+import javafx.application.Platform;
 
 public class GatlingTestViewModel implements Initializable {
 
@@ -1025,66 +1029,53 @@ public class GatlingTestViewModel implements Initializable {
             e.printStackTrace();
         }
 
-        try {
-            // Create and load the dialog
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/qa/app/ui/view/GatlingLoadDialog.fxml"));
-            DialogPane dialogPane = loader.load();
+        // Create default Gatling load parameters directly, bypassing the dialog
+        GatlingLoadParameters params = new GatlingLoadParameters();
+        params.setType(ThreadGroupType.STANDARD);
+        StandardThreadGroup config = new StandardThreadGroup();
+        config.setNumThreads(1);
+        config.setRampUp(0);
+        config.setLoops(1);
+        config.setScheduler(false);
+        config.setDelay(0);
+        params.setStandardThreadGroup(config);
 
-            GatlingLoadDialogViewModel controller = loader.getController();
+        List<GatlingTest> testsToRun = new ArrayList<>(selectedTests);
 
-            Dialog<ButtonType> dialog = new Dialog<>();
-            dialog.setDialogPane(dialogPane);
-            dialog.setTitle("Run Gatling Test(s)");
-            Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
-            stage.getIcons().add(new javafx.scene.image.Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
+        // Populate the fields for the focused test, to ensure latest data is used
+        GatlingTest focusedTest = testTable.getSelectionModel().getSelectedItem();
+        if (focusedTest != null && testsToRun.contains(focusedTest)) {
+            populateTestFromFields(focusedTest);
+        }
 
-            Optional<ButtonType> result = dialog.showAndWait();
+        if (mainViewModel != null) {
+            mainViewModel.updateStatus("Starting to run " + testsToRun.size() + " tests with default settings.", MainViewModel.StatusType.INFO);
+        }
 
-            if (result.isPresent() && result.get().getButtonData() == ButtonBar.ButtonData.OK_DONE) {
-                GatlingLoadParameters params = controller.getParameters();
-                List<GatlingTest> testsToRun = new ArrayList<>(selectedTests);
-
-                // Populate the fields for the focused test, to ensure latest data is used
-                GatlingTest focusedTest = testTable.getSelectionModel().getSelectedItem();
-                if (focusedTest != null && testsToRun.contains(focusedTest)) {
-                    populateTestFromFields(focusedTest);
-                }
-
-                if (mainViewModel != null) {
-                    mainViewModel.updateStatus("Starting to run " + testsToRun.size() + " tests", MainViewModel.StatusType.INFO);
-                }
-
-                // Define the UI refresh logic as a callback
-                Runnable onComplete = () -> {
-                    System.out.println("Gatling run finished. Refreshing UI.");
-                    loadTests();
-                    testTable.getSelectionModel().clearSelection();
-                    for(GatlingTest ranTest : testsToRun) {
-                        testTable.getItems().stream()
-                            .filter(t -> t.getId() == ranTest.getId())
-                            .findFirst()
-                            .ifPresent(t -> testTable.getSelectionModel().select(t));
-                    }
-                    if (testTable.getSelectionModel().getSelectedItem() != null) {
-                        showTestDetails(testTable.getSelectionModel().getSelectedItem());
-                    }
-                    testTable.refresh();
-                    mainViewModel.updateStatus("UI refreshed with test results.", MainViewModel.StatusType.SUCCESS);
-                };
-
-                // Execute all selected tests sequentially within the same thread group configuration
-                try {
-                    testService.runTests(testsToRun, params, onComplete);
-                } catch (ServiceException ex) {
-                    if (mainViewModel != null) {
-                        mainViewModel.updateStatus("Failed to run test(s): " + ex.getMessage(), MainViewModel.StatusType.ERROR);
-                    }
-                }
+        // Define the UI refresh logic as a callback
+        Runnable onComplete = () -> {
+            System.out.println("Gatling run finished. Refreshing UI.");
+            loadTests();
+            testTable.getSelectionModel().clearSelection();
+            for(GatlingTest ranTest : testsToRun) {
+                testTable.getItems().stream()
+                    .filter(t -> t.getId() == ranTest.getId())
+                    .findFirst()
+                    .ifPresent(t -> testTable.getSelectionModel().select(t));
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            if (testTable.getSelectionModel().getSelectedItem() != null) {
+                showTestDetails(testTable.getSelectionModel().getSelectedItem());
+            }
+            testTable.refresh();
+            mainViewModel.updateStatus("UI refreshed with test results.", MainViewModel.StatusType.SUCCESS);
+        };
+
+        // Execute all selected tests sequentially within the same thread group configuration
+        try {
+            testService.runTests(testsToRun, params, onComplete);
+        } catch (ServiceException ex) {
             if (mainViewModel != null) {
-                mainViewModel.updateStatus("Failed to open run dialog: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+                mainViewModel.updateStatus("Failed to run test(s): " + ex.getMessage(), MainViewModel.StatusType.ERROR);
             }
         }
     }
