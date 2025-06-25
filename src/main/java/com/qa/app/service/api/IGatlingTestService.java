@@ -14,7 +14,7 @@ public interface IGatlingTestService {
     void updateTest(GatlingTest test) throws ServiceException;
     void removeTest(int id) throws ServiceException;
     void toggleTestRunStatus(int id) throws ServiceException;
-    void runTest(GatlingTest test) throws ServiceException;
-    void runTestSuite(String suite) throws ServiceException;
+    void runTests(java.util.List<com.qa.app.model.GatlingTest> tests, com.qa.app.model.GatlingLoadParameters params, Runnable onComplete) throws ServiceException;
     List<GatlingTest> findTestsByProjectId(Integer projectId) throws ServiceException;
+    void markTestsPending(java.util.List<com.qa.app.model.GatlingTest> tests) throws ServiceException;
 }

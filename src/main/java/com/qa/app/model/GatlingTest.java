@@ -12,9 +12,7 @@ public class GatlingTest {
     private final StringProperty tcid = new SimpleStringProperty();
     private final StringProperty descriptions = new SimpleStringProperty();
     private final StringProperty conditions = new SimpleStringProperty();
-    private final StringProperty expStatus = new SimpleStringProperty();
-    private final StringProperty expResult = new SimpleStringProperty();
-    private final StringProperty saveFields = new SimpleStringProperty();
+    private final StringProperty responseChecks = new SimpleStringProperty();
     private final IntegerProperty endpointId = new SimpleIntegerProperty();
     private final StringProperty headers = new SimpleStringProperty();
     private final StringProperty body = new SimpleStringProperty();
@@ -26,6 +24,10 @@ public class GatlingTest {
     private final IntegerProperty projectId = new SimpleIntegerProperty();
     private Map<String, String> dynamicVariables = new HashMap<>();
     private Map<String, String> headersDynamicVariables = new HashMap<>();
+    private String reportPath;
+    private Boolean lastRunPassed;
+
+    // Deprecated fields removed: expStatus, saveFields
 
     public GatlingTest() {
     }
@@ -43,8 +45,8 @@ public class GatlingTest {
     }
 
     public GatlingTest(int id, boolean isEnabled, String suite, String tcid, String descriptions,
-                      String conditions, String expStatus, String expResult,
-                      String saveFields, int endpointId, String headers, String body,
+                      String conditions, String responseChecks,
+                      int endpointId, String headers, String body,
                       String tags, int waitTime, int bodyTemplateId, int headersTemplateId, Map<String, String> dynamicVariables, Map<String, String> headersDynamicVariables) {
         this.id.set(id);
         this.isEnabled.set(isEnabled);
@@ -52,9 +54,7 @@ public class GatlingTest {
         this.tcid.set(tcid);
         this.descriptions.set(descriptions);
         this.conditions.set(conditions);
-        this.expStatus.set(expStatus);
-        this.expResult.set(expResult);
-        this.saveFields.set(saveFields);
+        this.responseChecks.set(responseChecks);
         this.endpointId.set(endpointId);
         this.headers.set(headers);
         this.body.set(body);
@@ -64,6 +64,32 @@ public class GatlingTest {
         this.headersTemplateId.set(headersTemplateId);
         this.dynamicVariables = dynamicVariables;
         this.headersDynamicVariables = headersDynamicVariables;
+    }
+
+    /**
+     * Copy constructor for duplication.
+     * @param other The GatlingTest to copy.
+     */
+    public GatlingTest(GatlingTest other) {
+        // Do not copy ID to allow for new insertion
+        this.isEnabled.set(false); // Default to disabled
+        this.suite.set(other.getSuite());
+        this.tcid.set(other.getTcid() + "_copy");
+        this.descriptions.set(other.getDescriptions());
+        this.conditions.set(other.getConditions());
+        this.responseChecks.set(other.getResponseChecks());
+        this.endpointId.set(other.getEndpointId());
+        this.headers.set(other.getHeaders());
+        this.body.set(other.getBody());
+        this.tags.set(other.getTags());
+        this.waitTime.set(other.getWaitTime());
+        this.bodyTemplateId.set(other.getBodyTemplateId());
+        this.headersTemplateId.set(other.getHeadersTemplateId());
+        this.endpointName.set(other.getEndpointName());
+        this.projectId.set(other.getProjectId());
+        // Deep copy maps to avoid shared references
+        this.dynamicVariables = new HashMap<>(other.getBodyDynamicVariables());
+        this.headersDynamicVariables = new HashMap<>(other.getHeadersDynamicVariables());
     }
 
     // Getters and Setters
@@ -91,17 +117,9 @@ public class GatlingTest {
     public void setConditions(String conditions) { this.conditions.set(conditions); }
     public StringProperty conditionsProperty() { return conditions; }
 
-    public String getExpStatus() { return expStatus.get(); }
-    public void setExpStatus(String expStatus) { this.expStatus.set(expStatus); }
-    public StringProperty expStatusProperty() { return expStatus; }
-
-    public String getExpResult() { return expResult.get(); }
-    public void setExpResult(String expResult) { this.expResult.set(expResult); }
-    public StringProperty expResultProperty() { return expResult; }
-
-    public String getSaveFields() { return saveFields.get(); }
-    public void setSaveFields(String saveFields) { this.saveFields.set(saveFields); }
-    public StringProperty saveFieldsProperty() { return saveFields; }
+    public String getResponseChecks() { return responseChecks.get(); }
+    public void setResponseChecks(String responseChecks) { this.responseChecks.set(responseChecks); }
+    public StringProperty responseChecksProperty() { return responseChecks; }
 
     public int getEndpointId() { return endpointId.get(); }
     public void setEndpointId(int endpointId) { this.endpointId.set(endpointId); }
@@ -151,6 +169,22 @@ public class GatlingTest {
     }
     public IntegerProperty projectIdProperty() {
         return projectId;
+    }
+
+    public String getReportPath() {
+        return reportPath;
+    }
+
+    public void setReportPath(String reportPath) {
+        this.reportPath = reportPath;
+    }
+
+    public Boolean getLastRunPassed() {
+        return lastRunPassed;
+    }
+
+    public void setLastRunPassed(Boolean lastRunPassed) {
+        this.lastRunPassed = lastRunPassed;
     }
 
     @Override

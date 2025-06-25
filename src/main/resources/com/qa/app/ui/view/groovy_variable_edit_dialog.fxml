@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ButtonType?>
+<?import javafx.scene.control.DialogPane?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.Priority?>
+
+<DialogPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+    <headerText>
+        Edit Custom Groovy Variable
+    </headerText>
+    <content>
+        <GridPane hgap="10" vgap="10">
+            <padding>
+                <Insets top="10" />
+            </padding>
+            <Label text="Name:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+            <TextField fx:id="nameField" GridPane.rowIndex="0" GridPane.columnIndex="1" />
+
+            <Label text="Format:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
+            <TextField fx:id="formatField" GridPane.rowIndex="1" GridPane.columnIndex="1" />
+            
+            <Label text="Description:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
+            <TextField fx:id="descriptionField" GridPane.rowIndex="2" GridPane.columnIndex="1" />
+
+            <Label text="Groovy Script:" GridPane.rowIndex="3" GridPane.columnIndex="0" />
+            <TextArea fx:id="scriptArea" prefRowCount="10" wrapText="true" GridPane.rowIndex="4" GridPane.columnIndex="0" GridPane.columnSpan="2" />
+        </GridPane>
+    </content>
+    <buttonTypes>
+        <ButtonType fx:id="okButton" text="OK" buttonData="OK_DONE" />
+        <ButtonType text="Cancel" buttonData="CANCEL_CLOSE" />
+    </buttonTypes>
+</DialogPane> 

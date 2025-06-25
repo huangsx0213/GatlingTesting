@@ -19,7 +19,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     @Override
     public void addTest(GatlingTest test) throws SQLException {
         String sql = "INSERT INTO gatling_tests (is_enabled, suite, tcid, descriptions, conditions, " +
-                    "exp_status, exp_result, save_fields, endpoint_name, tags, wait_time, headers_template_id, body_template_id, body_dynamic_variables, headers_dynamic_variables, project_id) " +
+                    "endpoint_name, tags, wait_time, headers_template_id, body_template_id, body_dynamic_variables, headers_dynamic_variables, response_checks, project_id, report_path, last_run_passed) " +
                     "VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -28,20 +28,24 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             pstmt.setString(3, test.getTcid());
             pstmt.setString(4, test.getDescriptions());
             pstmt.setString(5, test.getConditions());
-            pstmt.setString(6, test.getExpStatus());
-            pstmt.setString(7, test.getExpResult());
-            pstmt.setString(8, test.getSaveFields());
-            pstmt.setString(9, test.getEndpointName());
-            pstmt.setString(10, test.getTags());
-            pstmt.setInt(11, test.getWaitTime());
-            pstmt.setInt(12, test.getHeadersTemplateId());
-            pstmt.setInt(13, test.getBodyTemplateId());
-            pstmt.setString(14, convertMapToJson(test.getBodyDynamicVariables()));
-            pstmt.setString(15, convertMapToJson(test.getHeadersDynamicVariables()));
+            pstmt.setString(6, test.getEndpointName());
+            pstmt.setString(7, test.getTags());
+            pstmt.setInt(8, test.getWaitTime());
+            pstmt.setInt(9, test.getHeadersTemplateId());
+            pstmt.setInt(10, test.getBodyTemplateId());
+            pstmt.setString(11, convertMapToJson(test.getBodyDynamicVariables()));
+            pstmt.setString(12, convertMapToJson(test.getHeadersDynamicVariables()));
+            pstmt.setString(13, test.getResponseChecks());
             if (test.getProjectId() != null) {
-                pstmt.setInt(16, test.getProjectId());
+                pstmt.setInt(14, test.getProjectId());
             } else {
-                pstmt.setNull(16, java.sql.Types.INTEGER);
+                pstmt.setNull(14, java.sql.Types.INTEGER);
+            }
+            pstmt.setString(15, test.getReportPath());
+            if (test.getLastRunPassed() != null) {
+                pstmt.setBoolean(16, test.getLastRunPassed());
+            } else {
+                pstmt.setNull(16, java.sql.Types.BOOLEAN);
             }
             pstmt.executeUpdate();
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
@@ -117,9 +121,8 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     @Override
     public void updateTest(GatlingTest test) throws SQLException {
         String sql = "UPDATE gatling_tests SET is_enabled = ?, suite = ?, tcid = ?, descriptions = ?, " +
-                    "conditions = ?, exp_status = ?, exp_result = ?, save_fields = ?, " +
-                    "endpoint_name = ?, tags = ?, wait_time = ?, headers_template_id = ?, " +
-                    "body_template_id = ?, body_dynamic_variables = ?, headers_dynamic_variables = ? WHERE id = ?";
+                    "conditions = ?, endpoint_name = ?, tags = ?, wait_time = ?, headers_template_id = ?, " +
+                    "body_template_id = ?, body_dynamic_variables = ?, headers_dynamic_variables = ?, response_checks = ?, project_id = ?, report_path = ?, last_run_passed = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setBoolean(1, test.isEnabled());
@@ -127,17 +130,26 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             pstmt.setString(3, test.getTcid());
             pstmt.setString(4, test.getDescriptions());
             pstmt.setString(5, test.getConditions());
-            pstmt.setString(6, test.getExpStatus());
-            pstmt.setString(7, test.getExpResult());
-            pstmt.setString(8, test.getSaveFields());
-            pstmt.setString(9, test.getEndpointName());
-            pstmt.setString(10, test.getTags());
-            pstmt.setInt(11, test.getWaitTime());
-            pstmt.setInt(12, test.getHeadersTemplateId());
-            pstmt.setInt(13, test.getBodyTemplateId());
-            pstmt.setString(14, convertMapToJson(test.getBodyDynamicVariables()));
-            pstmt.setString(15, convertMapToJson(test.getHeadersDynamicVariables()));
-            pstmt.setInt(16, test.getId());
+            pstmt.setString(6, test.getEndpointName());
+            pstmt.setString(7, test.getTags());
+            pstmt.setInt(8, test.getWaitTime());
+            pstmt.setInt(9, test.getHeadersTemplateId());
+            pstmt.setInt(10, test.getBodyTemplateId());
+            pstmt.setString(11, convertMapToJson(test.getBodyDynamicVariables()));
+            pstmt.setString(12, convertMapToJson(test.getHeadersDynamicVariables()));
+            pstmt.setString(13, test.getResponseChecks());
+            if (test.getProjectId() != null) {
+                pstmt.setInt(14, test.getProjectId());
+            } else {
+                pstmt.setNull(14, java.sql.Types.INTEGER);
+            }
+            pstmt.setString(15, test.getReportPath());
+            if (test.getLastRunPassed() != null) {
+                pstmt.setBoolean(16, test.getLastRunPassed());
+            } else {
+                pstmt.setNull(16, java.sql.Types.BOOLEAN);
+            }
+            pstmt.setInt(17, test.getId());
             pstmt.executeUpdate();
         }
     }
@@ -186,9 +198,6 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
         test.setTcid(rs.getString("tcid"));
         test.setDescriptions(rs.getString("descriptions"));
         test.setConditions(rs.getString("conditions"));
-        test.setExpStatus(rs.getString("exp_status"));
-        test.setExpResult(rs.getString("exp_result"));
-        test.setSaveFields(rs.getString("save_fields"));
         test.setEndpointName(rs.getString("endpoint_name"));
         test.setTags(rs.getString("tags"));
         test.setWaitTime(rs.getInt("wait_time"));
@@ -196,9 +205,17 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
         test.setBodyTemplateId(rs.getInt("body_template_id"));
         test.setDynamicVariables(convertJsonToMap(rs.getString("body_dynamic_variables")));
         test.setHeadersDynamicVariables(convertJsonToMap(rs.getString("headers_dynamic_variables")));
+        test.setResponseChecks(rs.getString("response_checks"));
         Object pid = rs.getObject("project_id");
         if (pid != null) {
             test.setProjectId((Integer)pid);
+        }
+        test.setReportPath(rs.getString("report_path"));
+        boolean lastRunPassed = rs.getBoolean("last_run_passed");
+        if (!rs.wasNull()) {
+            test.setLastRunPassed(lastRunPassed);
+        } else {
+            test.setLastRunPassed(null);
         }
         return test;
     }

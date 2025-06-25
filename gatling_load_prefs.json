@@ -1,0 +1,33 @@
+{
+  "standard" : {
+    "numThreads" : 1,
+    "rampUp" : 0,
+    "loops" : 1,
+    "scheduler" : false,
+    "duration" : 30,
+    "delay" : 0
+  },
+  "stepping" : {
+    "numThreads" : 5,
+    "initialDelay" : 0,
+    "startUsers" : 0,
+    "incrementUsers" : 1,
+    "incrementTime" : 10,
+    "holdLoad" : 20
+  },
+  "ultimate" : {
+    "steps" : [ {
+      "startTime" : 0,
+      "initialLoad" : 1,
+      "startupTime" : 1,
+      "holdTime" : 60,
+      "shutdownTime" : 1
+    }, {
+      "startTime" : 30,
+      "initialLoad" : 1,
+      "startupTime" : 1,
+      "holdTime" : 60,
+      "shutdownTime" : 1
+    } ]
+  }
+}

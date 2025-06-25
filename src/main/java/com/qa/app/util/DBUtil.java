@@ -12,7 +12,7 @@ public class DBUtil {
         try {
             Class.forName("org.sqlite.JDBC");
             Connection conn = DriverManager.getConnection(URL);
-            // 启用SQLite外键约束
+            // enable SQLite foreign key constraints
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("PRAGMA foreign_keys = ON");
             }
@@ -47,15 +47,15 @@ public class DBUtil {
                     + " wait_time INTEGER DEFAULT 0,"
                     + " conditions TEXT,"
                     + " descriptions TEXT,"
-                    + " exp_status TEXT,"
-                    + " exp_result TEXT,"
-                    + " save_fields TEXT,"
                     + " endpoint_name TEXT NOT NULL,"
                     + " headers_template_id INTEGER,"
                     + " body_template_id INTEGER,"
                     + " headers_dynamic_variables TEXT,"
                     + " body_dynamic_variables TEXT,"
+                    + " response_checks TEXT,"
                     + " project_id INTEGER,"
+                    + " report_path TEXT,"
+                    + " last_run_passed BOOLEAN,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
             stmt.execute(testsSql);
@@ -105,6 +105,19 @@ public class DBUtil {
                     + ");";
             stmt.execute(endpointSql);
 
+            // Create groovy_variables table if it doesn't exist
+            String groovyVariableSql = "CREATE TABLE IF NOT EXISTS groovy_variables ("
+                    + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "name TEXT NOT NULL, "
+                    + "value TEXT, "
+                    + "environment_id INTEGER, "
+                    + "project_id INTEGER, "
+                    + "FOREIGN KEY (environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
+                    + "FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
+                    + " UNIQUE(name, environment_id)"
+                    + ");";
+            stmt.execute(groovyVariableSql);
+
             // Create project table if it doesn't exist
             String projectSql = "CREATE TABLE IF NOT EXISTS project ("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -112,6 +125,39 @@ public class DBUtil {
                     + " description TEXT"
                     + ");";
             stmt.execute(projectSql);
+            
+            // Create scenarios table
+            String scenarioSql = "CREATE TABLE IF NOT EXISTS scenario (" +
+                    " id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    " name TEXT NOT NULL UNIQUE," +
+                    " desc TEXT," +
+                    " thread_group_json TEXT," +
+                    " schedule_json TEXT" +
+                    ");";
+            stmt.execute(scenarioSql);
+
+            // Create scenario_step table
+            String stepSql = "CREATE TABLE IF NOT EXISTS scenario_step (" +
+                    " id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    " scenario_id INTEGER NOT NULL," +
+                    " order_index INTEGER NOT NULL," +
+                    " test_tcid TEXT NOT NULL," +
+                    " wait_time INTEGER DEFAULT 0," +
+                    " tags TEXT," +
+                    " FOREIGN KEY(scenario_id) REFERENCES scenario(id) ON DELETE CASCADE ON UPDATE CASCADE" +
+                    ");";
+            stmt.execute(stepSql);
+
+            // Create scenario_schedule table
+            String schedSql = "CREATE TABLE IF NOT EXISTS scenario_schedule (" +
+                    " id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    " scenario_id INTEGER NOT NULL," +
+                    " cron_expr TEXT NOT NULL," +
+                    " next_run_at TEXT," +
+                    " enabled BOOLEAN DEFAULT 1," +
+                    " FOREIGN KEY(scenario_id) REFERENCES scenario(id) ON DELETE CASCADE ON UPDATE CASCADE" +
+                    ");";
+            stmt.execute(schedSql);
             
             System.out.println("Database schema initialized. All tables are up to date.");
         } catch (SQLException e) {
