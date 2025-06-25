@@ -42,7 +42,7 @@ public class VariableGenerator {
         }
     }
 
-    private static List<GroovyVariable> CUSTOM_VARIABLES;
+    private static List<com.qa.app.util.GroovyVariable> CUSTOM_VARIABLES;
     private static final IVariableService variableService = new VariableServiceImpl();
 
     static {
@@ -87,7 +87,7 @@ public class VariableGenerator {
         }
         // Add custom rules
         if (CUSTOM_VARIABLES != null) {
-            for (GroovyVariable variable : CUSTOM_VARIABLES) {
+            for (com.qa.app.util.GroovyVariable variable : CUSTOM_VARIABLES) {
                 definitions.add(java.util.Map.of("format", variable.getFormat(), "description", variable.getDescription()));
             }
         }
@@ -101,7 +101,7 @@ public class VariableGenerator {
 
         // 1. Check for custom Groovy variables first
         if (CUSTOM_VARIABLES != null) {
-            for (GroovyVariable variable : CUSTOM_VARIABLES) {
+            for (com.qa.app.util.GroovyVariable variable : CUSTOM_VARIABLES) {
                 Matcher matcher = variable.getMatcher(value);
                 if (matcher.matches()) {
                     int groupCount = matcher.groupCount();

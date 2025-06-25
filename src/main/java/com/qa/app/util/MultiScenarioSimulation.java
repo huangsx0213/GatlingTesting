@@ -11,6 +11,7 @@ import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
 import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
+import com.qa.app.util.RuntimeTemplateProcessor;
 
 import java.io.File;
 import java.io.IOException;
@@ -118,6 +119,7 @@ public class MultiScenarioSimulation extends Simulation {
     }
 
     private HttpRequestActionBuilder buildRequest(GatlingTest test, Endpoint ep) {
+        final RuntimeTemplateProcessor templateProcessor = new RuntimeTemplateProcessor();
         String reqName = test.getTcid();
         String method = ep.getMethod() == null ? "GET" : ep.getMethod().toUpperCase();
         HttpRequestActionBuilder req;
@@ -189,7 +191,7 @@ public class MultiScenarioSimulation extends Simulation {
                         steps.add(rampUsers(u).during(Duration.ofSeconds(Math.max(1,st.getIncrementTime()))));
                     }
                 }
-                return scn.injectOpen(steps);
+                return scn.injectOpen(steps.toArray(new OpenInjectionStep[0]));
             }
             case ULTIMATE -> {
                 UltimateThreadGroup ut=p.getUltimateThreadGroup();
@@ -202,7 +204,7 @@ public class MultiScenarioSimulation extends Simulation {
                     inj.add(rampUsers(step.getInitialLoad()).during(Duration.ofSeconds(step.getStartupTime())));
                     lastEnd=step.getStartTime()+step.getStartupTime();
                 }
-                return scn.injectOpen(inj);
+                return scn.injectOpen(inj.toArray(new OpenInjectionStep[0]));
             }
             case STANDARD -> {
                 StandardThreadGroup std=p.getStandardThreadGroup();

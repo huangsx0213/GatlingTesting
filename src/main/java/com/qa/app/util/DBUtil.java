@@ -54,6 +54,8 @@ public class DBUtil {
                     + " body_dynamic_variables TEXT,"
                     + " response_checks TEXT,"
                     + " project_id INTEGER,"
+                    + " report_path TEXT,"
+                    + " last_run_passed BOOLEAN,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
             stmt.execute(testsSql);

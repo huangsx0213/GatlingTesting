@@ -30,6 +30,11 @@ import com.qa.app.model.Operator;
 import javafx.util.converter.DefaultStringConverter;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleStringProperty;
+import com.qa.app.model.GatlingLoadParameters;
+import com.qa.app.model.threadgroups.StandardThreadGroup;
+import com.qa.app.model.threadgroups.ThreadGroupType;
+import com.qa.app.ui.view.FunctionalTestReportStage;
+import javafx.beans.binding.Bindings;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -39,9 +44,6 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 import javafx.scene.control.ComboBox;
-import com.qa.app.model.GatlingLoadParameters;
-import com.qa.app.model.threadgroups.StandardThreadGroup;
-import com.qa.app.model.threadgroups.ThreadGroupType;
 
 public class GatlingTestViewModel implements Initializable {
 
@@ -93,6 +95,8 @@ public class GatlingTestViewModel implements Initializable {
     private Button clearButton;
     @FXML
     private Button runTestButton;
+    @FXML
+    private Button viewReportButton;
     @FXML
     private TableView<GatlingTest> testTable;
     @FXML
@@ -229,6 +233,16 @@ public class GatlingTestViewModel implements Initializable {
         if (enabledFilterCombo != null) {
             enabledFilterCombo.setItems(FXCollections.observableArrayList("All", "Enabled", "Disabled"));
             enabledFilterCombo.setValue("All");
+        }
+
+        if (viewReportButton != null) {
+            viewReportButton.disableProperty().bind(
+                testTable.getSelectionModel().selectedItemProperty().isNull()
+                .or(Bindings.createBooleanBinding(() -> {
+                    GatlingTest selected = testTable.getSelectionModel().getSelectedItem();
+                    return selected == null || selected.getReportPath() == null || selected.getReportPath().isEmpty();
+                }, testTable.getSelectionModel().selectedItemProperty()))
+            );
         }
     }
 
@@ -1037,6 +1051,17 @@ public class GatlingTestViewModel implements Initializable {
     private void handleClearFields() {
         clearFields();
         testTable.getSelectionModel().clearSelection();
+    }
+
+    @FXML
+    private void handleViewReport() {
+        GatlingTest selectedTest = testTable.getSelectionModel().getSelectedItem();
+        if (selectedTest != null && selectedTest.getReportPath() != null && !selectedTest.getReportPath().isEmpty()) {
+            new FunctionalTestReportStage(selectedTest.getReportPath());
+        } else {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, "No report available for the selected test.", ButtonType.OK);
+            alert.showAndWait();
+        }
     }
 
     @FXML

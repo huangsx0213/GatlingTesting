@@ -19,8 +19,8 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     @Override
     public void addTest(GatlingTest test) throws SQLException {
         String sql = "INSERT INTO gatling_tests (is_enabled, suite, tcid, descriptions, conditions, " +
-                    "endpoint_name, tags, wait_time, headers_template_id, body_template_id, body_dynamic_variables, headers_dynamic_variables, response_checks, project_id) " +
-                    "VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "endpoint_name, tags, wait_time, headers_template_id, body_template_id, body_dynamic_variables, headers_dynamic_variables, response_checks, project_id, report_path, last_run_passed) " +
+                    "VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setBoolean(1, test.isEnabled());
@@ -40,6 +40,12 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
                 pstmt.setInt(14, test.getProjectId());
             } else {
                 pstmt.setNull(14, java.sql.Types.INTEGER);
+            }
+            pstmt.setString(15, test.getReportPath());
+            if (test.getLastRunPassed() != null) {
+                pstmt.setBoolean(16, test.getLastRunPassed());
+            } else {
+                pstmt.setNull(16, java.sql.Types.BOOLEAN);
             }
             pstmt.executeUpdate();
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
@@ -116,7 +122,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     public void updateTest(GatlingTest test) throws SQLException {
         String sql = "UPDATE gatling_tests SET is_enabled = ?, suite = ?, tcid = ?, descriptions = ?, " +
                     "conditions = ?, endpoint_name = ?, tags = ?, wait_time = ?, headers_template_id = ?, " +
-                    "body_template_id = ?, body_dynamic_variables = ?, headers_dynamic_variables = ?, response_checks = ?, project_id = ? WHERE id = ?";
+                    "body_template_id = ?, body_dynamic_variables = ?, headers_dynamic_variables = ?, response_checks = ?, project_id = ?, report_path = ?, last_run_passed = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setBoolean(1, test.isEnabled());
@@ -137,7 +143,13 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             } else {
                 pstmt.setNull(14, java.sql.Types.INTEGER);
             }
-            pstmt.setInt(15, test.getId());
+            pstmt.setString(15, test.getReportPath());
+            if (test.getLastRunPassed() != null) {
+                pstmt.setBoolean(16, test.getLastRunPassed());
+            } else {
+                pstmt.setNull(16, java.sql.Types.BOOLEAN);
+            }
+            pstmt.setInt(17, test.getId());
             pstmt.executeUpdate();
         }
     }
@@ -197,6 +209,13 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
         Object pid = rs.getObject("project_id");
         if (pid != null) {
             test.setProjectId((Integer)pid);
+        }
+        test.setReportPath(rs.getString("report_path"));
+        boolean lastRunPassed = rs.getBoolean("last_run_passed");
+        if (!rs.wasNull()) {
+            test.setLastRunPassed(lastRunPassed);
+        } else {
+            test.setLastRunPassed(null);
         }
         return test;
     }

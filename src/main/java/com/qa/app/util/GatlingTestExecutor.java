@@ -2,30 +2,40 @@ package com.qa.app.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.qa.app.dao.api.IGatlingTestDao;
 import com.qa.app.dao.impl.GatlingTestDaoImpl;
 import com.qa.app.model.Endpoint;
 import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.GatlingTest;
+import com.qa.app.model.reports.CaseReport;
+import com.qa.app.model.reports.FunctionalTestReport;
+import com.qa.app.model.reports.ModeGroup;
+import com.qa.app.model.reports.TestMode;
 import com.qa.app.model.threadgroups.SteppingThreadGroup;
 import com.qa.app.model.threadgroups.UltimateThreadGroupStep;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.InputStreamReader;
-import java.io.BufferedReader;
+import java.io.*;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class GatlingTestExecutor {
 
     /**
-     * Prefix used by DynamicJavaSimulation to output response check results to stdout.
+     * Prefix used by DynamicJavaSimulation to output the new report format to stdout.
      */
+    private static final String REPORT_PREFIX = "REPORT_JSON:";
     private static final String RESULT_PREFIX = "CHECK_RESULTS_JSON:";
 
     private static String assembleClasspath() {
@@ -158,8 +168,8 @@ public class GatlingTestExecutor {
                         String line;
                         while ((line = reader.readLine()) != null) {
                             System.out.println(line); // Pass Gatling output to our console
-                            if (line.startsWith(RESULT_PREFIX)) {
-                                jsonResult = line.substring(RESULT_PREFIX.length());
+                            if (line.startsWith(REPORT_PREFIX)) {
+                                jsonResult = line.substring(REPORT_PREFIX.length());
                             }
                         }
                     }
@@ -170,9 +180,9 @@ public class GatlingTestExecutor {
                         System.out.println("Gatling test execution completed.");
                         com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test " + test.getTcid() + " Completed", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
                         if (jsonResult != null) {
-                            updateTestsWithResultsFromJson(java.util.Collections.singletonList(test), jsonResult);
+                            processAndSaveReports(jsonResult, java.util.Collections.singletonList(test));
                         } else {
-                            System.err.println("Could not find check results in Gatling output. DB results will not be updated.");
+                            System.err.println("Could not find report results in Gatling output. DB results will not be updated.");
                         }
                     } else {
                         System.out.println("Gatling test execution failed, exit code: " + exitCode);
@@ -275,8 +285,8 @@ public class GatlingTestExecutor {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     System.out.println(line);
-                    if (line.startsWith(RESULT_PREFIX)) {
-                        jsonResult = line.substring(RESULT_PREFIX.length());
+                    if (line.startsWith(REPORT_PREFIX)) {
+                        jsonResult = line.substring(REPORT_PREFIX.length());
                     }
                 }
             }
@@ -284,11 +294,12 @@ public class GatlingTestExecutor {
             int exitCode = process.waitFor();
 
             if (exitCode == 0) {
-                System.out.println("Gatling test execution completed synchronously.");
+                System.out.println("Gatling synchronous execution completed.");
+                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test " + test.getTcid() + " Completed", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
                 if (jsonResult != null) {
-                    updateTestsWithResultsFromJson(java.util.Collections.singletonList(test), jsonResult);
+                    processAndSaveReports(jsonResult, java.util.Collections.singletonList(test));
                 } else {
-                    System.err.println("Could not find check results in Gatling output. DB results will not be updated.");
+                    System.err.println("Could not find report results in Gatling output. DB results will not be updated.");
                 }
             } else {
                 throw new RuntimeException("Gatling test execution failed, exit code: " + exitCode);
@@ -375,8 +386,8 @@ public class GatlingTestExecutor {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     System.out.println(line);
-                    if (line.startsWith(RESULT_PREFIX)) {
-                        jsonResult = line.substring(RESULT_PREFIX.length());
+                    if (line.startsWith(REPORT_PREFIX)) {
+                        jsonResult = line.substring(REPORT_PREFIX.length());
                     }
                 }
             }
@@ -386,7 +397,7 @@ public class GatlingTestExecutor {
             if (exitCode == 0) {
                 System.out.println("Gatling batch execution completed.");
                 if (jsonResult != null) {
-                    updateTestsWithResultsFromJson(tests, jsonResult);
+                    processAndSaveReports(jsonResult, tests);
                 } else {
                     System.err.println("Could not find check results in Gatling output. DB results will not be updated.");
                 }
@@ -401,7 +412,11 @@ public class GatlingTestExecutor {
     }
 
     // Async batch execution, avoid blocking the caller (e.g., JavaFX UI thread)
-    public static void executeBatch(java.util.List<GatlingTest> tests, GatlingLoadParameters params, java.util.List<Endpoint> endpoints, Runnable onComplete) {
+    public static void executeBatch(java.util.List<GatlingTest> tests, GatlingLoadParameters params,
+                                    java.util.List<Endpoint> endpoints,
+                                    java.util.List<String> origins,
+                                    java.util.List<String> modes,
+                                    Runnable onComplete) {
         // Wrap the entire heavy-lifting logic inside a background thread so the JavaFX UI thread stays responsive
         new Thread(() -> {
             try {
@@ -409,6 +424,9 @@ public class GatlingTestExecutor {
 
                 if (tests == null || endpoints == null || tests.size() != endpoints.size()) {
                     throw new IllegalArgumentException("Tests and Endpoints list size mismatch or null");
+                }
+                if (origins != null && modes != null && (origins.size() != tests.size() || modes.size() != tests.size())) {
+                    throw new IllegalArgumentException("Origins/Modes list size mismatch");
                 }
 
                 String javaHome = System.getProperty("java.home");
@@ -424,12 +442,16 @@ public class GatlingTestExecutor {
 
                 com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
-                // Build BatchItem list
+                // Build BatchItem list with extra meta
                 java.util.List<java.util.Map<String, Object>> batchItems = new java.util.ArrayList<>();
                 for (int i = 0; i < tests.size(); i++) {
                     java.util.Map<String, Object> map = new java.util.HashMap<>();
                     map.put("test", tests.get(i));
                     map.put("endpoint", endpoints.get(i));
+                    if (origins != null && modes != null) {
+                        map.put("origin", origins.get(i));
+                        map.put("mode", modes.get(i));
+                    }
                     batchItems.add(map);
                 }
 
@@ -481,8 +503,8 @@ public class GatlingTestExecutor {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         System.out.println(line);
-                        if (line.startsWith(RESULT_PREFIX)) {
-                            jsonResult = line.substring(RESULT_PREFIX.length());
+                        if (line.startsWith(REPORT_PREFIX)) {
+                            jsonResult = line.substring(REPORT_PREFIX.length());
                         }
                     }
                 }
@@ -493,7 +515,7 @@ public class GatlingTestExecutor {
                     System.out.println("Gatling batch execution completed.");
                     com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test(s) completed.", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
                     if (jsonResult != null) {
-                        updateTestsWithResultsFromJson(tests, jsonResult);
+                        processAndSaveReports(jsonResult, tests);
                     } else {
                         System.err.println("Could not find check results in Gatling output. DB results will not be updated.");
                     }
@@ -515,6 +537,122 @@ public class GatlingTestExecutor {
                 com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test(s) Exception: " + e.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
             }
         }, "gatling-batch-runner").start();
+    }
+
+    // Backward compatible method (without dependency metadata)
+    public static void executeBatch(java.util.List<GatlingTest> tests, GatlingLoadParameters params,
+                                    java.util.List<Endpoint> endpoints, Runnable onComplete) {
+        executeBatch(tests, params, endpoints, null, null, onComplete);
+    }
+
+    private static void processAndSaveReports(String jsonContent, List<GatlingTest> executedTests) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.enable(SerializationFeature.INDENT_OUTPUT);
+
+            TypeReference<List<Map<String, Object>>> typeRef = new TypeReference<>() {};
+            List<Map<String, Object>> reportItems = mapper.readValue(jsonContent, typeRef);
+
+            // Group reports by origin TCID
+            Map<String, List<Map<String, Object>>> groupedByOrigin = reportItems.stream()
+                    .collect(Collectors.groupingBy(item -> (String) item.get("origin")));
+
+            IGatlingTestDao testDao = new GatlingTestDaoImpl();
+
+            // NEW: collect all final reports for batch aggregation
+            List<FunctionalTestReport> aggregatedReports = new ArrayList<>();
+
+            for (Map.Entry<String, List<Map<String, Object>>> entry : groupedByOrigin.entrySet()) {
+                String originTcid = entry.getKey();
+                List<Map<String, Object>> itemsForOrigin = entry.getValue();
+
+                FunctionalTestReport finalReport = new FunctionalTestReport();
+                finalReport.setOriginTcid(originTcid);
+                finalReport.setExecutedAt(ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+
+                // Find the main test to get suite info
+                executedTests.stream()
+                        .filter(t -> t.getTcid().equals(originTcid))
+                        .findFirst()
+                        .ifPresent(mainTest -> finalReport.setSuite(mainTest.getSuite()));
+
+                // Group by mode directly based on each entry to accurately separate SETUP / MAIN / TEARDOWN
+                Map<TestMode, List<CaseReport>> casesByMode = new java.util.EnumMap<>(TestMode.class);
+                for (Map<String, Object> itemMap : itemsForOrigin) {
+                    String modeStr = (String) itemMap.getOrDefault("mode", "MAIN");
+                    TestMode mode = TestMode.valueOf(modeStr);
+                    CaseReport cr = mapper.convertValue(itemMap.get("report"), CaseReport.class);
+                    casesByMode.computeIfAbsent(mode, k -> new java.util.ArrayList<>()).add(cr);
+                }
+                
+                List<ModeGroup> modeGroups = new ArrayList<>();
+                EnumSet.of(TestMode.SETUP, TestMode.MAIN, TestMode.TEARDOWN, TestMode.CONDITION).forEach(mode -> {
+                    if (casesByMode.containsKey(mode)) {
+                        ModeGroup group = new ModeGroup();
+                        group.setMode(mode);
+                        group.setCases(casesByMode.get(mode));
+                        modeGroups.add(group);
+                    }
+                });
+
+                finalReport.setGroups(modeGroups);
+
+                // Determine overall pass status
+                boolean overallPassed = modeGroups.stream()
+                        .flatMap(mg -> mg.getCases().stream())
+                        .allMatch(CaseReport::isPassed);
+
+                // Save report to file
+                String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+                String reportFileName = String.format("functional_%s_%s.json", originTcid, timestamp);
+
+                Path reportDir = Paths.get(System.getProperty("user.dir"), "target", "gatling", "reports", "functional");
+                Files.createDirectories(reportDir);
+                Path reportPath = reportDir.resolve(reportFileName);
+
+                try (Writer writer = new BufferedWriter(new FileWriter(reportPath.toFile()))) {
+                    mapper.writeValue(writer, finalReport);
+                }
+
+                // Add to aggregate list
+                aggregatedReports.add(finalReport);
+
+                // Update the main test case in the database
+                executedTests.stream()
+                        .filter(t -> t.getTcid().equals(originTcid))
+                        .findFirst()
+                        .ifPresent(testToUpdate -> {
+                            try {
+                                testToUpdate.setReportPath(reportPath.toString());
+                                testToUpdate.setLastRunPassed(overallPassed);
+                                testDao.updateTest(testToUpdate);
+                                System.out.println("Updated test '" + originTcid + "' with report path: " + reportPath);
+                            } catch (Exception e) {
+                                System.err.println("Failed to update test in DB: " + originTcid);
+                                e.printStackTrace();
+                            }
+                        });
+            }
+
+            // === NEW ===
+            // Persist an aggregated report containing all FunctionalTestReport objects if more than one exists
+            if (aggregatedReports.size() > 1) {
+                String batchTimestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+                String batchFileName = String.format("functional_batch_%s.json", batchTimestamp);
+                Path reportDir = Paths.get(System.getProperty("user.dir"), "target", "gatling", "reports", "functional");
+                Files.createDirectories(reportDir);
+                Path batchReportPath = reportDir.resolve(batchFileName);
+
+                try (Writer writer = new BufferedWriter(new FileWriter(batchReportPath.toFile()))) {
+                    mapper.writeValue(writer, aggregatedReports);
+                }
+                System.out.println("Aggregated report saved to: " + batchReportPath);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Failed to parse or process functional test report from JSON: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private static void updateTestsWithResultsFromJson(List<GatlingTest> executedTests, String jsonContent) {

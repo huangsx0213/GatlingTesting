@@ -24,6 +24,8 @@ public class GatlingTest {
     private final IntegerProperty projectId = new SimpleIntegerProperty();
     private Map<String, String> dynamicVariables = new HashMap<>();
     private Map<String, String> headersDynamicVariables = new HashMap<>();
+    private String reportPath;
+    private Boolean lastRunPassed;
 
     // Deprecated fields removed: expStatus, saveFields
 
@@ -167,6 +169,22 @@ public class GatlingTest {
     }
     public IntegerProperty projectIdProperty() {
         return projectId;
+    }
+
+    public String getReportPath() {
+        return reportPath;
+    }
+
+    public void setReportPath(String reportPath) {
+        this.reportPath = reportPath;
+    }
+
+    public Boolean getLastRunPassed() {
+        return lastRunPassed;
+    }
+
+    public void setLastRunPassed(Boolean lastRunPassed) {
+        this.lastRunPassed = lastRunPassed;
     }
 
     @Override

@@ -36,6 +36,7 @@ public class MainViewModel implements Initializable {
 
     private final ObservableList<String> navItems = FXCollections.observableArrayList(
         "Gatling Test Management",
+        "Functional Test Reports",
         "Scenario Management",
         "Endpoint Management",
         "Headers Template Management",
@@ -89,6 +90,7 @@ public class MainViewModel implements Initializable {
         fxmlMapping.put("Variables Management", "/com/qa/app/ui/view/groovy_variable_view.fxml");
         fxmlMapping.put("Scenario Management", "/com/qa/app/ui/view/scenario_management_view.fxml");
         fxmlMapping.put("Application Properties", "/com/qa/app/ui/view/application_properties_view.fxml");
+        fxmlMapping.put("Functional Test Reports", "/com/qa/app/ui/view/test_report_view.fxml");
         // Removed System Settings mapping
 
         navigationList.setItems(navItems);
@@ -157,6 +159,8 @@ public class MainViewModel implements Initializable {
                     ((GroovyVariableViewModel) controller).refresh();
                 } else if (controller instanceof ScenarioViewModel) {
                     // currently no refresh method needed, placeholder for future
+                } else if (controller instanceof TestReportViewModel) {
+                    ((TestReportViewModel) controller).setMainViewModel(this);
                 }
                 // Gatling tab is not closable and always in the first position
                 if (tabName.equals("Gatling Test Management")) {
@@ -198,6 +202,8 @@ public class MainViewModel implements Initializable {
                         ((GroovyVariableViewModel) controller).setMainViewModel(this);
                     } else if (controller instanceof ScenarioViewModel) {
                         ((ScenarioViewModel) controller).setMainViewModel(this);
+                    } else if (controller instanceof TestReportViewModel) {
+                        ((TestReportViewModel) controller).setMainViewModel(this);
                     }
                     // let Node find controller
                     contentNode.getProperties().put("controller", controller);
@@ -245,6 +251,8 @@ public class MainViewModel implements Initializable {
                     ((GroovyVariableViewModel) controller).refresh();
                 } else if (controller instanceof ScenarioViewModel) {
                     // currently no refresh method needed, placeholder for future
+                } else if (controller instanceof TestReportViewModel) {
+                    ((TestReportViewModel) controller).setMainViewModel(this);
                 }
 
             } catch (IOException e) {

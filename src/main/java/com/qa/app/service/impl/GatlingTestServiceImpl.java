@@ -2,6 +2,7 @@ package com.qa.app.service.impl;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 import com.qa.app.dao.api.IGatlingTestDao;
 import com.qa.app.dao.impl.GatlingTestDaoImpl;
@@ -140,11 +141,15 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             throw new ServiceException("Test list cannot be null or empty.");
         }
 
-        // Mark all response checks as pending
-        markTestsPending(tests);
+        // ① Expand dependencies and capture extra meta (origin, mode)
+        ExpandedResult expanded = expandTestsWithDependencies(tests);
+        List<GatlingTest> executionList = expanded.tests;
+
+        // ② Mark all response checks as pending for all to-run tests
+        markTestsPending(executionList);
 
         java.util.List<Endpoint> endpoints = new java.util.ArrayList<>();
-        for (GatlingTest test : tests) {
+        for (GatlingTest test : executionList) {
             enrichTemplates(test);
             Endpoint endpoint = endpointService.getEndpointByName(test.getEndpointName());
             if (endpoint == null) {
@@ -154,9 +159,10 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         }
 
         try {
-            // 异步执行，避免阻塞调用线程（如 JavaFX UI 线程）
-            GatlingTestExecutor.executeBatch(tests, params, endpoints, onComplete);
-            
+            // Asynchronous execution, avoid blocking the calling thread (e.g. JavaFX UI thread)
+            GatlingTestExecutor.executeBatch(executionList, params, endpoints,
+                    expanded.origins, expanded.modes, onComplete);
+
         } catch (Exception e) {
             throw new ServiceException("Failed to run Gatling batch tests: " + e.getMessage(), e);
         }
@@ -202,5 +208,70 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
                 System.err.println("Failed to mark test " + test.getTcid() + " pending: " + ex.getMessage());
             }
         }
+    }
+
+    /**
+     * Parse the Condition string, e.g. "[Setup]TC001,TC002;[Teardown]TC003" -> Map
+     */
+    private Map<String, java.util.List<String>> parseConditionString(String cond) {
+        java.util.Map<String, java.util.List<String>> map = new java.util.HashMap<>();
+        if (cond == null || cond.isBlank()) return map;
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("\\[(\\w+)]([^;]*)");
+        java.util.regex.Matcher m = p.matcher(cond);
+        while (m.find()) {
+            String prefix = m.group(1);
+            String body = m.group(2).trim();
+            if (body.isBlank()) continue;
+            java.util.List<String> tcids = java.util.Arrays.stream(body.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isBlank())
+                    .toList();
+            map.put(prefix, tcids);
+        }
+        return map;
+    }
+
+    private static class ExpandedResult {
+        List<GatlingTest> tests = new java.util.ArrayList<>();
+        List<String> origins = new java.util.ArrayList<>();
+        List<String> modes = new java.util.ArrayList<>();
+    }
+
+    private ExpandedResult expandTestsWithDependencies(List<GatlingTest> selected) throws ServiceException {
+        ExpandedResult res = new ExpandedResult();
+
+        for (GatlingTest main : selected) {
+            Map<String, List<String>> condMap = parseConditionString(main.getConditions());
+
+            // 1) Setup
+            List<String> setups = condMap.getOrDefault("Setup", java.util.Collections.emptyList());
+            for (String tcid : setups) {
+                GatlingTest setupTest = findTestByTcid(tcid);
+                if (setupTest == null) {
+                    throw new ServiceException("Setup test not found: " + tcid + " (required by " + main.getTcid() + ")");
+                }
+                res.tests.add(setupTest);
+                res.origins.add(main.getTcid());
+                res.modes.add("SETUP");
+            }
+
+            // 2) Main test
+            res.tests.add(main);
+            res.origins.add(main.getTcid());
+            res.modes.add("MAIN");
+
+            // 3) Teardown
+            List<String> teardowns = condMap.getOrDefault("Teardown", java.util.Collections.emptyList());
+            for (String tcid : teardowns) {
+                GatlingTest teardownTest = findTestByTcid(tcid);
+                if (teardownTest == null) {
+                    throw new ServiceException("Teardown test not found: " + tcid + " (required by " + main.getTcid() + ")");
+                }
+                res.tests.add(teardownTest);
+                res.origins.add(main.getTcid());
+                res.modes.add("TEARDOWN");
+            }
+        }
+        return res;
     }
 }

@@ -5,25 +5,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qa.app.model.Endpoint;
 import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.GatlingTest;
+import com.qa.app.model.ResponseCheck;
+import com.qa.app.model.CheckType;
+import com.qa.app.model.reports.*;
 import com.qa.app.model.threadgroups.*;
+import io.gatling.http.response.Response;
 import io.gatling.javaapi.core.*;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
-import io.gatling.javaapi.core.CheckBuilder;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static io.gatling.javaapi.core.CoreDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.*;
 
-import com.qa.app.model.ResponseCheck;
 
 public class DynamicJavaSimulation extends Simulation {
 
@@ -34,10 +34,35 @@ public class DynamicJavaSimulation extends Simulation {
     private final List<BatchItem> batchItems;
     private final boolean isBatchMode;
     private final Map<String, List<ResponseCheck>> checkResults = new ConcurrentHashMap<>();
+    private final Map<String, CaseReport> caseReports = new ConcurrentHashMap<>();
+    private static final String REPORT_PREFIX = "REPORT_JSON:";
+    private static final String CHECK_REPORTS_KEY = "checkReports";
+    private static final List<String> RESPONSE_HEADERS_TO_CAPTURE = java.util.Arrays.asList(
+            "Content-Type",
+            "Set-Cookie",
+            "Location",
+            "Content-Length",
+            "Server"
+    );
+
 
     private static class BatchItem {
         public GatlingTest test;
         public Endpoint endpoint;
+        // Optional dependency metadata
+        public String origin; // 主用例 TCID
+        public String mode;   // SETUP | MAIN | TEARDOWN
+
+        public TestMode getTestMode() {
+            if (mode == null || mode.isBlank()) {
+                return TestMode.MAIN;
+            }
+            try {
+                return TestMode.valueOf(mode.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return TestMode.CONDITION; // Fallback for unknown modes
+            }
+        }
     }
 
     {
@@ -160,7 +185,7 @@ public class DynamicJavaSimulation extends Simulation {
                 // The hold is managed by the scenario lifetime (threadLifetime)
                 // The injection profile only defines how users arrive.
                 
-                return scn.injectOpen(steps);
+                return scn.injectOpen(steps.toArray(new OpenInjectionStep[0]));
 
 
             case ULTIMATE:
@@ -199,7 +224,7 @@ public class DynamicJavaSimulation extends Simulation {
                     // Update the end time for the next step's calculation
                     lastStepEndTime = step.getStartTime() + step.getStartupTime();
                 }
-                return scn.injectOpen(injectionSteps);
+                return scn.injectOpen(injectionSteps.toArray(new OpenInjectionStep[0]));
 
 
             case STANDARD:
@@ -245,69 +270,57 @@ public class DynamicJavaSimulation extends Simulation {
             standardConfig = params.getStandardThreadGroup();
         }
 
-        // For time-based scenarios (Standard with scheduler, Stepping, Ultimate), loop forever until maxDuration
-        if ((standardConfig != null && standardConfig.isScheduler())
-                || params.getType() == ThreadGroupType.STEPPING
-                || params.getType() == ThreadGroupType.ULTIMATE) {
-            return scenario(scenarioName)
-                    .forever().on(chain);
+        if (standardConfig != null && !standardConfig.isScheduler() && standardConfig.getLoops() > 0) {
+            return scenario(scenarioName).repeat(standardConfig.getLoops()).on(
+                exec(chain)
+            );
+        } else {
+            return scenario(scenarioName).exec(chain);
         }
-
-        // If standard config is not using scheduler and has a loop count, apply it.
-        if (standardConfig != null && !standardConfig.isScheduler() && standardConfig.getLoops() != -1) {
-            return scenario(scenarioName)
-                    .exec(repeat(standardConfig.getLoops()).on(chain));
-        }
-
-        return scenario(scenarioName).exec(chain);
     }
 
     private ChainBuilder createHttpChain() {
-        ChainBuilder chain = null;
-        for (int i = 0; i < batchItems.size(); i++) {
-            BatchItem item = batchItems.get(i);
-            ChainBuilder requestChain = createRequestBuilder(item);
-
-            if (chain == null) {
-                chain = requestChain;
-            } else {
-                chain = chain.exec(requestChain);
+        if (!isBatchMode) {
+            // Single test mode
+            return createRequestBuilder(batchItems.get(0));
+        } else {
+            // Batch mode: chain all request builders together
+            ChainBuilder root = exec(session -> session); // Start with a no-op
+            for (BatchItem item : batchItems) {
+                root = root.exec(createRequestBuilder(item));
             }
-
-            if (item.test.getWaitTime() > 0) {
-                System.out.println(String.format("   -> Pause %ds after %s", item.test.getWaitTime(), item.test.getTcid()));
-                chain = chain.pause(Duration.ofSeconds(item.test.getWaitTime()));
-            }
+            return root;
         }
-        return chain;
     }
 
     private ChainBuilder createRequestBuilder(BatchItem item) {
         GatlingTest test = item.test;
         Endpoint endpoint = item.endpoint;
-        String requestName = test.getTcid();
+        RuntimeTemplateProcessor templateProcessor = new RuntimeTemplateProcessor();
+
+        // Build composite key: tcid|mode to separate reports for different execution contexts
+        String reportKey = test.getTcid() + "|" + item.getTestMode().name();
+
+        // Ensure a CaseReport container exists for this key
+        caseReports.computeIfAbsent(reportKey, k -> {
+            CaseReport cr = new CaseReport();
+            cr.setTcid(test.getTcid());
+            cr.setItems(Collections.synchronizedList(new ArrayList<>()));
+            return cr;
+        });
+
+        // Use simple TCID as request name (no suffix)
+        final String requestName = test.getTcid();
 
         HttpRequestActionBuilder request;
-
         String method = endpoint.getMethod() == null ? "GET" : endpoint.getMethod().toUpperCase();
-        String bodyTemplate = test.getBody();
 
         switch (method) {
             case "POST":
-                if (bodyTemplate == null || bodyTemplate.isEmpty()) {
-                    request = http(requestName).post(endpoint.getUrl());
-                } else {
-                    request = http(requestName).post(endpoint.getUrl()).body(StringBody(session ->
-                            RuntimeTemplateProcessor.render(bodyTemplate, test.getBodyDynamicVariables())));
-                }
+                request = http(requestName).post(endpoint.getUrl());
                 break;
             case "PUT":
-                if (bodyTemplate == null || bodyTemplate.isEmpty()) {
-                    request = http(requestName).put(endpoint.getUrl());
-                } else {
-                    request = http(requestName).put(endpoint.getUrl()).body(StringBody(session ->
-                            RuntimeTemplateProcessor.render(bodyTemplate, test.getBodyDynamicVariables())));
-                }
+                request = http(requestName).put(endpoint.getUrl());
                 break;
             case "DELETE":
                 request = http(requestName).delete(endpoint.getUrl());
@@ -318,62 +331,61 @@ public class DynamicJavaSimulation extends Simulation {
                 break;
         }
 
-        // ---------------- Handle Headers ----------------
-        // First parse the template to get all Header Keys, then set a dynamic Expression for each Key
-        java.util.Map<String, String> rawHeaderMap = parseHeaders(test.getHeaders());
-        for (java.util.Map.Entry<String, String> entry : rawHeaderMap.entrySet()) {
-            String headerKey = entry.getKey();
-            String headerValueTemplate = entry.getValue();
-
-            request = request.header(headerKey, session ->
-                    RuntimeTemplateProcessor.render(headerValueTemplate, test.getHeadersDynamicVariables()));
+        // Dynamically process headers for each request using a session function
+        Map<String, String> headerTemplates = parseHeaders(test.getHeaders());
+        for (Map.Entry<String, String> headerEntry : headerTemplates.entrySet()) {
+            request = request.header(headerEntry.getKey(), session ->
+                    RuntimeTemplateProcessor.render(headerEntry.getValue(), test.getHeadersDynamicVariables()));
         }
 
-        // 1. Prepare lists for checks and for the logging actions that follow the request
-        java.util.List<CheckBuilder> checkBuilders = new java.util.ArrayList<>();
-        java.util.List<ChainBuilder> loggingActions = new java.util.ArrayList<>();
+        // Dynamically process body for each request using a session function
+        if (test.getBody() != null && !test.getBody().trim().isEmpty()) {
+            request = request.body(StringBody(session ->
+                    RuntimeTemplateProcessor.render(test.getBody(), test.getBodyDynamicVariables())));
+        }
+
+        List<CheckBuilder> checkBuilders = new ArrayList<>();
+        List<ChainBuilder> loggingActions = new ArrayList<>();
         boolean statusCheckExists = false;
 
         String checksJson = test.getResponseChecks();
-        if (checksJson != null && !checksJson.isBlank()) {
+        if (checksJson != null && !checksJson.isEmpty()) {
             try {
-                java.util.List<ResponseCheck> rcList = new com.fasterxml.jackson.databind.ObjectMapper()
-                        .readValue(checksJson, new com.fasterxml.jackson.core.type.TypeReference<java.util.List<ResponseCheck>>() {});
-                
-                // Store the parsed list in the results map to be updated during the simulation
-                checkResults.put(test.getTcid(), rcList);
+                List<ResponseCheck> checks = new ObjectMapper().readValue(checksJson, new TypeReference<>() {});
 
-                for (ResponseCheck rc : rcList) {
-                    if (rc == null || rc.getType() == null) continue;
+                // Initialize check reports list in session for the first check
+                loggingActions.add(exec(session -> session.set(CHECK_REPORTS_KEY, new ArrayList<CheckReport>())));
 
-                    // This check object will be captured by the lambda
-                    final ResponseCheck currentCheck = rc;
+                for (ResponseCheck responseCheck : checks) {
+                    // This is a deep copy. Critical for concurrent runs.
+                    final ResponseCheck currentCheck = new ResponseCheck(responseCheck);
 
                     switch (currentCheck.getType()) {
-                        case STATUS -> {
-                            // For STATUS, we will do the check and save inside a logging action,
-                            // but first we need to save the actual status code.
-                            String statusSaveKey = "status_code_" + currentCheck.hashCode();
+                        case STATUS: {
+                            statusCheckExists = true;
+                            // Status check in Gatling is special, it doesn't use a regular extractor.
+                            // We save the status and check it in a subsequent action.
+                            String statusSaveKey = "response_status_" + currentCheck.hashCode();
                             checkBuilders.add(status().saveAs(statusSaveKey));
-                            statusCheckExists = true; // Mark that we are handling status
 
                             loggingActions.add(exec(session -> {
+                                CheckReport checkReport = new CheckReport();
+                                checkReport.setType(currentCheck.getType());
+                                checkReport.setOperator(currentCheck.getOperator());
+                                checkReport.setExpect(currentCheck.getExpect());
+
                                 try {
-                                    Object statusObj = session.get(statusSaveKey);
                                     String actualStatus;
-                                    if (statusObj instanceof Integer) {
+                                    if (session.contains(statusSaveKey)) {
+                                        // Gatling 3.7+ saves status as Integer
+                                        Object statusObj = session.get(statusSaveKey);
                                         actualStatus = String.valueOf(statusObj);
-                                    } else if (statusObj instanceof char[]) {
-                                        actualStatus = new String((char[]) statusObj);
-                                    } else if (statusObj != null) {
-                                        actualStatus = statusObj.toString();
                                     } else {
-                                        actualStatus = "<VALUE NOT FOUND>";
+                                        actualStatus = "<STATUS NOT FOUND>";
                                     }
                                     
-                                    currentCheck.setActual(actualStatus);
+                                    checkReport.setActual(actualStatus);
 
-                                    // 根据操作符选择不同的比较方式
                                     boolean checkPassed = false;
                                     switch (currentCheck.getOperator()) {
                                         case CONTAINS:
@@ -384,45 +396,52 @@ public class DynamicJavaSimulation extends Simulation {
                                             checkPassed = actualStatus.equals(currentCheck.getExpect());
                                             break;
                                     }
+                                    checkReport.setPassed(checkPassed);
 
-                                    // Perform the actual check here. It's now non-blocking for other checks.
                                     if (!checkPassed) {
-                                        System.out.printf("\u001B[31mCHECK_FAIL|%s|%s|%s|%s|%s|%s\u001B[0m%n",
-                                                test.getTcid(), 
-                                                currentCheck.getType(),
-                                                currentCheck.getExpression(), 
-                                                currentCheck.getOperator(),
-                                                currentCheck.getExpect(), 
-                                                actualStatus);
-                                        // IMPORTANT: We need to manually fail the session if the primary check fails
-                                        return session.markAsFailed();
+                                        // Logging to console is still useful for live debugging
+                                        System.out.printf("\u001B[31mCHECK_FAIL|%s|...|%s|actual:%s\u001B[0m%n",
+                                                test.getTcid(), currentCheck.getExpect(), actualStatus);
+                                        // This is a non-fatal check for reporting, but we can still mark session as failed
+                                        // return session.markAsFailed();
                                     }
+                                    // Add to list in session
+                                    session.getList(CHECK_REPORTS_KEY).add(checkReport);
                                     return session.remove(statusSaveKey);
                                 } catch (Exception e) {
                                     System.err.println("[ERROR] Exception in STATUS check: " + e.getMessage());
-                                    e.printStackTrace();
-                                    currentCheck.setActual("ERROR: " + e.getMessage());
+                                    checkReport.setActual("ERROR: " + e.getMessage());
+                                    checkReport.setPassed(false);
+                                    session.getList(CHECK_REPORTS_KEY).add(checkReport);
                                     return session;
                                 }
                             }));
+                            break;
                         }
-                        case JSON_PATH, XPATH, REGEX -> {
+                        case JSON_PATH:
+                        case XPATH:
+                        case REGEX: {
                             String saveAsKey = (currentCheck.getSaveAs() != null && !currentCheck.getSaveAs().isBlank())
                                 ? currentCheck.getSaveAs() : "temp_check_var_" + currentCheck.hashCode();
 
                             CheckBuilder extractor = switch (currentCheck.getType()) {
-                                case JSON_PATH -> jsonPath(currentCheck.getExpression()).saveAs(saveAsKey);
-                                case XPATH -> xpath(currentCheck.getExpression()).saveAs(saveAsKey);
-                                case REGEX -> regex(currentCheck.getExpression()).saveAs(saveAsKey);
-                                default -> throw new IllegalStateException("Unexpected value: " + currentCheck.getType());
+                                case JSON_PATH: yield jsonPath(currentCheck.getExpression()).saveAs(saveAsKey);
+                                case XPATH: yield xpath(currentCheck.getExpression()).saveAs(saveAsKey);
+                                case REGEX: yield regex(currentCheck.getExpression()).saveAs(saveAsKey);
+                                default: throw new IllegalStateException("Unexpected value: " + currentCheck.getType());
                             };
                             checkBuilders.add(extractor);
 
-                            // Create the logging action and add it to a list to be processed later.
                             loggingActions.add(exec(session -> {
+                                CheckReport checkReport = new CheckReport();
+                                checkReport.setType(currentCheck.getType());
+                                checkReport.setExpression(currentCheck.getExpression());
+                                checkReport.setOperator(currentCheck.getOperator());
+                                checkReport.setExpect(currentCheck.getExpect());
+
+                                String actualValue;
                                 if (session.contains(saveAsKey)) {
                                     Object rawValue = session.get(saveAsKey);
-                                    String actualValue;
                                     if (rawValue instanceof String) {
                                         actualValue = (String) rawValue;
                                     } else if (rawValue instanceof char[]) {
@@ -432,11 +451,11 @@ public class DynamicJavaSimulation extends Simulation {
                                     } else {
                                         actualValue = String.valueOf(rawValue);
                                     }
+                                } else {
+                                    actualValue = "<VALUE NOT FOUND>";
+                                }
+                                checkReport.setActual(actualValue);
                                     
-                                    // IMPORTANT: Set the actual value on the check object
-                                    currentCheck.setActual(actualValue);
-
-                                    // 根据操作符选择不同的比较方式
                                     boolean checkPassed = false;
                                     switch (currentCheck.getOperator()) {
                                         case CONTAINS:
@@ -447,32 +466,21 @@ public class DynamicJavaSimulation extends Simulation {
                                             checkPassed = actualValue.equals(currentCheck.getExpect());
                                             break;
                                     }
+                                checkReport.setPassed(checkPassed);
 
                                     if (!checkPassed) {
-                                        System.out.printf("\u001B[31mCHECK_FAIL|%s|%s|%s|%s|%s|%s\u001B[0m%n",
-                                                test.getTcid(), 
-                                                currentCheck.getType(),
-                                                currentCheck.getExpression(), 
-                                                currentCheck.getOperator(),
-                                                currentCheck.getExpect(), 
-                                                actualValue);
-                                    }
-                                } else {
-                                    // IMPORTANT: Set actual value when not found
-                                    currentCheck.setActual("<VALUE NOT FOUND>");
-                                    System.out.printf("\u001B[31mCHECK_FAIL|%s|%s|%s|%s|%s|%s\u001B[0m%n",
-                                            test.getTcid(),
-                                            currentCheck.getType(),
-                                            currentCheck.getExpression(),
-                                            currentCheck.getOperator(),
-                                            currentCheck.getExpect(),
-                                            "<VALUE NOT FOUND>");
+                                    System.out.printf("\u001B[31mCHECK_FAIL|%s|%s|...|expected:%s|actual:%s\u001B[0m%n",
+                                            test.getTcid(), currentCheck.getExpression(), currentCheck.getExpect(), actualValue);
                                 }
+
+                                session.getList(CHECK_REPORTS_KEY).add(checkReport);
+
                                 if (saveAsKey.startsWith("temp_check_var_")) {
                                     return session.remove(saveAsKey);
                                 }
                                 return session;
                             }));
+                            break;
                         }
                     }
                 }
@@ -481,28 +489,122 @@ public class DynamicJavaSimulation extends Simulation {
             }
         }
 
-        // 2. Apply all checks to the request builder *before* it's used.
-        // The check() method returns a new builder instance, so we must reassign it.
+        // Apply all checks to the request builder
         if (!checkBuilders.isEmpty()) {
             request = request.check(checkBuilders.toArray(new CheckBuilder[0]));
         }
 
-        // IMPORTANT: If no status check was defined by the user, we must add a default
-        // blocking check to ensure the request fails on non-200 responses.
-        // This one does not save the actual value, it's just for fail-fast behavior.
+        // Add a default blocking check if no user-defined status check exists
         if (!statusCheckExists) {
             request = request.check(status().is(200));
         }
 
-        // 3. Start the chain with the fully configured request.
-        ChainBuilder finalChain = exec(request);
+        // Add checks to save response metadata for reporting
+        request = request.check(
+            bodyString().saveAs("responseBody"),
+            responseTimeInMillis().saveAs("latencyMs"),
+            bodyLength().saveAs("sizeBytes")
+        );
 
-        // 4. Append all the logging actions to the chain.
-        for (ChainBuilder loggingAction : loggingActions) {
-            finalChain = finalChain.exec(loggingAction);
+        // Capture selected response headers
+        for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
+            String sessionKey = "respHeader_" + headerName.replace("-", "_");
+            request = request.check(header(headerName).optional().saveAs(sessionKey));
         }
 
-        return finalChain;
+        // ** REPORTING LOGIC **
+        // This chain is executed AFTER the request is complete.
+        ChainBuilder reportingChain = exec(session -> {
+            RequestReport report = new RequestReport();
+            report.setRequestName(requestName);
+
+            // 1. Build RequestInfo (with resolved variables)
+            RequestInfo requestInfo = new RequestInfo();
+            requestInfo.setMethod(method);
+            requestInfo.setUrl(endpoint.getUrl());
+
+            // Re-process templates to get the resolved values for the report
+            String finalHeaders = RuntimeTemplateProcessor.render(test.getHeaders(), test.getHeadersDynamicVariables());
+            Map<String, String> finalHeadersMap = parseHeaders(finalHeaders);
+            requestInfo.setHeaders(finalHeadersMap);
+
+            if (test.getBody() != null && !test.getBody().trim().isEmpty()) {
+                String finalBody = RuntimeTemplateProcessor.render(test.getBody(), test.getBodyDynamicVariables());
+                requestInfo.setBody(finalBody);
+            }
+            report.setRequest(requestInfo);
+
+            // 2. Build ResponseInfo
+            ResponseInfo responseInfo = new ResponseInfo();
+            if (session.contains("responseBody")) {
+                responseInfo.setBodySample(session.getString("responseBody"));
+            } else {
+                responseInfo.setBodySample("Response body not captured.");
+            }
+            // Note: Gatling Response object is not directly available here.
+            // We rely on checks to get status, and other metrics are not easily available post-request.
+            // This is a limitation of this reporting approach.
+            // We can get status from our check reports.
+            responseInfo.setStatus(0); // Default, will be overwritten by status check
+            if (session.contains("latencyMs")) {
+                responseInfo.setLatencyMs(session.getLong("latencyMs"));
+            }
+            if (session.contains("sizeBytes")) {
+                responseInfo.setSizeBytes((long) session.getInt("sizeBytes"));
+            }
+            // 由于技术限制，我们无法直接获取所有响应头
+            Map<String, String> capturedHeaders = new HashMap<>();
+            for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
+                String key = "respHeader_" + headerName.replace("-", "_");
+                if (session.contains(key)) {
+                    capturedHeaders.put(headerName, session.getString(key));
+                }
+            }
+            responseInfo.setHeaders(capturedHeaders);
+
+            // 3. Collect CheckReports
+            if (session.contains(CHECK_REPORTS_KEY)) {
+                List<CheckReport> reports = session.getList(CHECK_REPORTS_KEY);
+                report.setChecks(reports);
+
+                // Find status from checks to populate ResponseInfo
+                reports.stream()
+                        .filter(r -> r.getType() == CheckType.STATUS && r.getActual() != null)
+                        .findFirst()
+                        .ifPresent(r -> {
+                            try {
+                                responseInfo.setStatus(Integer.parseInt(r.getActual()));
+                            } catch (NumberFormatException e) {
+                                // Ignore if status is not a number
+                            }
+                        });
+            } else {
+                report.setChecks(new ArrayList<>());
+            }
+            report.setResponse(responseInfo);
+            
+            // 4. Set overall pass/fail status
+            boolean allChecksPassed = report.getChecks().stream().allMatch(CheckReport::isPassed);
+            report.setPassed(allChecksPassed);
+            report.setStatus(String.valueOf(responseInfo.getStatus()));
+
+
+            // 5. Add the completed report to the main case report
+            caseReports.get(reportKey).getItems().add(report);
+
+            // Clear the check reports for the next request in the chain
+            io.gatling.javaapi.core.Session cleaned = session.remove(CHECK_REPORTS_KEY)
+                    .remove("responseBody")
+                    .remove("latencyMs")
+                    .remove("sizeBytes");
+            for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
+                cleaned = cleaned.remove("respHeader_" + headerName.replace("-", "_"));
+            }
+            return cleaned;
+        });
+
+        // Link the request and the reporting logic
+        return exec(request).exec(loggingActions).exec(reportingChain);
     }
 
     private Map<String, String> parseHeaders(String headersString) {
@@ -531,36 +633,35 @@ public class DynamicJavaSimulation extends Simulation {
     @Override
     public void after() {
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            // Finalize all case reports by calculating overall pass/fail status
+            for (CaseReport caseReport : caseReports.values()) {
+                boolean allPassed = caseReport.getItems().stream()
+                        .allMatch(item -> item.getChecks().stream().allMatch(CheckReport::isPassed));
+                caseReport.setPassed(allPassed);
+            }
 
-            java.util.List<java.util.Map<String, Object>> summary;
+            ObjectMapper mapper = new ObjectMapper();
+            List<Map<String, Object>> summaryList = new ArrayList<>();
 
-            if (isBatchMode) {
-                // Batch mode: build a list of {tcid, responseChecks}
-                summary = new java.util.ArrayList<>();
-                for (java.util.Map.Entry<String, List<ResponseCheck>> entry : checkResults.entrySet()) {
-                    java.util.Map<String, Object> resultEntry = new java.util.HashMap<>();
-                    resultEntry.put("tcid", entry.getKey());
-                    resultEntry.put("responseChecks", entry.getValue());
-                    summary.add(resultEntry);
-                }
-            } else {
-                // Single mode – wrap into list for unified structure
-                summary = new java.util.ArrayList<>();
-                if (!checkResults.isEmpty()) {
-                    java.util.Map<String, Object> entry = new java.util.HashMap<>();
-                    String tcid = checkResults.keySet().iterator().next();
-                    entry.put("tcid", tcid);
-                    entry.put("responseChecks", checkResults.get(tcid));
-                    summary.add(entry);
+            for (BatchItem item : batchItems) {
+                String reportKey = item.test.getTcid() + "|" + item.getTestMode().name();
+                CaseReport report = caseReports.get(reportKey);
+                if (report != null) {
+                    Map<String, Object> summaryEntry = new HashMap<>();
+                    summaryEntry.put("origin", item.origin != null ? item.origin : item.test.getTcid());
+                    summaryEntry.put("tcid", item.test.getTcid());
+                    summaryEntry.put("mode", item.getTestMode().name());
+                    summaryEntry.put("report", report);
+                    summaryList.add(summaryEntry);
                 }
             }
 
-            // Serialize to compact JSON (single line) so the caller process can parse easily.
-            String json = mapper.writeValueAsString(summary);
+            // Serialize to compact JSON (single line)
+            String json = mapper.writeValueAsString(summaryList);
 
-            // Use a clear prefix so the parent process can detect this line and extract the JSON.
-            System.out.println("CHECK_RESULTS_JSON:" + json);
+            // Use the new prefix for the report
+            System.out.println(REPORT_PREFIX + json);
+
         } catch (Exception ex) {
             System.err.println("Failed to output response check results: " + ex.getMessage());
             ex.printStackTrace();
