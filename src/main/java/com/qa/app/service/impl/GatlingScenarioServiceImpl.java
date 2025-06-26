@@ -32,6 +32,13 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
     @Override
     public void updateScenario(Scenario sc, List<ScenarioStep> steps) throws ServiceException {
         try {
+            // make sure project id is set
+            if (sc.getProjectId() == 0 && sc.getId() > 0) {
+                Scenario existing = scenarioDao.getScenarioById(sc.getId());
+                if (existing != null) {
+                    sc.setProjectId(existing.getProjectId());
+                }
+            }
             scenarioDao.updateScenario(sc);
             scenarioDao.deleteStepsByScenarioId(sc.getId());
             for (ScenarioStep s : steps) {
@@ -73,9 +80,9 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
     }
 
     @Override
-    public List<Scenario> findAllScenarios() throws ServiceException {
+    public List<Scenario> findAllScenarios(Integer projectId) throws ServiceException {
         try {
-            return scenarioDao.getAllScenarios();
+            return scenarioDao.getAllScenarios(projectId);
         } catch (Exception e) {
             throw new ServiceException("Failed to query scenarios", e);
         }
@@ -121,20 +128,12 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
 
         try {
             // ===== 1. 准备数据 =====
-            class ScenarioRunItem {
-                public com.qa.app.model.Scenario scenario;
-                public com.qa.app.model.GatlingLoadParameters params;
-                public java.util.List<java.util.Map<String, Object>> items;
-            }
-
             java.util.List<ScenarioRunItem> runItems = new java.util.ArrayList<>();
 
             IEndpointService endpointService = new EndpointServiceImpl();
 
             for (com.qa.app.model.Scenario sc : scenarios) {
-                ScenarioRunItem sri = new ScenarioRunItem();
-                sri.scenario = sc;
-                sri.params = objectMapper.readValue(sc.getThreadGroupJson(), GatlingLoadParameters.class);
+                GatlingLoadParameters params = objectMapper.readValue(sc.getThreadGroupJson(), GatlingLoadParameters.class);
 
                 java.util.List<ScenarioStep> steps = scenarioDao.getStepsByScenarioId(sc.getId());
                 java.util.List<java.util.Map<String, Object>> batchItems = new java.util.ArrayList<>();
@@ -165,8 +164,7 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
                     map.put("endpoint", endpointService.getEndpointByName(gt.getEndpointName()));
                     batchItems.add(map);
                 }
-                sri.items = batchItems;
-                runItems.add(sri);
+                runItems.add(new ScenarioRunItem(sc, params, batchItems));
             }
 
             // ===== 2. 序列化到临时文件 =====

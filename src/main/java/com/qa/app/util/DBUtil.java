@@ -132,7 +132,9 @@ public class DBUtil {
                     " name TEXT NOT NULL UNIQUE," +
                     " desc TEXT," +
                     " thread_group_json TEXT," +
-                    " schedule_json TEXT" +
+                    " schedule_json TEXT," +
+                    " project_id INTEGER," +
+                    " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE" +
                     ");";
             stmt.execute(scenarioSql);
 

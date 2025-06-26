@@ -22,8 +22,9 @@ import com.qa.app.service.impl.HeadersTemplateServiceImpl;
 import org.yaml.snakeyaml.DumperOptions;
 
 import com.qa.app.util.AppConfig;
+import com.qa.app.common.listeners.AppConfigChangeListener;
 
-public class HeadersTemplateViewModel implements Initializable {
+public class HeadersTemplateViewModel implements Initializable, AppConfigChangeListener {
     @FXML
     private TextField headersTemplateNameField;
     @FXML
@@ -56,8 +57,14 @@ public class HeadersTemplateViewModel implements Initializable {
         headersTemplateNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
         headersTemplateContentColumn.setCellValueFactory(cellData -> cellData.getValue().contentProperty());
         headersTemplateTable.setItems(headersTemplateList);
-        headersTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showHeadersTemplateDetails(newSel));
-        loadHeadersTemplates();
+        headersTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                headersTemplateContentArea.setText(newSelection.getContent());
+                headersTemplateNameField.setText(newSelection.getName());
+            }
+        });
+        loadData();
+        AppConfig.addChangeListener(this);
 
         // double click row to show content in popup
         headersTemplateTable.setRowFactory(tv -> {
@@ -114,7 +121,12 @@ public class HeadersTemplateViewModel implements Initializable {
         });
     }
 
-    private void loadHeadersTemplates() {
+    @Override
+    public void onConfigChanged() {
+        loadData();
+    }
+
+    public void loadData() {
         headersTemplateList.clear();
         Integer projectId = AppConfig.getCurrentProjectId();
         if (projectId != null) {
@@ -125,15 +137,6 @@ public class HeadersTemplateViewModel implements Initializable {
             } catch (ServiceException e) {
                 // add error hint
             }
-        }
-    }
-
-    private void showHeadersTemplateDetails(HeadersTemplateItem item) {
-        if (item != null) {
-            headersTemplateNameField.setText(item.getName());
-            headersTemplateContentArea.setText(item.getContent());
-        } else {
-            clearFields();
         }
     }
 
@@ -151,7 +154,7 @@ public class HeadersTemplateViewModel implements Initializable {
             HeadersTemplate t = new HeadersTemplate(name, content);
             t.setProjectId(AppConfig.getCurrentProjectId());
             headersTemplateService.addHeadersTemplate(t);
-            loadHeadersTemplates();
+            loadData();
             clearFields();
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Template added successfully.", MainViewModel.StatusType.SUCCESS);
@@ -175,7 +178,7 @@ public class HeadersTemplateViewModel implements Initializable {
         try {
             HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), headersTemplateContentArea.getText().trim(), AppConfig.getCurrentProjectId());
             headersTemplateService.updateHeadersTemplate(t);
-            loadHeadersTemplates();
+            loadData();
             clearFields();
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Template updated successfully.", MainViewModel.StatusType.SUCCESS);
@@ -193,7 +196,7 @@ public class HeadersTemplateViewModel implements Initializable {
         if (selected != null) {
             try {
                 headersTemplateService.deleteHeadersTemplate(selected.getId());
-                loadHeadersTemplates();
+                loadData();
                 clearFields();
                 if (mainViewModel != null) {
                     mainViewModel.updateStatus("Template deleted successfully.", MainViewModel.StatusType.SUCCESS);
@@ -291,7 +294,7 @@ public class HeadersTemplateViewModel implements Initializable {
     }
 
     public void refresh() {
-        loadHeadersTemplates();
+        loadData();
     }
 
     public static class HeadersTemplateItem {

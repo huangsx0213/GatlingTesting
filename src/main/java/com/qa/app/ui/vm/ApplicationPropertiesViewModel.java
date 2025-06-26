@@ -12,11 +12,12 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.util.converter.DefaultStringConverter;
 
-import java.io.*;
 import java.net.URL;
 import java.util.*;
+import com.qa.app.util.AppConfig;
+import com.qa.app.common.listeners.AppConfigChangeListener;
 
-public class ApplicationPropertiesViewModel implements Initializable {
+public class ApplicationPropertiesViewModel implements Initializable, AppConfigChangeListener {
     @FXML
     private TableView<PropertyItem> propertiesTable;
     @FXML
@@ -25,7 +26,6 @@ public class ApplicationPropertiesViewModel implements Initializable {
     private TableColumn<PropertyItem, String> valueColumn;
 
     private final ObservableList<PropertyItem> propertyList = FXCollections.observableArrayList();
-    private final String propertiesFilePath = "src/main/resources/application.properties";
 
     private MainViewModel mainViewModel;
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -44,38 +44,31 @@ public class ApplicationPropertiesViewModel implements Initializable {
         });
         propertiesTable.setItems(propertyList);
         propertiesTable.setEditable(true);
+        AppConfig.addChangeListener(this);
+        loadProperties();
+    }
+
+    @Override
+    public void onConfigChanged() {
         loadProperties();
     }
 
     public void loadProperties() {
         propertyList.clear();
-        Properties props = new Properties();
-        try (InputStream input = new FileInputStream(propertiesFilePath)) {
-            props.load(input);
-            for (String key : props.stringPropertyNames()) {
-                propertyList.add(new PropertyItem(key, props.getProperty(key)));
-            }
-        } catch (IOException e) {
-            // add error hint
-        }
-    }
-
-    public void saveProperties() {
-        Properties props = new Properties();
-        for (PropertyItem item : propertyList) {
-            props.setProperty(item.getKey(), item.getValue());
-        }
-        try (OutputStream output = new FileOutputStream(propertiesFilePath)) {
-            props.store(output, "Updated by ApplicationPropertiesViewModel");
-        } catch (IOException e) {
-            // add error hint
+        Properties props = AppConfig.getProperties();
+        for (String key : props.stringPropertyNames()) {
+            propertyList.add(new PropertyItem(key, props.getProperty(key)));
         }
     }
 
     @FXML
     private void onSave() {
-        saveProperties();
-        loadProperties(); // after save, auto refresh
+        Properties props = new Properties();
+        for (PropertyItem item : propertyList) {
+            props.setProperty(item.getKey(), item.getValue());
+        }
+        AppConfig.saveProperties(props);
+        loadProperties();
         if (mainViewModel != null) {
             mainViewModel.updateStatus("Save Success: Properties updated.", MainViewModel.StatusType.SUCCESS);
         }

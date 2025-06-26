@@ -8,6 +8,7 @@ import com.qa.app.ui.vm.gatling.TagHandler;
 import com.qa.app.ui.vm.gatling.TemplateHandler;
 import com.qa.app.ui.vm.gatling.TestCondictionHandler;
 import com.qa.app.util.AppConfig;
+import com.qa.app.common.listeners.AppConfigChangeListener;
 import com.qa.app.util.VariableGenerator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -43,7 +44,7 @@ import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 import javafx.scene.control.ComboBox;
 
-public class GatlingTestViewModel implements Initializable {
+public class GatlingTestViewModel implements Initializable, AppConfigChangeListener {
 
     @FXML
     private TextField testIdField;
@@ -211,7 +212,6 @@ public class GatlingTestViewModel implements Initializable {
         setupConditionsTable();
 
         setupEndpointComboBox();
-        loadEndpoints();
 
         // initialize suiteComboBox
         loadAllSuites();
@@ -231,6 +231,12 @@ public class GatlingTestViewModel implements Initializable {
             enabledFilterCombo.setItems(FXCollections.observableArrayList("All", "Enabled", "Disabled"));
             enabledFilterCombo.setValue("All");
         }
+        
+        loadEndpoints();
+        loadAllTcids();
+        loadTests();
+        loadTemplates();
+        loadHeadersTemplates();
 
         if (viewReportButton != null) {
             viewReportButton.disableProperty().bind(
@@ -241,6 +247,17 @@ public class GatlingTestViewModel implements Initializable {
                 }, testTable.getSelectionModel().selectedItemProperty()))
             );
         }
+
+        AppConfig.addChangeListener(this);
+    }
+
+    @Override
+    public void onConfigChanged() {
+        loadEndpoints();
+        loadAllTcids();
+        loadTests();
+        loadTemplates();
+        loadHeadersTemplates();
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {

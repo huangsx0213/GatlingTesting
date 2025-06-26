@@ -18,4 +18,5 @@ public interface IGatlingTestService {
                   com.qa.app.model.GatlingLoadParameters params,
                   java.lang.Runnable onComplete) throws ServiceException;
     List<GatlingTest> findTestsByProjectId(Integer projectId) throws ServiceException;
+    List<GatlingTest> findAllTestsByProjectId(Integer projectId) throws ServiceException;
 }

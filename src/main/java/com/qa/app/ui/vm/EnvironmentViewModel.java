@@ -3,6 +3,8 @@ package com.qa.app.ui.vm;
 import com.qa.app.model.Environment;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.impl.EnvironmentServiceImpl;
+import com.qa.app.util.AppConfig;
+import com.qa.app.common.listeners.AppConfigChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -12,7 +14,7 @@ import javafx.scene.control.*;
 import java.net.URL;
 import java.util.ResourceBundle;
 
-public class EnvironmentViewModel implements Initializable {
+public class EnvironmentViewModel implements Initializable, AppConfigChangeListener {
     @FXML private TextField environmentNameField;
     @FXML private TextArea environmentDescriptionArea;
     @FXML private Button addButton;
@@ -39,6 +41,12 @@ public class EnvironmentViewModel implements Initializable {
         environmentTable.setItems(environmentList);
         loadEnvironments();
         environmentTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> onTableSelectionChanged(newSel));
+        AppConfig.addChangeListener(this);
+    }
+
+    @Override
+    public void onConfigChanged() {
+        loadEnvironments();
     }
 
     private void loadEnvironments() {

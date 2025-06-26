@@ -17,8 +17,9 @@ import com.qa.app.service.api.IEnvironmentService;
 import com.qa.app.service.impl.EndpointServiceImpl;
 import com.qa.app.service.impl.EnvironmentServiceImpl;
 import com.qa.app.util.AppConfig;
+import com.qa.app.common.listeners.AppConfigChangeListener;
 
-public class EndpointViewModel implements Initializable {
+public class EndpointViewModel implements Initializable, AppConfigChangeListener {
     @FXML
     private TextField endpointNameField;
     @FXML
@@ -67,8 +68,12 @@ public class EndpointViewModel implements Initializable {
             return new javafx.beans.property.SimpleStringProperty(envName);
         });
         endpointTable.setItems(endpointList);
-        endpointTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showEndpointDetails(newSel));
-        methodComboBox.setItems(FXCollections.observableArrayList("GET", "POST", "PUT", "DELETE"));
+        endpointTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                populateFields(newSelection);
+            }
+        });
+        methodComboBox.setItems(FXCollections.observableArrayList("GET", "POST", "PUT", "DELETE", "PATCH"));
         methodComboBox.setPromptText("Select Method");
         methodComboBox.setButtonCell(new ListCell<>() {
             @Override
@@ -82,35 +87,19 @@ public class EndpointViewModel implements Initializable {
             }
         });
         loadEndpoints();
-        try {
-            environmentList.setAll(environmentService.findAllEnvironments());
-        } catch (ServiceException e) {
-            environmentList.clear();
-        }
-        environmentComboBox.setItems(environmentList);
-        environmentComboBox.setConverter(new javafx.util.StringConverter<Environment>() {
-            @Override
-            public String toString(Environment env) {
-                return env == null ? "" : env.getName();
-            }
-            @Override
-            public Environment fromString(String s) {
-                return environmentList.stream().filter(e -> e.getName().equals(s)).findFirst().orElse(null);
-            }
-        });
-        environmentComboBox.setPromptText("Select Environment");
-        environmentComboBox.setButtonCell(new ListCell<>() {
-            @Override
-            protected void updateItem(Environment item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(environmentComboBox.getPromptText());
-                } else {
-                    setText(item.getName());
-                }
-            }
-        });
-        environmentComboBox.getSelectionModel().clearSelection();
+        loadEnvironments();
+        AppConfig.addChangeListener(this);
+    }
+
+    @Override
+    public void onConfigChanged() {
+        loadEndpoints();
+        loadEnvironments();
+    }
+
+    public void refresh() {
+        loadEndpoints();
+        loadEnvironments();
     }
 
     private void loadEndpoints() {
@@ -127,7 +116,16 @@ public class EndpointViewModel implements Initializable {
         }
     }
 
-    private void showEndpointDetails(EndpointItem item) {
+    private void loadEnvironments() {
+        try {
+            environmentList.setAll(environmentService.findAllEnvironments());
+        } catch (ServiceException e) {
+            environmentList.clear();
+        }
+        environmentComboBox.setItems(environmentList);
+    }
+
+    private void populateFields(EndpointItem item) {
         if (item != null) {
             endpointNameField.setText(item.getName());
             methodComboBox.setValue(item.getMethod());
@@ -275,21 +273,6 @@ public class EndpointViewModel implements Initializable {
 
     public void setMainViewModel(MainViewModel mainViewModel) {
         this.mainViewModel = mainViewModel;
-    }
-
-    public void refreshEnvironmentComboBox() {
-        try {
-            environmentList.setAll(environmentService.findAllEnvironments());
-        } catch (ServiceException e) {
-            environmentList.clear();
-        }
-        environmentComboBox.setItems(environmentList);
-    }
-
-    public void refresh() {
-        refreshEnvironmentComboBox();
-        loadEndpoints();
-        clearFields();
     }
 
     // 内部类用于表格项

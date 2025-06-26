@@ -84,6 +84,11 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     }
 
     @Override
+    public List<GatlingTest> findAllTestsByProjectId(Integer projectId) throws ServiceException {
+        return withSql(() -> testDao.getTestsByProjectId(projectId), "Database error while retrieving tests by projectId");
+    }
+
+    @Override
     public List<GatlingTest> findTestsBySuite(String suite) throws ServiceException {
         return withSql(() -> testDao.getTestsBySuite(suite), "Database error while finding tests by suite");
     }

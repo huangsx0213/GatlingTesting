@@ -161,7 +161,7 @@ public class MainViewModel implements Initializable {
                     ((GroovyVariableViewModel) controller).refresh();
                 } else if (controller instanceof GatlingTestReportViewModel) {
                     ((GatlingTestReportViewModel) controller).refresh();
-                } else if (controller instanceof ScenarioViewModel) {
+                } else if (controller instanceof GatlingScenarioViewModel) {
                     // currently no refresh method needed, placeholder for future
                 } else if (controller instanceof GatlingInternalReportViewModel) {
                     ((GatlingInternalReportViewModel) controller).refresh();
@@ -204,8 +204,8 @@ public class MainViewModel implements Initializable {
                         ((ApplicationPropertiesViewModel) controller).setMainViewModel(this);
                     } else if (controller instanceof GroovyVariableViewModel) {
                         ((GroovyVariableViewModel) controller).setMainViewModel(this);
-                    } else if (controller instanceof ScenarioViewModel) {
-                        ((ScenarioViewModel) controller).setMainViewModel(this);
+                    } else if (controller instanceof GatlingScenarioViewModel) {
+                        ((GatlingScenarioViewModel) controller).setMainViewModel(this);
                     } else if (controller instanceof GatlingInternalReportViewModel) {
                         // currently no setMainViewModel method needed, placeholder for future
                     }
@@ -255,7 +255,7 @@ public class MainViewModel implements Initializable {
                     ((GroovyVariableViewModel) controller).refresh();
                 } else if (controller instanceof GatlingTestReportViewModel) {
                     ((GatlingTestReportViewModel) controller).refresh();
-                } else if (controller instanceof ScenarioViewModel) {
+                } else if (controller instanceof GatlingScenarioViewModel) {
                     // currently no refresh method needed, placeholder for future
                 } else if (controller instanceof GatlingInternalReportViewModel) {
                     ((GatlingInternalReportViewModel) controller).refresh();

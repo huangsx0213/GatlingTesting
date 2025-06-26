@@ -16,11 +16,12 @@ import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.impl.BodyTemplateServiceImpl;
 import com.qa.app.util.AppConfig;
+import com.qa.app.common.listeners.AppConfigChangeListener;
 import com.qa.app.ui.vm.gatling.TemplateValidator;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Alert.AlertType;
 
-public class BodyTemplateViewModel implements Initializable {
+public class BodyTemplateViewModel implements Initializable, AppConfigChangeListener {
     @FXML
     private TextField bodyTemplateNameField;
     @FXML
@@ -56,8 +57,14 @@ public class BodyTemplateViewModel implements Initializable {
         bodyTemplateNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
         bodyTemplateContentColumn.setCellValueFactory(cellData -> cellData.getValue().contentProperty());
         bodyTemplateTable.setItems(bodyTemplateList);
-        bodyTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showBodyTemplateDetails(newSel));
+        bodyTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                bodyTemplateContentArea.setText(newSelection.getContent());
+                bodyTemplateNameField.setText(newSelection.getName());
+            }
+        });
         loadBodyTemplates();
+        AppConfig.addChangeListener(this);
         
         // Initialize format dropdown, now including FTL
         bodyFormatComboBox.getItems().addAll("FTL", "JSON", "XML", "TEXT");
@@ -78,6 +85,11 @@ public class BodyTemplateViewModel implements Initializable {
         setupContentColumnCellFactory();
     }
     
+    @Override
+    public void onConfigChanged() {
+        loadBodyTemplates();
+    }
+
     private void loadBodyTemplates() {
         bodyTemplateList.clear();
         Integer projectId = AppConfig.getCurrentProjectId();
@@ -89,15 +101,6 @@ public class BodyTemplateViewModel implements Initializable {
             } catch (ServiceException e) {
                 showError("Failed to load templates: " + e.getMessage());
             }
-        }
-    }
-
-    private void showBodyTemplateDetails(BodyTemplateItem item) {
-        if (item != null) {
-            bodyTemplateNameField.setText(item.getName());
-            bodyTemplateContentArea.setText(item.getContent());
-        } else {
-            clearFields();
         }
     }
 
