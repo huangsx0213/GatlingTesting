@@ -62,7 +62,7 @@ public class GatlingTestRunner {
         return cp;
     }
 
-    private static List<String> buildGatlingCommand(String testsFilePath, String paramsFilePath) throws java.net.URISyntaxException {
+    private static List<String> buildGatlingCommand(String testsFilePath, String paramsFilePath) throws Exception {
         String javaHome = System.getProperty("java.home");
         String javaBin = java.nio.file.Paths.get(javaHome, "bin", "java").toString();
         String classpath = assembleClasspath();
@@ -71,7 +71,21 @@ public class GatlingTestRunner {
         String resultsPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
 
         URL logbackUrl = GatlingTestRunner.class.getClassLoader().getResource("logback.xml");
-        String logbackPath = (logbackUrl != null) ? new File(logbackUrl.toURI()).getAbsolutePath() : null;
+        String logbackPath = null;
+        if (logbackUrl != null) {
+            if ("jar".equals(logbackUrl.getProtocol())) {
+                // Extract logback.xml from JAR to a temporary file
+                try (InputStream inputStream = logbackUrl.openStream()) {
+                    File tempFile = File.createTempFile("logback-", ".xml");
+                    tempFile.deleteOnExit();
+                    Files.copy(inputStream, tempFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    logbackPath = tempFile.getAbsolutePath();
+                }
+            } else {
+                // Running from file system (e.g., in IDE)
+                logbackPath = new File(logbackUrl.toURI()).getAbsolutePath();
+            }
+        }
 
         List<String> command = new ArrayList<>();
         command.add(javaBin);
