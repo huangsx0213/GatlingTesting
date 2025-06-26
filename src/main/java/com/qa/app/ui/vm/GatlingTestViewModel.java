@@ -147,8 +147,7 @@ public class GatlingTestViewModel implements Initializable {
     private TableColumn<ResponseCheck, Operator> checkOperatorColumn;
     @FXML
     private TableColumn<ResponseCheck, String> checkExpectColumn;
-    @FXML
-    private TableColumn<ResponseCheck, String> checkActualColumn;
+
     @FXML
     private TableColumn<ResponseCheck, String> checkSaveAsColumn;
 
@@ -1075,76 +1074,49 @@ public class GatlingTestViewModel implements Initializable {
             return;
         }
 
-        // Make a stable copy of the selection *before* any refreshes
+        // Make a stable copy of the selection to avoid UI side-effects
         List<GatlingTest> testsToRun = new ArrayList<>(selectedTests);
 
-        // Persist any edits made in the detail pane to the focused test (if it is among the selections)
-        GatlingTest focusedTest = testTable.getSelectionModel().getSelectedItem();
-        if (focusedTest != null && testsToRun.contains(focusedTest)) {
-            populateTestFromFields(focusedTest);
+        // Persist current form edits back to the focused test (if part of the run set)
+        GatlingTest focused = testTable.getSelectionModel().getSelectedItem();
+        if (focused != null && testsToRun.contains(focused)) {
+            populateTestFromFields(focused);
         }
 
-        // Mark all selected tests as PENDING (set Actual -> "TO_RUN") in DB
-        try {
-            testService.markTestsPending(testsToRun);
-        } catch (ServiceException e) {
-            System.err.println("Failed to mark tests as pending: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        // Immediately reload data so the UI reflects the new "TO_RUN" status **while keeping the selection**
-        loadTests();
-        testTable.getSelectionModel().clearSelection();
-        for (GatlingTest t : testsToRun) {
-            testTable.getItems().stream()
-                    .filter(uiTest -> uiTest.getId() == t.getId())
-                    .findFirst()
-                    .ifPresent(uiTest -> testTable.getSelectionModel().select(uiTest));
-        }
-        if (testTable.getSelectionModel().getSelectedItem() != null) {
-            showTestDetails(testTable.getSelectionModel().getSelectedItem());
-        }
-        testTable.refresh();
-        updateSelectAllCheckBoxState();
-
-        // ----- Prepare Gatling load parameters (default single-thread run) -----
+        // Prepare minimal load profile (single user by default)
         GatlingLoadParameters params = new GatlingLoadParameters();
         params.setType(ThreadGroupType.STANDARD);
-        StandardThreadGroup config = new StandardThreadGroup();
-        config.setNumThreads(1);
-        config.setRampUp(0);
-        config.setLoops(1);
-        config.setScheduler(false);
-        config.setDelay(0);
-        params.setStandardThreadGroup(config);
+        StandardThreadGroup tg = new StandardThreadGroup();
+        tg.setNumThreads(1);
+        tg.setRampUp(0);
+        tg.setLoops(1);
+        tg.setScheduler(false);
+        tg.setDelay(0);
+        params.setStandardThreadGroup(tg);
 
+        // Notify UI + disable Run button to prevent duplicate clicks
         if (mainViewModel != null) {
-            mainViewModel.updateStatus("Starting to run " + testsToRun.size() + " tests with default settings.",
-                    MainViewModel.StatusType.INFO);
+            mainViewModel.updateStatus("Running " + testsToRun.size() + " Gatling test(s)...", MainViewModel.StatusType.INFO);
         }
+        // Disable button
+        runTestButton.setDisable(true);
 
-        // Callback to execute on test completion – refresh data & keep selection
         Runnable onComplete = () -> {
-            System.out.println("Gatling run finished. Refreshing UI.");
-            loadTests();
-            testTable.getSelectionModel().clearSelection();
-            for (GatlingTest ranTest : testsToRun) {
-                testTable.getItems().stream()
-                        .filter(t -> t.getId() == ranTest.getId())
-                        .findFirst()
-                        .ifPresent(t -> testTable.getSelectionModel().select(t));
-            }
-            if (testTable.getSelectionModel().getSelectedItem() != null) {
-                showTestDetails(testTable.getSelectionModel().getSelectedItem());
-            }
-            testTable.refresh();
-            updateSelectAllCheckBoxState();
+            // Re-enable Run button and refresh data on JavaFX thread
+            javafx.application.Platform.runLater(() -> {
+                runTestButton.setDisable(false);
+                loadTests();
+                testTable.refresh();
+                if (mainViewModel != null) {
+                    mainViewModel.updateStatus("Gatling test(s) completed.", MainViewModel.StatusType.SUCCESS);
+                }
+            });
         };
 
-        // Execute all selected tests sequentially within the same thread group configuration
         try {
             testService.runTests(testsToRun, params, onComplete);
         } catch (ServiceException ex) {
+            runTestButton.setDisable(false);
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to run test(s): " + ex.getMessage(),
                         MainViewModel.StatusType.ERROR);
@@ -1312,9 +1284,6 @@ public class GatlingTestViewModel implements Initializable {
         checkExpectColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getExpect()));
         checkExpectColumn.setCellFactory(column -> new TextFieldTableCell<>(new DefaultStringConverter()));
         checkExpectColumn.setOnEditCommit(event -> event.getRowValue().setExpect(event.getNewValue()));
-
-        checkActualColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getActual()));
-        checkActualColumn.setEditable(false);
 
         checkSaveAsColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getSaveAs()));
         checkSaveAsColumn.setCellFactory(TextFieldTableCell.forTableColumn());

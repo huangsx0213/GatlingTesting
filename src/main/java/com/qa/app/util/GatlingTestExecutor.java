@@ -415,13 +415,18 @@ public class GatlingTestExecutor {
     public static void executeBatch(java.util.List<GatlingTest> tests, GatlingLoadParameters params,
                                     java.util.List<Endpoint> endpoints,
                                     java.util.List<String> origins,
+                                    java.util.List<String> modes) {
+        executeBatch(tests, params, endpoints, origins, modes, null);
+    }
+
+    // Async batch execution with completion callback
+    public static void executeBatch(java.util.List<GatlingTest> tests, GatlingLoadParameters params,
+                                    java.util.List<Endpoint> endpoints,
+                                    java.util.List<String> origins,
                                     java.util.List<String> modes,
-                                    Runnable onComplete) {
-        // Wrap the entire heavy-lifting logic inside a background thread so the JavaFX UI thread stays responsive
+                                    java.lang.Runnable onComplete) {
         new Thread(() -> {
             try {
-                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Running " + tests.size() + " test(s).", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
-
                 if (tests == null || endpoints == null || tests.size() != endpoints.size()) {
                     throw new IllegalArgumentException("Tests and Endpoints list size mismatch or null");
                 }
@@ -436,13 +441,11 @@ public class GatlingTestExecutor {
                 String simulationClass = DynamicJavaSimulation.class.getName();
                 String resultsPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
 
-                // Find the logback.xml file in resources
                 URL logbackUrl = GatlingTestExecutor.class.getClassLoader().getResource("logback.xml");
                 String logbackPath = (logbackUrl != null) ? new File(logbackUrl.toURI()).getAbsolutePath() : null;
 
                 com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
-                // Build BatchItem list with extra meta
                 java.util.List<java.util.Map<String, Object>> batchItems = new java.util.ArrayList<>();
                 for (int i = 0; i < tests.size(); i++) {
                     java.util.Map<String, Object> map = new java.util.HashMap<>();
@@ -513,36 +516,35 @@ public class GatlingTestExecutor {
 
                 if (exitCode == 0) {
                     System.out.println("Gatling batch execution completed.");
-                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test(s) completed.", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
+                    // com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test(s) completed.", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
                     if (jsonResult != null) {
                         processAndSaveReports(jsonResult, tests);
-                    } else {
-                        System.err.println("Could not find check results in Gatling output. DB results will not be updated.");
-                    }
-                    if (onComplete != null) {
-                        // Ensure UI updates are executed on the JavaFX Application Thread
-                        if (javafx.application.Platform.isFxApplicationThread()) {
-                            onComplete.run();
-                        } else {
-                            javafx.application.Platform.runLater(onComplete);
-                        }
                     }
                 } else {
                     System.out.println("Gatling batch execution failed, exit code: " + exitCode);
                     com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test(s) Failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
                 }
+
             } catch (Exception e) {
                 System.err.println("Failed to start Gatling batch process: " + e.getMessage());
                 e.printStackTrace();
                 com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test(s) Exception: " + e.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+            } finally {
+                if (onComplete != null) {
+                    if (javafx.application.Platform.isFxApplicationThread()) {
+                        onComplete.run();
+                    } else {
+                        javafx.application.Platform.runLater(onComplete);
+                    }
+                }
             }
         }, "gatling-batch-runner").start();
     }
 
     // Backward compatible method (without dependency metadata)
     public static void executeBatch(java.util.List<GatlingTest> tests, GatlingLoadParameters params,
-                                    java.util.List<Endpoint> endpoints, Runnable onComplete) {
-        executeBatch(tests, params, endpoints, null, null, onComplete);
+                                    java.util.List<Endpoint> endpoints) {
+        executeBatch(tests, params, endpoints, null, null);
     }
 
     private static void processAndSaveReports(String jsonContent, List<GatlingTest> executedTests) {
@@ -559,7 +561,7 @@ public class GatlingTestExecutor {
 
             IGatlingTestDao testDao = new GatlingTestDaoImpl();
 
-            // NEW: collect all final reports for batch aggregation
+            // Collect all final reports for batch aggregation
             List<FunctionalTestReport> aggregatedReports = new ArrayList<>();
 
             for (Map.Entry<String, List<Map<String, Object>>> entry : groupedByOrigin.entrySet()) {
@@ -584,7 +586,7 @@ public class GatlingTestExecutor {
                     CaseReport cr = mapper.convertValue(itemMap.get("report"), CaseReport.class);
                     casesByMode.computeIfAbsent(mode, k -> new java.util.ArrayList<>()).add(cr);
                 }
-                
+
                 List<ModeGroup> modeGroups = new ArrayList<>();
                 EnumSet.of(TestMode.SETUP, TestMode.MAIN, TestMode.TEARDOWN, TestMode.CONDITION).forEach(mode -> {
                     if (casesByMode.containsKey(mode)) {
@@ -596,57 +598,49 @@ public class GatlingTestExecutor {
                 });
 
                 finalReport.setGroups(modeGroups);
+                aggregatedReports.add(finalReport);
+            }
 
-                // Determine overall pass status
-                boolean overallPassed = modeGroups.stream()
+            // Always persist an aggregated report
+            Path batchReportPath = null;
+            if (!aggregatedReports.isEmpty()) {
+                String batchTimestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+                String batchFileName = String.format("functional_batch_%s.json", batchTimestamp);
+                Path reportDir = Paths.get(System.getProperty("user.dir"), "target", "gatling", "reports");
+                Files.createDirectories(reportDir);
+                batchReportPath = reportDir.resolve(batchFileName);
+
+                try (Writer writer = new BufferedWriter(new FileWriter(batchReportPath.toFile()))) {
+                    mapper.writeValue(writer, aggregatedReports);
+                    System.out.println("Aggregated report saved to: " + batchReportPath);
+                }
+            }
+
+            // Update each test in the database with its status and the path to the batch report if it exists.
+            for (FunctionalTestReport report : aggregatedReports) {
+                final String originTcid = report.getOriginTcid();
+
+                final boolean overallPassed = report.getGroups().stream()
                         .flatMap(mg -> mg.getCases().stream())
                         .allMatch(CaseReport::isPassed);
 
-                // Save report to file
-                String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-                String reportFileName = String.format("functional_%s_%s.json", originTcid, timestamp);
-
-                Path reportDir = Paths.get(System.getProperty("user.dir"), "target", "gatling", "reports", "functional");
-                Files.createDirectories(reportDir);
-                Path reportPath = reportDir.resolve(reportFileName);
-
-                try (Writer writer = new BufferedWriter(new FileWriter(reportPath.toFile()))) {
-                    mapper.writeValue(writer, finalReport);
-                }
-
-                // Add to aggregate list
-                aggregatedReports.add(finalReport);
-
-                // Update the main test case in the database
+                final Path finalBatchReportPath = batchReportPath;
                 executedTests.stream()
                         .filter(t -> t.getTcid().equals(originTcid))
                         .findFirst()
                         .ifPresent(testToUpdate -> {
                             try {
-                                testToUpdate.setReportPath(reportPath.toString());
+                                if (finalBatchReportPath != null) {
+                                    testToUpdate.setReportPath(finalBatchReportPath.toString());
+                                }
                                 testToUpdate.setLastRunPassed(overallPassed);
                                 testDao.updateTest(testToUpdate);
-                                System.out.println("Updated test '" + originTcid + "' with report path: " + reportPath);
+                                System.out.println("Updated test '" + originTcid + "' with pass_status=" + overallPassed);
                             } catch (Exception e) {
                                 System.err.println("Failed to update test in DB: " + originTcid);
                                 e.printStackTrace();
                             }
                         });
-            }
-
-            // === NEW ===
-            // Persist an aggregated report containing all FunctionalTestReport objects if more than one exists
-            if (aggregatedReports.size() > 1) {
-                String batchTimestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-                String batchFileName = String.format("functional_batch_%s.json", batchTimestamp);
-                Path reportDir = Paths.get(System.getProperty("user.dir"), "target", "gatling", "reports", "functional");
-                Files.createDirectories(reportDir);
-                Path batchReportPath = reportDir.resolve(batchFileName);
-
-                try (Writer writer = new BufferedWriter(new FileWriter(batchReportPath.toFile()))) {
-                    mapper.writeValue(writer, aggregatedReports);
-                }
-                System.out.println("Aggregated report saved to: " + batchReportPath);
             }
 
         } catch (Exception e) {

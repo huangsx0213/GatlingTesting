@@ -24,10 +24,6 @@ public class TestReportViewModel implements Initializable {
 
     //<editor-fold desc="FXML Fields">
     @FXML
-    private Label originTcidLabel;
-    @FXML
-    private Label suiteLabel;
-    @FXML
     private TreeTableView<Object> requestsTreeTableView;
     @FXML
     private TreeTableColumn<Object, String> nameColumn;
@@ -298,10 +294,6 @@ public class TestReportViewModel implements Initializable {
         if (reports == null || reports.isEmpty()) {
             return;
         }
-
-        // Indicate aggregated view
-        originTcidLabel.setText("(Multiple)");
-        suiteLabel.setText("-");
 
         TreeItem<Object> root = new TreeItem<>("ROOT");
         root.setExpanded(true);

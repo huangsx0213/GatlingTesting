@@ -135,6 +135,10 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         }
     }
 
+    public void runTests(java.util.List<GatlingTest> tests, GatlingLoadParameters params) throws ServiceException {
+        runTests(tests, params, null);
+    }
+
     @Override
     public void runTests(java.util.List<GatlingTest> tests, GatlingLoadParameters params, Runnable onComplete) throws ServiceException {
         if (tests == null || tests.isEmpty()) {
@@ -144,9 +148,6 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         // ① Expand dependencies and capture extra meta (origin, mode)
         ExpandedResult expanded = expandTestsWithDependencies(tests);
         List<GatlingTest> executionList = expanded.tests;
-
-        // ② Mark all response checks as pending for all to-run tests
-        markTestsPending(executionList);
 
         java.util.List<Endpoint> endpoints = new java.util.ArrayList<>();
         for (GatlingTest test : executionList) {
@@ -159,7 +160,6 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         }
 
         try {
-            // Asynchronous execution, avoid blocking the calling thread (e.g. JavaFX UI thread)
             GatlingTestExecutor.executeBatch(executionList, params, endpoints,
                     expanded.origins, expanded.modes, onComplete);
 
@@ -193,22 +193,6 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         } catch (Exception ignored) { }
     }
 
-    @Override
-    public void markTestsPending(List<GatlingTest> tests) throws ServiceException {
-        ObjectMapper mapper = new ObjectMapper();
-        for (GatlingTest test : tests) {
-            try {
-                java.util.List<ResponseCheck> list = mapper.readValue(test.getResponseChecks(), new TypeReference<java.util.List<ResponseCheck>>(){});
-                for (ResponseCheck rc : list) {
-                    rc.setActual("TO_RUN");
-                }
-                test.setResponseChecks(mapper.writeValueAsString(list));
-                testDao.updateTest(test);
-            } catch (Exception ex) {
-                System.err.println("Failed to mark test " + test.getTcid() + " pending: " + ex.getMessage());
-            }
-        }
-    }
 
     /**
      * Parse the Condition string, e.g. "[Setup]TC001,TC002;[Teardown]TC003" -> Map
