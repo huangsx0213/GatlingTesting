@@ -103,7 +103,7 @@ public class GatlingInternalReportViewModel implements Initializable {
         try (Stream<Path> stream = Files.walk(parentDir.toPath(), 1)) {
             stream.map(Path::toFile)
                   .filter(file -> file.isDirectory() && file.getName().contains("simulation"))
-                  .sorted(Comparator.comparing(File::getName))
+                  .sorted(Comparator.comparingLong(File::lastModified))
                   .forEach(reportDirectoriesCombo.getItems()::add);
         } catch (Exception e) {
             e.printStackTrace();
