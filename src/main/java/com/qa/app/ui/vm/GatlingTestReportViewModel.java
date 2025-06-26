@@ -441,13 +441,13 @@ public class GatlingTestReportViewModel implements Initializable {
                 java.util.List<File> jsonFiles = stream
                         .filter(p -> p.toString().endsWith(".json"))
                         .map(java.nio.file.Path::toFile)
-                        .sorted(java.util.Comparator.comparingLong(File::lastModified))
+                        .sorted(java.util.Comparator.comparingLong(File::lastModified).reversed())
                         .collect(java.util.stream.Collectors.toList());
                 recentFilesCombo.setItems(FXCollections.observableArrayList(jsonFiles));
 
                 if (!jsonFiles.isEmpty()) {
                     // Automatically select and load the latest report (which is now the last item)
-                    recentFilesCombo.getSelectionModel().selectLast();
+                    recentFilesCombo.getSelectionModel().selectFirst();
                     handleRecentSelection(); // This will trigger loading the report
                 }
             } catch (IOException e) {

@@ -87,7 +87,7 @@ public class GatlingInternalReportViewModel implements Initializable {
             populateReportDirectories(initialDir);
             if (!reportDirectoriesCombo.getItems().isEmpty()) {
                 // Default to the latest report (last in the sorted list)
-                reportDirectoriesCombo.getSelectionModel().selectLast();
+                reportDirectoriesCombo.getSelectionModel().selectFirst();
                 File selectedDir = reportDirectoriesCombo.getSelectionModel().getSelectedItem();
                 loadReport(selectedDir);
                 savePreferences(selectedDir);
@@ -103,7 +103,7 @@ public class GatlingInternalReportViewModel implements Initializable {
         try (Stream<Path> stream = Files.walk(parentDir.toPath(), 1)) {
             stream.map(Path::toFile)
                   .filter(file -> file.isDirectory() && file.getName().contains("simulation"))
-                  .sorted(Comparator.comparingLong(File::lastModified))
+                  .sorted(Comparator.comparingLong(File::lastModified).reversed())
                   .forEach(reportDirectoriesCombo.getItems()::add);
         } catch (Exception e) {
             e.printStackTrace();

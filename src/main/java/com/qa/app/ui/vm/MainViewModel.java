@@ -89,7 +89,7 @@ public class MainViewModel implements Initializable {
         fxmlMapping.put("Environment Management", "/com/qa/app/ui/view/environment_view.fxml");
         fxmlMapping.put("Project Management", "/com/qa/app/ui/view/project_view.fxml");
         fxmlMapping.put("Variables Management", "/com/qa/app/ui/view/groovy_variable_view.fxml");
-        fxmlMapping.put("Gatling Scenario Management", "/com/qa/app/ui/view/scenario_management_view.fxml");
+        fxmlMapping.put("Gatling Scenario Management", "/com/qa/app/ui/view/gatling_scenario_view.fxml");
         fxmlMapping.put("Application Properties", "/com/qa/app/ui/view/application_properties_view.fxml");
         fxmlMapping.put("Gatling Test Reports", "/com/qa/app/ui/view/gatling_test_report_view.fxml");
         fxmlMapping.put("Gatling Internal Report", "/com/qa/app/ui/view/gatling_internal_report_view.fxml");

@@ -234,11 +234,11 @@
                         <Separator />
                         <HBox alignment="CENTER_LEFT" spacing="15.0">
                             <children>
-                        <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddTest" text="Add Test" />
-                        <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateTest" text="Update Test" />
-                        <Button fx:id="duplicateButton" mnemonicParsing="false" onAction="#handleDuplicateTest" text="Duplicate Test" />
-                        <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteTest" text="Delete Test" />
-                        <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearFields" text="Clear Form" />
+                        <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddTest" text="Add" />
+                        <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateTest" text="Update" />
+                        <Button fx:id="duplicateButton" mnemonicParsing="false" onAction="#handleDuplicateTest" text="Duplicate" />
+                        <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteTest" text="Delete" />
+                        <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearFields" text="Clear" />
                         <Separator orientation="VERTICAL" />
                         <Button fx:id="runTestButton" mnemonicParsing="false" onAction="#handleRunTest" text="Run Selected Test(s)" />
                             </children>
