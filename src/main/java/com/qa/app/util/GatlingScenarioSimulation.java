@@ -25,7 +25,7 @@ import static io.gatling.javaapi.http.HttpDsl.status;
      * Dynamically generate Simulation for multiple scenarios and thread groups, for concurrent execution of multiple Scenarios in one process.
      * System property: -Dgatling.multiscenario.file=/path/to/json
      */
-public class MultiScenarioSimulation extends Simulation {
+public class GatlingScenarioSimulation extends Simulation {
 
     private static class ScenarioRunItem {
         public com.qa.app.model.Scenario scenario;
@@ -35,7 +35,7 @@ public class MultiScenarioSimulation extends Simulation {
 
     private final List<ScenarioRunItem> runItems;
 
-    public MultiScenarioSimulation() {
+    public GatlingScenarioSimulation() {
         try {
             String filePath = System.getProperty("gatling.multiscenario.file");
             if (filePath == null || filePath.isBlank()) {

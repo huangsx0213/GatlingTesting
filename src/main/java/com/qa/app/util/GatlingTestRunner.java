@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 public class GatlingTestRunner {
 
     /**
-     * Prefix used by DynamicJavaSimulation to output the new report format to stdout.
+     * Prefix used by GatlingTestSimulation to output the new report format to stdout.
      */
     private static final String REPORT_PREFIX = "REPORT_JSON:";
 
@@ -67,7 +67,7 @@ public class GatlingTestRunner {
         String javaBin = java.nio.file.Paths.get(javaHome, "bin", "java").toString();
         String classpath = assembleClasspath();
         String gatlingMain = "io.gatling.app.Gatling";
-        String simulationClass = DynamicJavaSimulation.class.getName();
+        String simulationClass = GatlingTestSimulation.class.getName();
         String resultsPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
 
         URL logbackUrl = GatlingTestRunner.class.getClassLoader().getResource("logback.xml");
@@ -247,7 +247,7 @@ public class GatlingTestRunner {
             Path batchReportPath = null;
             if (!aggregatedReports.isEmpty()) {
                 String batchTimestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-                String batchFileName = String.format("functional_batch_%s.json", batchTimestamp);
+                String batchFileName = String.format("functional_report_%s.json", batchTimestamp);
                 Path reportDir = Paths.get(System.getProperty("user.dir"), "target", "gatling", "reports");
                 Files.createDirectories(reportDir);
                 batchReportPath = reportDir.resolve(batchFileName);

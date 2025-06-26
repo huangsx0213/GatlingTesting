@@ -16,7 +16,7 @@ import java.net.URL;
 import java.util.Map;
 import java.util.ResourceBundle;
 
-public class TestReportViewModel implements Initializable {
+public class GatlingTestReportViewModel implements Initializable {
 
     //<editor-fold desc="FXML Fields">
     @FXML
@@ -70,7 +70,7 @@ public class TestReportViewModel implements Initializable {
     @FXML
     private Label failedLabel;
     @FXML
-    private javafx.scene.control.ComboBox<String> recentFilesCombo;
+    private javafx.scene.control.ComboBox<File> recentFilesCombo;
     //</editor-fold>
 
     private final javafx.beans.property.IntegerProperty totalCases = new javafx.beans.property.SimpleIntegerProperty(0);
@@ -89,6 +89,23 @@ public class TestReportViewModel implements Initializable {
         setupSelectionListener();
         clearDetails();
         bindSummaryLabels();
+
+        // Configure ComboBox to display file names
+        recentFilesCombo.setCellFactory(param -> new ListCell<>() {
+            @Override
+            protected void updateItem(File item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+        recentFilesCombo.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(File item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+
         // Default select Checks tab
         if (detailsTabPane != null) {
             if (checksTab != null) {
@@ -108,6 +125,9 @@ public class TestReportViewModel implements Initializable {
         fileChooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("JSON Files", "*.json"),
                 new FileChooser.ExtensionFilter("All Files", "*.*"));
+        if (lastDir != null && java.nio.file.Files.isDirectory(lastDir)) {
+            fileChooser.setInitialDirectory(lastDir.toFile());
+        }
         File selectedFile = fileChooser.showOpenDialog(new Stage());
         if (selectedFile != null) {
             try {
@@ -116,7 +136,7 @@ public class TestReportViewModel implements Initializable {
                 // after load success
                 java.nio.file.Path selectedPath = selectedFile.toPath();
                 lastDir = selectedPath.getParent();
-                java.util.prefs.Preferences.userNodeForPackage(TestReportViewModel.class).put("lastReportDir", lastDir.toString());
+                java.util.prefs.Preferences.userNodeForPackage(GatlingTestReportViewModel.class).put("lastReportDir", lastDir.toString());
                 refreshRecentFiles();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -402,35 +422,52 @@ public class TestReportViewModel implements Initializable {
     }
 
     private void loadLastDirAndFiles() {
-        java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(TestReportViewModel.class);
-        String dirStr = prefs.get("lastReportDir", null);
-        if (dirStr != null) {
-            lastDir = java.nio.file.Paths.get(dirStr);
-            refreshRecentFiles();
+        java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(GatlingTestReportViewModel.class);
+        String lastDirPath = prefs.get("lastReportDir", null);
+
+        if (lastDirPath != null) {
+            lastDir = java.nio.file.Paths.get(lastDirPath);
+        } else {
+            // Fallback to a default directory if no preference is set
+            lastDir = java.nio.file.Paths.get("target/gatling");
         }
+        refreshRecentFiles();
     }
 
     private void refreshRecentFiles() {
         recentFilesCombo.getItems().clear();
         if (lastDir != null && java.nio.file.Files.isDirectory(lastDir)) {
             try (java.util.stream.Stream<java.nio.file.Path> stream = java.nio.file.Files.list(lastDir)) {
-                stream.filter(p -> p.toString().endsWith(".json"))
-                        .map(p -> p.getFileName().toString())
-                        .sorted()
-                        .forEach(recentFilesCombo.getItems()::add);
-            } catch (Exception ignored) {}
+                java.util.List<File> jsonFiles = stream
+                        .filter(p -> p.toString().endsWith(".json"))
+                        .map(java.nio.file.Path::toFile)
+                        .sorted(java.util.Comparator.comparingLong(File::lastModified))
+                        .collect(java.util.stream.Collectors.toList());
+                recentFilesCombo.setItems(FXCollections.observableArrayList(jsonFiles));
+
+                if (!jsonFiles.isEmpty()) {
+                    // Automatically select and load the latest report (which is now the last item)
+                    recentFilesCombo.getSelectionModel().selectLast();
+                    handleRecentSelection(); // This will trigger loading the report
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
     @FXML private void handleRecentSelection() {
-        String fileName = recentFilesCombo.getSelectionModel().getSelectedItem();
-        if (fileName != null && lastDir != null) {
-            java.nio.file.Path path = lastDir.resolve(fileName);
+        File selectedFile = recentFilesCombo.getSelectionModel().getSelectedItem();
+        if (selectedFile != null) {
             try {
-                String json = java.nio.file.Files.readString(path);
-                loadReportData(json);
-            } catch (Exception e) {
+                String jsonContent = new String(java.nio.file.Files.readAllBytes(selectedFile.toPath()));
+                loadReportData(jsonContent);
+                // Update last directory preference upon successful load
+                lastDir = selectedFile.toPath().getParent();
+                java.util.prefs.Preferences.userNodeForPackage(GatlingTestReportViewModel.class).put("lastReportDir", lastDir.toString());
+            } catch (IOException e) {
                 e.printStackTrace();
+                // Show error alert
             }
         }
     }

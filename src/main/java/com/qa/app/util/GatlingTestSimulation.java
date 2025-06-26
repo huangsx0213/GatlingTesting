@@ -23,7 +23,7 @@ import static io.gatling.javaapi.core.CoreDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.*;
 
 
-public class DynamicJavaSimulation extends Simulation {
+public class GatlingTestSimulation extends Simulation {
 
     // Static holder for results, accessible from within the same JVM
     public static final Map<String, List<ResponseCheck>> lastRunResults = new ConcurrentHashMap<>();

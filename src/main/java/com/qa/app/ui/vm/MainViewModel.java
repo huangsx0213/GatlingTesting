@@ -36,8 +36,9 @@ public class MainViewModel implements Initializable {
 
     private final ObservableList<String> navItems = FXCollections.observableArrayList(
         "Gatling Test Management",
-        "Gatling Test Reports",
         "Gatling Scenario Management",
+        "Gatling Test Reports",
+        "Gatling Internal Report",
         "Endpoint Management",
         "Headers Template Management",
         "Body Template Management",
@@ -90,7 +91,8 @@ public class MainViewModel implements Initializable {
         fxmlMapping.put("Variables Management", "/com/qa/app/ui/view/groovy_variable_view.fxml");
         fxmlMapping.put("Gatling Scenario Management", "/com/qa/app/ui/view/scenario_management_view.fxml");
         fxmlMapping.put("Application Properties", "/com/qa/app/ui/view/application_properties_view.fxml");
-        fxmlMapping.put("Gatling Test Reports", "/com/qa/app/ui/view/test_report_view.fxml");
+        fxmlMapping.put("Gatling Test Reports", "/com/qa/app/ui/view/gatling_test_report_view.fxml");
+        fxmlMapping.put("Gatling Internal Report", "/com/qa/app/ui/view/gatling_internal_report_view.fxml");
         // Removed System Settings mapping
 
         navigationList.setItems(navItems);
@@ -157,10 +159,12 @@ public class MainViewModel implements Initializable {
                     ((ApplicationPropertiesViewModel) controller).loadProperties();
                 } else if (controller instanceof GroovyVariableViewModel) {
                     ((GroovyVariableViewModel) controller).refresh();
-                } else if (controller instanceof TestReportViewModel) {
-                    ((TestReportViewModel) controller).refresh();
+                } else if (controller instanceof GatlingTestReportViewModel) {
+                    ((GatlingTestReportViewModel) controller).refresh();
                 } else if (controller instanceof ScenarioViewModel) {
                     // currently no refresh method needed, placeholder for future
+                } else if (controller instanceof GatlingInternalReportViewModel) {
+                    ((GatlingInternalReportViewModel) controller).refresh();
                 }
                 // Gatling tab is not closable and always in the first position
                 if (tabName.equals("Gatling Test Management")) {
@@ -202,6 +206,8 @@ public class MainViewModel implements Initializable {
                         ((GroovyVariableViewModel) controller).setMainViewModel(this);
                     } else if (controller instanceof ScenarioViewModel) {
                         ((ScenarioViewModel) controller).setMainViewModel(this);
+                    } else if (controller instanceof GatlingInternalReportViewModel) {
+                        // currently no setMainViewModel method needed, placeholder for future
                     }
                     // let Node find controller
                     contentNode.getProperties().put("controller", controller);
@@ -247,29 +253,22 @@ public class MainViewModel implements Initializable {
                     ((ApplicationPropertiesViewModel) controller).loadProperties();
                 } else if (controller instanceof GroovyVariableViewModel) {
                     ((GroovyVariableViewModel) controller).refresh();
-                } else if (controller instanceof TestReportViewModel) {
-                    ((TestReportViewModel) controller).refresh();
+                } else if (controller instanceof GatlingTestReportViewModel) {
+                    ((GatlingTestReportViewModel) controller).refresh();
                 } else if (controller instanceof ScenarioViewModel) {
                     // currently no refresh method needed, placeholder for future
+                } else if (controller instanceof GatlingInternalReportViewModel) {
+                    ((GatlingInternalReportViewModel) controller).refresh();
                 }
-
             } catch (IOException e) {
                 System.err.println("Failed to load FXML for tab: " + tabName + " from " + fxmlPath);
                 e.printStackTrace();
+                showGlobalStatus("Error loading page: " + tabName, StatusType.ERROR);
             }
         } else {
-            System.err.println("No FXML mapping found for: " + tabName);
-            // Optionally, show a placeholder or error tab
-             Tab errorTab = new Tab(tabName + " (Not Implemented)");
-             errorTab.setContent(new javafx.scene.control.Label("Feature '" + tabName + "' is not yet implemented."));
-             contentTabPane.getTabs().add(errorTab);
-             contentTabPane.getSelectionModel().select(errorTab);
-             if (currentFeatureLabel != null) {
-                currentFeatureLabel.setText(tabName + " (Not Implemented)");
-             }
-             updateStatus("Feature '" + tabName + "' is not yet implemented.", StatusType.INFO);
-         }
-     }
+            showGlobalStatus("No FXML mapping for: " + tabName, StatusType.ERROR);
+        }
+    }
 
     public void updateStatus(String message, StatusType type) {
         if (statusLabel != null) {
@@ -289,10 +288,8 @@ public class MainViewModel implements Initializable {
     }
 
     public void reloadAllTabs() {
-        com.qa.app.util.AppConfig.reload();
-        contentTabPane.getTabs().clear();
         loadedTabs.clear();
+        contentTabPane.getTabs().clear();
         reinitialize();
-        updateStatus("Reloaded all tabs.", StatusType.INFO);
     }
 }
