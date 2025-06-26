@@ -3,7 +3,6 @@ package com.qa.app.service.impl;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
-
 import com.qa.app.dao.api.IGatlingTestDao;
 import com.qa.app.dao.impl.GatlingTestDaoImpl;
 import com.qa.app.model.GatlingTest;
@@ -18,9 +17,6 @@ import com.qa.app.model.HeadersTemplate;
 import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.api.IHeadersTemplateService;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.qa.app.model.ResponseCheck;
 
 
 public class GatlingTestServiceImpl implements IGatlingTestService {
@@ -30,16 +26,40 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
     private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
 
+    /* -------------------------------------------------
+     *  Helper functional interfaces & utility wrappers
+     * ------------------------------------------------- */
+    @FunctionalInterface
+    private interface SqlCallable<T> {
+        T call() throws SQLException;
+    }
+
+    private <T> T withSql(SqlCallable<T> action, String errMsg) throws ServiceException {
+        try {
+            return action.call();
+        } catch (SQLException e) {
+            throw new ServiceException(errMsg + ": " + e.getMessage(), e);
+        }
+    }
+
+
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    private void validateTestBasicFields(GatlingTest test) throws ServiceException {
+        if (test == null || isBlank(test.getTcid()) || isBlank(test.getSuite()) || isBlank(test.getEndpointName())) {
+            throw new ServiceException("Test validation failed: TCID, Suite, and Endpoint Name are required.");
+        }
+    }
+
     @Override
     public void createTest(GatlingTest test) throws ServiceException {
+        validateTestBasicFields(test);
+
         try {
-            if (test == null || test.getTcid() == null || test.getTcid().trim().isEmpty() ||
-                test.getSuite() == null || test.getSuite().trim().isEmpty() ||
-                test.getEndpointName() == null || test.getEndpointName().trim().isEmpty()) {
-                throw new ServiceException("Test validation failed: TCID, Suite, and Endpoint Name are required.");
-            }
-            GatlingTest existingTest = testDao.getTestByTcid(test.getTcid());
-            if (existingTest != null) {
+            GatlingTest existing = testDao.getTestByTcid(test.getTcid());
+            if (existing != null) {
                 throw new ServiceException("Test with TCID '" + test.getTcid() + "' already exists.");
             }
             testDao.addTest(test);
@@ -50,38 +70,22 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
 
     @Override
     public GatlingTest findTestById(int id) throws ServiceException {
-        try {
-            return testDao.getTestById(id);
-        } catch (SQLException e) {
-            throw new ServiceException("Database error while finding test by ID: " + e.getMessage(), e);
-        }
+        return withSql(() -> testDao.getTestById(id), "Database error while finding test by ID");
     }
 
     @Override
     public GatlingTest findTestByTcid(String tcid) throws ServiceException {
-        try {
-            return testDao.getTestByTcid(tcid);
-        } catch (SQLException e) {
-            throw new ServiceException("Database error while finding test by TCID: " + e.getMessage(), e);
-        }
+        return withSql(() -> testDao.getTestByTcid(tcid), "Database error while finding test by TCID");
     }
 
     @Override
     public List<GatlingTest> findAllTests() throws ServiceException {
-        try {
-            return testDao.getAllTests();
-        } catch (SQLException e) {
-            throw new ServiceException("Database error while retrieving all tests: " + e.getMessage(), e);
-        }
+        return withSql(testDao::getAllTests, "Database error while retrieving all tests");
     }
 
     @Override
     public List<GatlingTest> findTestsBySuite(String suite) throws ServiceException {
-        try {
-            return testDao.getTestsBySuite(suite);
-        } catch (SQLException e) {
-            throw new ServiceException("Database error while finding tests by suite: " + e.getMessage(), e);
-        }
+        return withSql(() -> testDao.getTestsBySuite(suite), "Database error while finding tests by suite");
     }
 
     @Override
@@ -112,8 +116,8 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     @Override
     public void removeTest(int id) throws ServiceException {
         try {
-            GatlingTest existingTest = testDao.getTestById(id);
-            if (existingTest == null) {
+            GatlingTest existing = testDao.getTestById(id);
+            if (existing == null) {
                 throw new ServiceException("Test with ID " + id + " not found.");
             }
             testDao.deleteTest(id);
@@ -125,11 +129,11 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     @Override
     public void toggleTestRunStatus(int id) throws ServiceException {
         try {
-            GatlingTest test = testDao.getTestById(id);
-            if (test == null) {
+            GatlingTest t = testDao.getTestById(id);
+            if (t == null) {
                 throw new ServiceException("Test with ID " + id + " not found.");
             }
-            testDao.updateTestRunStatus(id, !test.isEnabled());
+            testDao.updateTestRunStatus(id, !t.isEnabled());
         } catch (SQLException e) {
             throw new ServiceException("Database error while toggling test run status: " + e.getMessage(), e);
         }

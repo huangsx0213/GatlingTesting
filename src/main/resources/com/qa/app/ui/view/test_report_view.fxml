@@ -59,7 +59,7 @@
                <HBox spacing="10.0">
                   <children>
                         <Label text="Recent Reports:" />
-                        <ComboBox fx:id="recentFilesCombo" onAction="#handleRecentSelection" prefWidth="300.0" />
+                        <ComboBox fx:id="recentFilesCombo" onAction="#handleRecentSelection" prefWidth="300.0" promptText="Select a report..."/>
                         <Button onAction="#handleLoadReport" text="Browse..." />
                   </children>
                </HBox>

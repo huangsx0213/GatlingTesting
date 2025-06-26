@@ -4,13 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qa.app.model.reports.*;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.TreeItemPropertyValueFactory;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -75,13 +71,15 @@ public class TestReportViewModel implements Initializable {
     private javafx.scene.control.ComboBox<String> recentFilesCombo;
     //</editor-fold>
 
-    private MainViewModel mainViewModel;
-
     private final javafx.beans.property.IntegerProperty totalCases = new javafx.beans.property.SimpleIntegerProperty(0);
     private final javafx.beans.property.IntegerProperty passedCases = new javafx.beans.property.SimpleIntegerProperty(0);
     private final javafx.beans.property.IntegerProperty failedCases = new javafx.beans.property.SimpleIntegerProperty(0);
 
     private java.nio.file.Path lastDir;
+
+    public void refresh() {
+        loadLastDirAndFiles();
+    }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -92,10 +90,6 @@ public class TestReportViewModel implements Initializable {
         loadLastDirAndFiles();
     }
 
-    public void setMainViewModel(MainViewModel mainViewModel) {
-        this.mainViewModel = mainViewModel;
-    }
-    
     @FXML
     private void handleLoadReport() {
         FileChooser fileChooser = new FileChooser();

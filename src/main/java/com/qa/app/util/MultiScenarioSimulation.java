@@ -11,7 +11,6 @@ import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
 import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
-import com.qa.app.util.RuntimeTemplateProcessor;
 
 import java.io.File;
 import java.io.IOException;
@@ -119,7 +118,6 @@ public class MultiScenarioSimulation extends Simulation {
     }
 
     private HttpRequestActionBuilder buildRequest(GatlingTest test, Endpoint ep) {
-        final RuntimeTemplateProcessor templateProcessor = new RuntimeTemplateProcessor();
         String reqName = test.getTcid();
         String method = ep.getMethod() == null ? "GET" : ep.getMethod().toUpperCase();
         HttpRequestActionBuilder req;

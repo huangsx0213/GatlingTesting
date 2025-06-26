@@ -28,12 +28,10 @@ import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
 import com.qa.app.model.Operator;
 import javafx.util.converter.DefaultStringConverter;
-import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleStringProperty;
 import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.threadgroups.StandardThreadGroup;
 import com.qa.app.model.threadgroups.ThreadGroupType;
-import com.qa.app.ui.view.FunctionalTestReportStage;
 import javafx.beans.binding.Bindings;
 
 import java.net.URL;
@@ -1052,16 +1050,7 @@ public class GatlingTestViewModel implements Initializable {
         testTable.getSelectionModel().clearSelection();
     }
 
-    @FXML
-    private void handleViewReport() {
-        GatlingTest selectedTest = testTable.getSelectionModel().getSelectedItem();
-        if (selectedTest != null && selectedTest.getReportPath() != null && !selectedTest.getReportPath().isEmpty()) {
-            new FunctionalTestReportStage(selectedTest.getReportPath());
-        } else {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION, "No report available for the selected test.", ButtonType.OK);
-            alert.showAndWait();
-        }
-    }
+
 
     @FXML
     private void handleRunTest() {
@@ -1192,7 +1181,11 @@ public class GatlingTestViewModel implements Initializable {
     // =====================
     @FXML
     private void handleAddResponseCheck() {
-        responseChecks.add(new ResponseCheck());
+        ResponseCheck newCheck = new ResponseCheck();
+        responseChecks.add(newCheck);
+        responseChecksTable.getSelectionModel().clearSelection();
+        responseChecksTable.getSelectionModel().select(newCheck);
+        responseChecksTable.scrollTo(newCheck);
     }
 
     @FXML

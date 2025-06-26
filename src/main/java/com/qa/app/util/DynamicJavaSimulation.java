@@ -9,7 +9,6 @@ import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
 import com.qa.app.model.reports.*;
 import com.qa.app.model.threadgroups.*;
-import io.gatling.http.response.Response;
 import io.gatling.javaapi.core.*;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
@@ -19,7 +18,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import static io.gatling.javaapi.core.CoreDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.*;
@@ -33,7 +31,6 @@ public class DynamicJavaSimulation extends Simulation {
     private final GatlingLoadParameters params;
     private final List<BatchItem> batchItems;
     private final boolean isBatchMode;
-    private final Map<String, List<ResponseCheck>> checkResults = new ConcurrentHashMap<>();
     private final Map<String, CaseReport> caseReports = new ConcurrentHashMap<>();
     private static final String REPORT_PREFIX = "REPORT_JSON:";
     private static final String CHECK_REPORTS_KEY = "checkReports";
@@ -296,7 +293,6 @@ public class DynamicJavaSimulation extends Simulation {
     private ChainBuilder createRequestBuilder(BatchItem item) {
         GatlingTest test = item.test;
         Endpoint endpoint = item.endpoint;
-        RuntimeTemplateProcessor templateProcessor = new RuntimeTemplateProcessor();
 
         // Build composite key: tcid|mode to separate reports for different execution contexts
         String reportKey = test.getTcid() + "|" + item.getTestMode().name();
@@ -386,7 +382,7 @@ public class DynamicJavaSimulation extends Simulation {
                                     
                                     checkReport.setActual(actualStatus);
 
-                                    boolean checkPassed = false;
+                                    boolean checkPassed;
                                     switch (currentCheck.getOperator()) {
                                         case CONTAINS:
                                             checkPassed = actualStatus.contains(currentCheck.getExpect());
@@ -399,13 +395,14 @@ public class DynamicJavaSimulation extends Simulation {
                                     checkReport.setPassed(checkPassed);
 
                                     if (!checkPassed) {
-                                        // Logging to console is still useful for live debugging
-                                        System.out.printf("\u001B[31mCHECK_FAIL|%s|...|%s|actual:%s\u001B[0m%n",
-                                                test.getTcid(), currentCheck.getExpect(), actualStatus);
-                                        // This is a non-fatal check for reporting, but we can still mark session as failed
-                                        // return session.markAsFailed();
+                                        System.out.println(String.format("CHECK_FAIL|%s|%s|%s|expected:%s|actual:%s",
+                                                test.getTcid(), "STATUS", currentCheck.getOperator().toString(), currentCheck.getExpect(), actualStatus));
+                                    } else {
+                                         System.out.println(String.format("CHECK_PASS|%s|%s|%s|expected:%s|actual:%s",
+                                                test.getTcid(), "STATUS", currentCheck.getOperator().toString(), currentCheck.getExpect(), actualStatus));
                                     }
-                                    // Add to list in session
+
+                                    // Add to session for reporting
                                     session.getList(CHECK_REPORTS_KEY).add(checkReport);
                                     return session.remove(statusSaveKey);
                                 } catch (Exception e) {
@@ -452,11 +449,11 @@ public class DynamicJavaSimulation extends Simulation {
                                         actualValue = String.valueOf(rawValue);
                                     }
                                 } else {
-                                    actualValue = "<VALUE NOT FOUND>";
+                                    actualValue = "Path not found";
                                 }
                                 checkReport.setActual(actualValue);
                                     
-                                    boolean checkPassed = false;
+                                    boolean checkPassed;
                                     switch (currentCheck.getOperator()) {
                                         case CONTAINS:
                                             checkPassed = actualValue.contains(currentCheck.getExpect());
@@ -466,19 +463,23 @@ public class DynamicJavaSimulation extends Simulation {
                                             checkPassed = actualValue.equals(currentCheck.getExpect());
                                             break;
                                     }
-                                checkReport.setPassed(checkPassed);
+                                    checkReport.setPassed(checkPassed);
 
                                     if (!checkPassed) {
-                                    System.out.printf("\u001B[31mCHECK_FAIL|%s|%s|...|expected:%s|actual:%s\u001B[0m%n",
-                                            test.getTcid(), currentCheck.getExpression(), currentCheck.getExpect(), actualValue);
-                                }
+                                        System.out.println(String.format("CHECK_FAIL|%s|%s|%s|expected:%s|actual:%s",
+                                                test.getTcid(), currentCheck.getExpression(), currentCheck.getOperator().toString(), currentCheck.getExpect(), actualValue));
+                                    } else {
+                                        System.out.println(String.format("CHECK_PASS|%s|%s|%s|expected:%s|actual:%s",
+                                                test.getTcid(), currentCheck.getExpression(), currentCheck.getOperator().toString(), currentCheck.getExpect(), actualValue));
+                                    }
 
-                                session.getList(CHECK_REPORTS_KEY).add(checkReport);
+                                    // Add to session for reporting
+                                    session.getList(CHECK_REPORTS_KEY).add(checkReport);
 
-                                if (saveAsKey.startsWith("temp_check_var_")) {
-                                    return session.remove(saveAsKey);
-                                }
-                                return session;
+                                    if (saveAsKey.startsWith("temp_check_var_")) {
+                                        return session.remove(saveAsKey);
+                                    }
+                                    return session;
                             }));
                             break;
                         }
