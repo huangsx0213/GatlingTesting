@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class GatlingTestExecutor {
+public class GatlingTestRunner {
 
     /**
      * Prefix used by DynamicJavaSimulation to output the new report format to stdout.
@@ -53,7 +53,7 @@ public class GatlingTestExecutor {
         // Fallback to original method for other environments (e.g., IDE, fat JAR)
         String cp = System.getProperty("java.class.path");
         try {
-            String selfPath = new java.io.File(GatlingTestExecutor.class.getProtectionDomain()
+            String selfPath = new java.io.File(GatlingTestRunner.class.getProtectionDomain()
                     .getCodeSource().getLocation().toURI()).getPath();
             if (!cp.contains(selfPath)) {
                 cp += java.io.File.pathSeparator + selfPath;
@@ -70,7 +70,7 @@ public class GatlingTestExecutor {
         String simulationClass = DynamicJavaSimulation.class.getName();
         String resultsPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
 
-        URL logbackUrl = GatlingTestExecutor.class.getClassLoader().getResource("logback.xml");
+        URL logbackUrl = GatlingTestRunner.class.getClassLoader().getResource("logback.xml");
         String logbackPath = (logbackUrl != null) ? new File(logbackUrl.toURI()).getAbsolutePath() : null;
 
         List<String> command = new ArrayList<>();
@@ -186,7 +186,7 @@ public class GatlingTestExecutor {
                     }
                 }
             }
-        }, "gatling-batch-runner").start();
+        }, "test-runner").start();
     }
 
     private static void processAndSaveReports(String jsonContent, List<GatlingTest> executedTests) {

@@ -12,7 +12,7 @@
             </padding>
 
             <!-- Title -->
-            <Label text="Scenario Management" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
+            <Label text="Gatling Scenario Management" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
             <Separator />
 
             <!-- Basic info grid -->
@@ -222,7 +222,7 @@
                 <Button text="Delete" onAction="#handleDeleteScenario" />
                 <Button text="Clear" onAction="#handleClearScenarioForm" />
                 <Separator orientation="VERTICAL" />
-                <Button text="Run Selected Scenario(s)" onAction="#handleRunScenario" />
+                <Button fx:id="runScenarioButton" text="Run Selected Scenario(s)" onAction="#handleRunScenario" />
                 <Button text="Schedule" onAction="#handleScheduleScenario" />
             </HBox>
 

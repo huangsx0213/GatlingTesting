@@ -107,17 +107,23 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
     }
 
     @Override
-    public void runScenarios(java.util.List<Scenario> scenarios) throws ServiceException {
-        if (scenarios == null || scenarios.isEmpty()) return;
+    public void runScenarios(java.util.List<com.qa.app.model.Scenario> scenarios, java.lang.Runnable onComplete) throws ServiceException {
+        if (scenarios == null || scenarios.isEmpty()) {
+            if (onComplete != null) {
+                if (javafx.application.Platform.isFxApplicationThread()) {
+                    onComplete.run();
+                } else {
+                    javafx.application.Platform.runLater(onComplete);
+                }
+            }
+            return;
+        }
 
         try {
             // ===== 1. 准备数据 =====
             class ScenarioRunItem {
-                @SuppressWarnings("unused")
-                public Scenario scenario;
-                @SuppressWarnings("unused")
-                public GatlingLoadParameters params;
-                @SuppressWarnings("unused")
+                public com.qa.app.model.Scenario scenario;
+                public com.qa.app.model.GatlingLoadParameters params;
                 public java.util.List<java.util.Map<String, Object>> items;
             }
 
@@ -125,7 +131,7 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
 
             IEndpointService endpointService = new EndpointServiceImpl();
 
-            for (Scenario sc : scenarios) {
+            for (com.qa.app.model.Scenario sc : scenarios) {
                 ScenarioRunItem sri = new ScenarioRunItem();
                 sri.scenario = sc;
                 sri.params = objectMapper.readValue(sc.getThreadGroupJson(), GatlingLoadParameters.class);
@@ -166,7 +172,7 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             // ===== 2. 序列化到临时文件 =====
             java.io.File multiFile = java.io.File.createTempFile("gatling_multiscenario_", ".json");
             multiFile.deleteOnExit();
-            new ObjectMapper().writeValue(multiFile, runItems);
+            new com.fasterxml.jackson.databind.ObjectMapper().writeValue(multiFile, runItems);
 
             // ===== 3. 启动 Gatling =====
             String javaHome = System.getProperty("java.home");
@@ -195,32 +201,49 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             // 在独立线程中启动并等待 Gatling 进程，避免阻塞调用线程
             new Thread(() -> {
                 try {
-                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Multi-scenario Starting", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
-
                     int exitCode;
-                    java.lang.Process p = pb.start();
-                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Multi-scenario Running", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+                    java.lang.Process p = null;
+                    try {
+                        p = pb.start();
+                    } catch (Exception ex) {
+                        System.err.println("Failed to start Gatling process: " + ex.getMessage());
+                        throw ex;
+                    }
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Running " + scenarios.size() + " Gatling scenario(s)", com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
 
                     exitCode = p.waitFor();
                     if (exitCode != 0) {
-                        System.err.println("Gatling multi-scenario execution failed, exit code: " + exitCode);
-                        com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Multi-scenario Failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+                        System.err.println("Gatling scenario(s) Failed, exit code: " + exitCode);
+                        com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Gatling scenario(s) Failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
                     } else {
-                        System.out.println("Gatling multi-scenario execution completed.");
-                        com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Multi-scenario Completed", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
+                        System.out.println("Gatling scenario(s) Completed.");
+                        com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Gatling Scenario(s) Completed", com.qa.app.ui.vm.MainViewModel.StatusType.SUCCESS);
                     }
                 } catch (Exception ex) {
-                    System.err.println("Failed to execute Gatling multi-scenario: " + ex.getMessage());
+                    System.err.println("Failed to execute Gatling Scenario(s): " + ex.getMessage());
                     ex.printStackTrace();
-                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Multi-scenario Exception: " + ex.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+                    com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Gatling Scenario(s) Exception: " + ex.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+                } finally {
+                    if (onComplete != null) {
+                        if (javafx.application.Platform.isFxApplicationThread()) {
+                            onComplete.run();
+                        } else {
+                            javafx.application.Platform.runLater(onComplete);
+                        }
+                    }
                 }
-            }, "gatling-multi-scenario-runner").start();
+            }, "scenario-runner").start();
 
         } catch(ServiceException se){
             throw se;
         } catch(Exception e){
-            throw new ServiceException("Failed to run multi-scenario", e);
+            throw new ServiceException("Failed to run Gatling scenario(s)", e);
         }
+    }
+
+    @Override
+    public void runScenarios(java.util.List<com.qa.app.model.Scenario> scenarios) throws ServiceException {
+        runScenarios(scenarios, null);
     }
 
     @Override

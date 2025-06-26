@@ -30,6 +30,8 @@ public class TestReportViewModel implements Initializable {
     @FXML
     private TabPane detailsTabPane;
     @FXML
+    private Tab checksTab;
+    @FXML
     private Label methodLabel;
     @FXML
     private Label urlLabel;
@@ -87,6 +89,15 @@ public class TestReportViewModel implements Initializable {
         setupSelectionListener();
         clearDetails();
         bindSummaryLabels();
+        // Default select Checks tab
+        if (detailsTabPane != null) {
+            if (checksTab != null) {
+                detailsTabPane.getSelectionModel().select(checksTab);
+            } else if (!detailsTabPane.getTabs().isEmpty()) {
+                // select last tab (assumed Checks) if fx:id not injected
+                detailsTabPane.getSelectionModel().select(detailsTabPane.getTabs().size() - 1);
+            }
+        }
         loadLastDirAndFiles();
     }
 
@@ -184,12 +195,54 @@ public class TestReportViewModel implements Initializable {
             return new SimpleStringProperty("");
         });
         
+        // Color-code PASS/FAIL in result column
+        resultColumn.setCellFactory(col -> new javafx.scene.control.TreeTableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    if ("PASS".equalsIgnoreCase(item)) {
+                        setStyle("-fx-text-fill: green;");
+                    } else if ("FAIL".equalsIgnoreCase(item)) {
+                        setStyle("-fx-text-fill: red;");
+                    } else {
+                        setStyle("");
+                    }
+                }
+            }
+        });
+
         checkTypeColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getType().toString()));
         checkExpressionColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getExpression()));
         checkOperatorColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getOperator().toString()));
         checkExpectedColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getExpect()));
         checkActualColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getActual()));
         checkResultColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().isPassed() ? "PASS" : "FAIL"));
+
+        // Color-code PASS/FAIL in checks table result column
+        checkResultColumn.setCellFactory(col -> new javafx.scene.control.TableCell<CheckReport, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    if ("PASS".equalsIgnoreCase(item)) {
+                        setStyle("-fx-text-fill: green;");
+                    } else if ("FAIL".equalsIgnoreCase(item)) {
+                        setStyle("-fx-text-fill: red;");
+                    } else {
+                        setStyle("");
+                    }
+                }
+            }
+        });
     }
 
     private void setupSelectionListener() {

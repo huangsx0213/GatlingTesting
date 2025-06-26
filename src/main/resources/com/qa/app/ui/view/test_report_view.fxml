@@ -28,7 +28,7 @@
             <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
          </padding>
          <children>
-            <Label style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" text="Functional Test Reports" />
+            <Label style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" text="Gatling Test Reports" />
             <Separator />
             <VBox spacing="15.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
                
@@ -172,7 +172,7 @@
                                     </AnchorPane>
                                  </content>
                               </Tab>
-                              <Tab text="Checks">
+                              <Tab fx:id="checksTab" text="Checks">
                                  <content>
                                     <AnchorPane>
                                        <children>

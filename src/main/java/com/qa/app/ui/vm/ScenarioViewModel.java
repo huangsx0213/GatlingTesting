@@ -21,6 +21,7 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.util.converter.IntegerStringConverter;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
+import javafx.scene.control.Button;
 
 public class ScenarioViewModel {
 
@@ -107,6 +108,8 @@ public class ScenarioViewModel {
     private final javafx.scene.control.CheckBox selectAllCheckBoxSc = new javafx.scene.control.CheckBox();
 
     private boolean isUpdatingSelection = false;
+
+    @FXML private Button runScenarioButton;
 
     public void setMainViewModel(MainViewModel vm) {
         this.mainViewModel = vm;
@@ -497,19 +500,34 @@ public class ScenarioViewModel {
             return;
         }
 
+        // Disable the Run button to prevent duplicate clicks
+        Button srcBtn;
+        if (runScenarioButton != null) {
+            srcBtn = runScenarioButton;
+        } else if (evt.getSource() instanceof Button) {
+            srcBtn = (Button) evt.getSource();
+        } else {
+            srcBtn = null;
+        }
+        if (srcBtn != null) srcBtn.setDisable(true);
+
+        String runningMsg = "Running " + selected.size() + " scenario(s)...";
+        if (mainViewModel != null) {
+            mainViewModel.updateStatus(runningMsg, MainViewModel.StatusType.INFO);
+        } else {
+            com.qa.app.ui.vm.MainViewModel.showGlobalStatus(runningMsg, com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+        }
+
+        Runnable onComplete = () -> javafx.application.Platform.runLater(() -> {
+            if (srcBtn != null) srcBtn.setDisable(false);
+            reloadScenarios();
+        });
+
         try {
-            if (selected.size() == 1) {
-                scenarioService.runScenario(selected.get(0).getId());
-            } else {
-                scenarioService.runScenarios(new java.util.ArrayList<>(selected));
-            }
-            String runMsg = "Running " + selected.size() + " scenario(s).";
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus(runMsg, MainViewModel.StatusType.INFO);
-            } else {
-                com.qa.app.ui.vm.MainViewModel.showGlobalStatus(runMsg, com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
-            }
+            // Always call the multi-scenario API for simplicity
+            scenarioService.runScenarios(new java.util.ArrayList<>(selected), onComplete);
         } catch (ServiceException e) {
+            if (srcBtn != null) srcBtn.setDisable(false);
             showError(e.getMessage());
         }
     }

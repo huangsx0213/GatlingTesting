@@ -769,6 +769,13 @@ public class GatlingTestViewModel implements Initializable {
         conditionHandler.getConditionRows().clear();
         updateGeneratedBody();
         updateGeneratedHeaders();
+
+        // Clear response checks
+        responseChecks.clear();
+        ensureDefaultStatusCheck();
+        if (responseChecksTable != null) {
+            responseChecksTable.refresh();
+        }
     }
 
     private void updateGeneratedBody() {

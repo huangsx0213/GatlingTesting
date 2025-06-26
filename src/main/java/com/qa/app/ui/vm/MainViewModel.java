@@ -37,7 +37,7 @@ public class MainViewModel implements Initializable {
     private final ObservableList<String> navItems = FXCollections.observableArrayList(
         "Gatling Test Management",
         "Gatling Test Reports",
-        "Scenario Management",
+        "Gatling Scenario Management",
         "Endpoint Management",
         "Headers Template Management",
         "Body Template Management",
@@ -88,7 +88,7 @@ public class MainViewModel implements Initializable {
         fxmlMapping.put("Environment Management", "/com/qa/app/ui/view/environment_view.fxml");
         fxmlMapping.put("Project Management", "/com/qa/app/ui/view/project_view.fxml");
         fxmlMapping.put("Variables Management", "/com/qa/app/ui/view/groovy_variable_view.fxml");
-        fxmlMapping.put("Scenario Management", "/com/qa/app/ui/view/scenario_management_view.fxml");
+        fxmlMapping.put("Gatling Scenario Management", "/com/qa/app/ui/view/scenario_management_view.fxml");
         fxmlMapping.put("Application Properties", "/com/qa/app/ui/view/application_properties_view.fxml");
         fxmlMapping.put("Gatling Test Reports", "/com/qa/app/ui/view/test_report_view.fxml");
         // Removed System Settings mapping
