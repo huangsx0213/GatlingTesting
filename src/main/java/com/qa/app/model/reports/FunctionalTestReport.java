@@ -7,6 +7,7 @@ public class FunctionalTestReport {
     private String suite;
     private String executedAt;
     private List<ModeGroup> groups;
+    private boolean passed;
 
     // Getters and Setters
     public String getOriginTcid() {
@@ -39,5 +40,13 @@ public class FunctionalTestReport {
 
     public void setGroups(List<ModeGroup> groups) {
         this.groups = groups;
+    }
+    
+    public boolean isPassed() {
+        return passed;
+    }
+    
+    public void setPassed(boolean passed) {
+        this.passed = passed;
     }
 } 

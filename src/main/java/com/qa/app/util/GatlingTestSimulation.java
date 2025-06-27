@@ -33,6 +33,7 @@ public class GatlingTestSimulation extends Simulation {
     private final boolean isBatchMode;
     private final Map<String, CaseReport> caseReports = new ConcurrentHashMap<>();
     private static final String REPORT_PREFIX = "REPORT_JSON:";
+    private static final String VARIABLES_PREFIX = "TEST_VARIABLES:";
     private static final String CHECK_REPORTS_KEY = "checkReports";
     private static final List<String> RESPONSE_HEADERS_TO_CAPTURE = java.util.Arrays.asList(
             "Content-Type",
@@ -47,7 +48,7 @@ public class GatlingTestSimulation extends Simulation {
         public GatlingTest test;
         public Endpoint endpoint;
         // Optional dependency metadata
-        public String origin; // 主用例 TCID
+        public String origin; // Main test TCID
         public String mode;   // SETUP | MAIN | TEARDOWN
 
         public TestMode getTestMode() {
@@ -65,6 +66,10 @@ public class GatlingTestSimulation extends Simulation {
     {
         // Clear results at the beginning of a simulation run.
         lastRunResults.clear();
+        
+        // Clear test run context
+        TestRunContext.clear();
+        
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             this.params = objectMapper.readValue(new File(System.getProperty("gatling.params.file")), GatlingLoadParameters.class);
@@ -453,33 +458,38 @@ public class GatlingTestSimulation extends Simulation {
                                 }
                                 checkReport.setActual(actualValue);
                                     
-                                    boolean checkPassed;
-                                    switch (currentCheck.getOperator()) {
-                                        case CONTAINS:
-                                            checkPassed = actualValue.contains(currentCheck.getExpect());
-                                            break;
-                                        case IS:
-                                        default:
-                                            checkPassed = actualValue.equals(currentCheck.getExpect());
-                                            break;
-                                    }
-                                    checkReport.setPassed(checkPassed);
+                                boolean checkPassed;
+                                switch (currentCheck.getOperator()) {
+                                    case CONTAINS:
+                                        checkPassed = actualValue.contains(currentCheck.getExpect());
+                                        break;
+                                    case IS:
+                                    default:
+                                        checkPassed = actualValue.equals(currentCheck.getExpect());
+                                        break;
+                                }
+                                checkReport.setPassed(checkPassed);
 
-                                    if (!checkPassed) {
-                                        System.out.println(String.format("CHECK_FAIL|%s|%s|%s|expected:%s|actual:%s",
-                                                test.getTcid(), currentCheck.getExpression(), currentCheck.getOperator().toString(), currentCheck.getExpect(), actualValue));
-                                    } else {
-                                        System.out.println(String.format("CHECK_PASS|%s|%s|%s|expected:%s|actual:%s",
-                                                test.getTcid(), currentCheck.getExpression(), currentCheck.getOperator().toString(), currentCheck.getExpect(), actualValue));
-                                    }
+                                if (!checkPassed) {
+                                    System.out.println(String.format("CHECK_FAIL|%s|%s|%s|expected:%s|actual:%s",
+                                            test.getTcid(), currentCheck.getExpression(), currentCheck.getOperator().toString(), currentCheck.getExpect(), actualValue));
+                                } else {
+                                    System.out.println(String.format("CHECK_PASS|%s|%s|%s|expected:%s|actual:%s",
+                                            test.getTcid(), currentCheck.getExpression(), currentCheck.getOperator().toString(), currentCheck.getExpect(), actualValue));
+                                }
 
-                                    // Add to session for reporting
-                                    session.getList(CHECK_REPORTS_KEY).add(checkReport);
+                                // Add to session for reporting
+                                session.getList(CHECK_REPORTS_KEY).add(checkReport);
 
-                                    if (saveAsKey.startsWith("temp_check_var_")) {
-                                        return session.remove(saveAsKey);
-                                    }
-                                    return session;
+                                // 如果设置了saveAs，则将值保存到TestRunContext中
+                                if (currentCheck.getSaveAs() != null && !currentCheck.getSaveAs().isBlank()) {
+                                    TestRunContext.saveVariable(test.getTcid(), currentCheck.getSaveAs(), actualValue);
+                                }
+
+                                if (saveAsKey.startsWith("temp_check_var_")) {
+                                    return session.remove(saveAsKey);
+                                }
+                                return session;
                             }));
                             break;
                         }
@@ -634,6 +644,9 @@ public class GatlingTestSimulation extends Simulation {
     @Override
     public void after() {
         try {
+            // 输出测试变量信息
+            System.out.println(VARIABLES_PREFIX + new ObjectMapper().writeValueAsString(TestRunContext.getAllVariables()));
+            
             // Finalize all case reports by calculating overall pass/fail status
             for (CaseReport caseReport : caseReports.values()) {
                 boolean allPassed = caseReport.getItems().stream()

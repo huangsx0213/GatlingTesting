@@ -28,6 +28,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
 
 public class GatlingTestRunner {
 
@@ -35,6 +36,11 @@ public class GatlingTestRunner {
      * Prefix used by GatlingTestSimulation to output the new report format to stdout.
      */
     private static final String REPORT_PREFIX = "REPORT_JSON:";
+
+    /**
+     * Prefix used by GatlingTestSimulation to output test variables.
+     */
+    private static final String VARIABLES_PREFIX = "TEST_VARIABLES:";
 
     private static String assembleClasspath() {
         // Prefer classpath provided by Maven build plugin (read from a file to avoid command line length limits)
@@ -136,7 +142,7 @@ public class GatlingTestRunner {
                     batchItems.add(map);
                 }
 
-                java.io.File batchFile = java.io.File.createTempFile("gatling_batch_tests_", ".json");
+                java.io.File batchFile = java.io.File.createTempFile("gatling_tests_", ".json");
                 batchFile.deleteOnExit();
                 try (java.io.BufferedWriter writer = new java.io.BufferedWriter(new java.io.FileWriter(batchFile))) {
                     writer.write(objectMapper.writeValueAsString(batchItems));
@@ -150,14 +156,14 @@ public class GatlingTestRunner {
 
                 List<String> command = buildGatlingCommand(batchFile.getAbsolutePath(), paramsFile.getAbsolutePath());
 
-                System.out.println("========== Gatling Batch Execution (Async) ==========");
+                System.out.println("========== Gatling Test(s) Execution (Async) ==========");
                 for (int i = 0; i < tests.size(); i++) {
                     System.out.println(String.format("  %d) %s [ %s %s ]", i + 1,
                             tests.get(i).getTcid(),
                             endpoints.get(i).getMethod(),
                             endpoints.get(i).getUrl()));
                 }
-                System.out.println("Starting Gatling batch test in background (separate process)...");
+                System.out.println("Starting Gatling test(s) in background (separate process)...");
 
                 java.lang.ProcessBuilder processBuilder = new java.lang.ProcessBuilder(command);
                 processBuilder.redirectErrorStream(true);
@@ -165,12 +171,22 @@ public class GatlingTestRunner {
                 java.lang.Process process = processBuilder.start();
 
                 String jsonResult = null;
+                Map<String, String> testVariables = null;
+                
                 try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         System.out.println(line);
                         if (line.startsWith(REPORT_PREFIX)) {
                             jsonResult = line.substring(REPORT_PREFIX.length());
+                        } else if (line.startsWith(VARIABLES_PREFIX)) {
+                            String variablesJson = line.substring(VARIABLES_PREFIX.length());
+                            try {
+                                testVariables = objectMapper.readValue(variablesJson, new TypeReference<Map<String, String>>() {});
+                                System.out.println("Received " + testVariables.size() + " test variables from execution");
+                            } catch (Exception e) {
+                                System.err.println("Failed to parse test variables: " + e.getMessage());
+                            }
                         }
                     }
                 }
@@ -178,19 +194,29 @@ public class GatlingTestRunner {
                 int exitCode = process.waitFor();
 
                 if (exitCode == 0) {
-                    System.out.println("Gatling batch execution completed.");
+                    System.out.println("Gatling test(s) execution completed.");
                     if (jsonResult != null) {
                         processAndSaveReports(jsonResult, tests);
                     }
+                    if (testVariables != null && !testVariables.isEmpty()) {
+                        // Load test variables into TestRunContext for subsequent use
+                        TestRunContext.clear();
+                        for (Map.Entry<String, String> entry : testVariables.entrySet()) {
+                            String[] parts = entry.getKey().split("\\.", 2);
+                            if (parts.length == 2) {
+                                TestRunContext.saveVariable(parts[0], parts[1], entry.getValue());
+                            }
+                        }
+                    }
                 } else {
-                    System.out.println("Gatling batch execution failed, exit code: " + exitCode);
+                    System.out.println("Gatling test(s) execution failed, exit code: " + exitCode);
                     com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test(s) Failed, exit code: " + exitCode, com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
                 }
 
             } catch (Exception e) {
-                System.err.println("Failed to start Gatling batch process: " + e.getMessage());
+                System.err.println("Failed to start Gatling test(s) process: " + e.getMessage());
                 e.printStackTrace();
-                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Test(s) Exception: " + e.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
+                com.qa.app.ui.vm.MainViewModel.showGlobalStatus("Gatling Test(s) Exception: " + e.getMessage(), com.qa.app.ui.vm.MainViewModel.StatusType.ERROR);
             } finally {
                 if (onComplete != null) {
                     if (javafx.application.Platform.isFxApplicationThread()) {
@@ -218,21 +244,34 @@ public class GatlingTestRunner {
             IGatlingTestDao testDao = new GatlingTestDaoImpl();
 
             // Collect all final reports for batch aggregation
-            List<FunctionalTestReport> aggregatedReports = new ArrayList<>();
+            // Use LinkedHashMap to maintain execution order
+            Map<String, FunctionalTestReport> reportMap = new LinkedHashMap<>();
+            
+            // First create a report object placeholder in the order of the original test list
+            for (GatlingTest test : executedTests) {
+                if (!reportMap.containsKey(test.getTcid())) {
+                    FunctionalTestReport report = new FunctionalTestReport();
+                    report.setOriginTcid(test.getTcid());
+                    report.setSuite(test.getSuite());
+                    report.setExecutedAt(ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+                    reportMap.put(test.getTcid(), report);
+                }
+            }
 
+            // Then fill the report content
             for (Map.Entry<String, List<Map<String, Object>>> entry : groupedByOrigin.entrySet()) {
                 String originTcid = entry.getKey();
                 List<Map<String, Object>> itemsForOrigin = entry.getValue();
-
-                FunctionalTestReport finalReport = new FunctionalTestReport();
-                finalReport.setOriginTcid(originTcid);
-                finalReport.setExecutedAt(ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
-
-                // Find the main test to get suite info
-                executedTests.stream()
-                        .filter(t -> t.getTcid().equals(originTcid))
-                        .findFirst()
-                        .ifPresent(mainTest -> finalReport.setSuite(mainTest.getSuite()));
+                
+                // If this TCID is not in our report mapping (possibly a dependency), add it
+                if (!reportMap.containsKey(originTcid)) {
+                    FunctionalTestReport report = new FunctionalTestReport();
+                    report.setOriginTcid(originTcid);
+                    report.setExecutedAt(ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+                    reportMap.put(originTcid, report);
+                }
+                
+                FunctionalTestReport finalReport = reportMap.get(originTcid);
 
                 // Group by mode directly based on each entry to accurately separate SETUP / MAIN / TEARDOWN
                 Map<TestMode, List<CaseReport>> casesByMode = new java.util.EnumMap<>(TestMode.class);
@@ -254,55 +293,61 @@ public class GatlingTestRunner {
                 });
 
                 finalReport.setGroups(modeGroups);
-                aggregatedReports.add(finalReport);
-            }
+                
+                // Set the passed status of the report
+                boolean allPassed = modeGroups.stream().allMatch(g -> g.getCases().stream().allMatch(CaseReport::isPassed));
+                finalReport.setPassed(allPassed);
 
-            // Always persist an aggregated report
-            Path batchReportPath = null;
+                // Update test status
+                for (GatlingTest test : executedTests) {
+                    if (test.getTcid().equals(originTcid)) {
+                        try {
+                            test.setLastRunPassed(allPassed);
+                            testDao.updateTest(test);
+                        } catch (Exception e) {
+                            System.err.println("Failed to update test status for " + test.getTcid() + ": " + e.getMessage());
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // Convert to list, maintain order
+            List<FunctionalTestReport> aggregatedReports = new ArrayList<>(reportMap.values());
+
+            // Generate an aggregated report
             if (!aggregatedReports.isEmpty()) {
                 String batchTimestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
                 String batchFileName = String.format("functional_report_%s.json", batchTimestamp);
                 Path reportDir = Paths.get(System.getProperty("user.dir"), "target", "gatling", "reports");
                 Files.createDirectories(reportDir);
-                batchReportPath = reportDir.resolve(batchFileName);
+                Path batchReportPath = reportDir.resolve(batchFileName);
 
                 try (Writer writer = new BufferedWriter(new FileWriter(batchReportPath.toFile()))) {
                     mapper.writeValue(writer, aggregatedReports);
                     System.out.println("Aggregated report saved to: " + batchReportPath);
                 }
-            }
-
-            // Update each test in the database with its status and the path to the batch report if it exists.
-            for (FunctionalTestReport report : aggregatedReports) {
-                final String originTcid = report.getOriginTcid();
-
-                final boolean overallPassed = report.getGroups().stream()
-                        .flatMap(mg -> mg.getCases().stream())
-                        .allMatch(CaseReport::isPassed);
-
-                final Path finalBatchReportPath = batchReportPath;
-                executedTests.stream()
-                        .filter(t -> t.getTcid().equals(originTcid))
-                        .findFirst()
-                        .ifPresent(testToUpdate -> {
-                            try {
-                                if (finalBatchReportPath != null) {
-                                    testToUpdate.setReportPath(finalBatchReportPath.toString());
+                
+                // Update each test, set the report path to the aggregated report
+                for (FunctionalTestReport report : aggregatedReports) {
+                    final String originTcid = report.getOriginTcid();
+                    executedTests.stream()
+                            .filter(t -> t.getTcid().equals(originTcid))
+                            .findFirst()
+                            .ifPresent(testToUpdate -> {
+                                try {
+                                    testToUpdate.setReportPath(batchReportPath.toString());
+                                    testDao.updateTest(testToUpdate);
+                                } catch (Exception e) {
+                                    System.err.println("Failed to update report path for test " + originTcid + ": " + e.getMessage());
                                 }
-                                testToUpdate.setLastRunPassed(overallPassed);
-                                testDao.updateTest(testToUpdate);
-                                System.out.println("Updated test '" + originTcid + "' with pass_status=" + overallPassed);
-                            } catch (Exception e) {
-                                System.err.println("Failed to update test in DB: " + originTcid);
-                                e.printStackTrace();
-                            }
-                        });
+                            });
+                }
             }
 
         } catch (Exception e) {
-            System.err.println("Failed to parse or process functional test report from JSON: " + e.getMessage());
+            System.err.println("Failed to process reports: " + e.getMessage());
             e.printStackTrace();
         }
     }
-
 } 

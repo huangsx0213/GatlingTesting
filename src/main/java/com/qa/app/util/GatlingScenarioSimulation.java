@@ -27,6 +27,8 @@ import static io.gatling.javaapi.http.HttpDsl.status;
      */
 public class GatlingScenarioSimulation extends Simulation {
 
+    private static final String VARIABLES_PREFIX = "TEST_VARIABLES:";
+
     private static class ScenarioRunItem {
         public com.qa.app.model.Scenario scenario;
         public GatlingLoadParameters params;
@@ -36,6 +38,9 @@ public class GatlingScenarioSimulation extends Simulation {
     private final List<ScenarioRunItem> runItems;
 
     public GatlingScenarioSimulation() {
+        // Clear test run context at the beginning of a simulation run
+        TestRunContext.clear();
+        
         try {
             String filePath = System.getProperty("gatling.multiscenario.file");
             if (filePath == null || filePath.isBlank()) {
@@ -97,17 +102,56 @@ public class GatlingScenarioSimulation extends Simulation {
     private ScenarioBuilder buildScenario(ScenarioRunItem sri) {
         ChainBuilder chain = null;
         com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+        
         for (Map<String, Object> m : sri.items) {
             Object to = m.get("test");
             GatlingTest test = (to instanceof GatlingTest) ? (GatlingTest) to : om.convertValue(to, GatlingTest.class);
             Object eo = m.get("endpoint");
             Endpoint ep = (eo instanceof Endpoint) ? (Endpoint) eo : om.convertValue(eo, Endpoint.class);
             HttpRequestActionBuilder req = buildRequest(test, ep);
+            
+            // Create a chain that executes the request and then processes any saved variables
+            final String tcid = test.getTcid();
+            ChainBuilder requestChain = exec(req).exec(session -> {
+                // Check for variables that need to be saved to TestRunContext
+                try {
+                    String json = test.getResponseChecks();
+                    if (json != null && !json.isBlank()) {
+                        List<ResponseCheck> checks = new ObjectMapper().readValue(json, new TypeReference<List<ResponseCheck>>() {});
+                        for (ResponseCheck rc : checks) {
+                            if (rc.getSaveAs() != null && !rc.getSaveAs().isBlank()) {
+                                String saveAsKey = rc.getSaveAs();
+                                if (session.contains(saveAsKey)) {
+                                    Object rawValue = session.get(saveAsKey);
+                                    String actualValue;
+                                    if (rawValue instanceof String) {
+                                        actualValue = (String) rawValue;
+                                    } else if (rawValue instanceof char[]) {
+                                        actualValue = new String((char[]) rawValue);
+                                    } else if (rawValue instanceof String[] arr) {
+                                        actualValue = arr.length > 0 ? arr[0] : "";
+                                    } else {
+                                        actualValue = String.valueOf(rawValue);
+                                    }
+                                    
+                                    // Save to TestRunContext
+                                    TestRunContext.saveVariable(tcid, saveAsKey, actualValue);
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    // Ignore parsing errors
+                }
+                return session;
+            });
+            
             if (chain == null) {
-                chain = exec(req);
+                chain = requestChain;
             } else {
-                chain = chain.exec(req);
+                chain = chain.exec(requestChain);
             }
+            
             if (test.getWaitTime() > 0) {
                 chain = chain.pause(Duration.ofSeconds(test.getWaitTime()));
             }
@@ -141,22 +185,26 @@ public class GatlingScenarioSimulation extends Simulation {
     private HttpRequestActionBuilder buildRequest(GatlingTest test, Endpoint ep) {
         String reqName = test.getTcid();
         String method = ep.getMethod() == null ? "GET" : ep.getMethod().toUpperCase();
+        
+        // Process URL with test variables
+        String processedUrl = TestRunContext.processVariableReferences(ep.getUrl());
+        
         HttpRequestActionBuilder req;
         switch(method){
             case "POST" -> {
-                req = http(reqName).post(ep.getUrl());
+                req = http(reqName).post(processedUrl);
                 if (test.getBody()!=null && !test.getBody().isBlank()) {
                     req = req.body(StringBody(session -> RuntimeTemplateProcessor.render(test.getBody(), test.getBodyDynamicVariables())));
                 }
             }
             case "PUT" -> {
-                req = http(reqName).put(ep.getUrl());
+                req = http(reqName).put(processedUrl);
                 if (test.getBody()!=null && !test.getBody().isBlank()) {
                     req = req.body(StringBody(session -> RuntimeTemplateProcessor.render(test.getBody(), test.getBodyDynamicVariables())));
                 }
             }
-            case "DELETE" -> req = http(reqName).delete(ep.getUrl());
-            default -> req = http(reqName).get(ep.getUrl());
+            case "DELETE" -> req = http(reqName).delete(processedUrl);
+            default -> req = http(reqName).get(processedUrl);
         }
 
         // headers
@@ -165,21 +213,60 @@ public class GatlingScenarioSimulation extends Simulation {
             req = req.header(entry.getKey(), session -> RuntimeTemplateProcessor.render(entry.getValue(), test.getHeadersDynamicVariables()));
         }
 
-        int expected = 200;
+        // Add response checks and variable extraction
+        List<CheckBuilder> checkBuilders = new ArrayList<>();
+        final String tcid = test.getTcid();
+        
         try {
             String json = test.getResponseChecks();
             if(json!=null && !json.isBlank()){
                 List<ResponseCheck> list = new ObjectMapper().readValue(json, new TypeReference<List<ResponseCheck>>(){});
+                int expected = 200;
+                
                 for(ResponseCheck rc: list){
-                    if(rc.getType()== CheckType.STATUS){
+                    if(rc.getType() == CheckType.STATUS){
                         expected = Integer.parseInt(rc.getExpect());
-                        break;
+                    }
+                    
+                    // Add extractors for variables to be saved
+                    if (rc.getSaveAs() != null && !rc.getSaveAs().isBlank()) {
+                        String saveAsKey = rc.getSaveAs();
+                        
+                        // Create the extractor based on check type
+                        switch(rc.getType()) {
+                            case JSON_PATH:
+                                checkBuilders.add(jsonPath(rc.getExpression()).saveAs(saveAsKey));
+                                break;
+                            case XPATH:
+                                checkBuilders.add(xpath(rc.getExpression()).saveAs(saveAsKey));
+                                break;
+                            case REGEX:
+                                checkBuilders.add(regex(rc.getExpression()).saveAs(saveAsKey));
+                                break;
+                            default:
+                                // Status check is handled separately
+                                break;
+                        }
                     }
                 }
+                
+                // Add status check
+                checkBuilders.add(status().is(expected));
+            } else {
+                // Default status check
+                checkBuilders.add(status().is(200));
             }
-        }catch(Exception ignored){}
+        } catch(Exception e) {
+            // Default status check on error
+            checkBuilders.add(status().is(200));
+        }
+        
+        // Apply all checks
+        if (!checkBuilders.isEmpty()) {
+            req = req.check(checkBuilders.toArray(new CheckBuilder[0]));
+        }
 
-        return req.check(status().is(expected));
+        return req;
     }
 
     private Map<String,String> parseHeaders(String str){
@@ -264,6 +351,17 @@ public class GatlingScenarioSimulation extends Simulation {
                 return max;
             }
             default -> {return 0;}
+        }
+    }
+    
+    @Override
+    public void after() {
+        try {
+            // Output test variables information
+            System.out.println(VARIABLES_PREFIX + new ObjectMapper().writeValueAsString(TestRunContext.getAllVariables()));
+        } catch (Exception ex) {
+            System.err.println("Failed to output test variables: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
 } 

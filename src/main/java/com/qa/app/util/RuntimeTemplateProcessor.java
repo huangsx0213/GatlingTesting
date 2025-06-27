@@ -52,14 +52,20 @@ public class RuntimeTemplateProcessor {
         if (templateStr == null || templateStr.isBlank()) {
             return templateStr;
         }
-        String fmTemplateStr = preprocessForFreeMarker(templateStr);
+        
+        // Process test variable references ${TCID.variableName}
+        String processedTemplate = TestRunContext.processVariableReferences(templateStr);
+        
+        String fmTemplateStr = preprocessForFreeMarker(processedTemplate);
 
         // Construct the data model
         Map<String, Object> dataModel = new HashMap<>();
         if (variableExpressionMap != null) {
             for (Map.Entry<String, String> entry : variableExpressionMap.entrySet()) {
+                // Process test variable references in variable values
+                String processedValue = TestRunContext.processVariableReferences(entry.getValue());
                 // Call VariableGenerator.generate on variable expressions again to achieve true dynamic effects
-                String value = VariableGenerator.generate(entry.getValue());
+                String value = VariableGenerator.generate(processedValue);
                 dataModel.put(entry.getKey(), value);
             }
         }

@@ -1,0 +1,80 @@
+package com.qa.app.util;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Test run context for managing variables during test execution.
+ * Variables are stored in the format "TCID.variableName" and can be referenced using ${TCID.variableName} in subsequent tests.
+ */
+public class TestRunContext {
+    // Map to store all test variables, key is "TCID.variableName", value is the variable value
+    private static final Map<String, String> testVariables = new ConcurrentHashMap<>();
+    
+    // Regular expression to match ${TCID.variableName} format
+    private static final Pattern VARIABLE_REFERENCE_PATTERN = Pattern.compile("\\$\\{([\\w.-]+)\\.([\\w.-]+)\\}");
+    
+    /**
+     * Clear all test variables
+     */
+    public static void clear() {
+        testVariables.clear();
+    }
+    
+    /**
+     * Save test variable
+     * @param tcid Test case ID
+     * @param variableName Variable name
+     * @param value Variable value
+     */
+    public static void saveVariable(String tcid, String variableName, String value) {
+        if (tcid == null || tcid.isBlank() || variableName == null || variableName.isBlank()) {
+            return;
+        }
+        String key = tcid + "." + variableName;
+        testVariables.put(key, value);
+        System.out.println("VARIABLE_SAVED|" + key + "|" + value);
+    }
+    
+    /**
+     * Get test variable
+     * @param key Full variable key in the format "TCID.variableName"
+     * @return Variable value, or null if not found
+     */
+    public static String getVariable(String key) {
+        return testVariables.get(key);
+    }
+    
+    /**
+     * Process variable references in a string, replacing ${TCID.variableName} with the actual variable value
+     * @param input Input string
+     * @return String with variable references replaced
+     */
+    public static String processVariableReferences(String input) {
+        if (input == null || input.isEmpty() || !input.contains("${")) {
+            return input;
+        }
+        
+        StringBuffer result = new StringBuffer();
+        Matcher matcher = VARIABLE_REFERENCE_PATTERN.matcher(input);
+        
+        while (matcher.find()) {
+            String fullKey = matcher.group(1) + "." + matcher.group(2);
+            String value = testVariables.getOrDefault(fullKey, "${" + fullKey + " - NOT FOUND}");
+            matcher.appendReplacement(result, Matcher.quoteReplacement(value));
+        }
+        matcher.appendTail(result);
+        
+        return result.toString();
+    }
+    
+    /**
+     * Get all test variables
+     * @return Copy of the variable Map
+     */
+    public static Map<String, String> getAllVariables() {
+        return new ConcurrentHashMap<>(testVariables);
+    }
+} 
