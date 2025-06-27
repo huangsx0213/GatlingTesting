@@ -287,30 +287,32 @@ public class GatlingTestReportViewModel implements Initializable {
 
         // Custom cell to embed expand/collapse buttons on ROOT row
         nameColumn.setCellFactory(col -> new javafx.scene.control.TreeTableCell<>() {
-            private final javafx.scene.control.Button toggleBtn = new javafx.scene.control.Button();
+            private final javafx.scene.control.Button expandBtn = new javafx.scene.control.Button("+");
+            private final javafx.scene.control.Button collapseBtn = new javafx.scene.control.Button("-");
             private final javafx.scene.control.Label rootLabel = new Label("ROOT");
-            private final javafx.scene.layout.HBox graphic = new javafx.scene.layout.HBox(6, rootLabel, toggleBtn);
+            private final javafx.scene.layout.HBox graphic = new javafx.scene.layout.HBox(6, rootLabel, expandBtn, collapseBtn);
 
             {
                 graphic.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-                toggleBtn.getStyleClass().add("icon-button");
+                expandBtn.getStyleClass().add("icon-button");
+                collapseBtn.getStyleClass().add("icon-button");
                 
-                // Make the button background transparent
-                toggleBtn.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
+                // Make buttons background transparent and small for alignment
+                String buttonStyle = "-fx-background-color: transparent; -fx-border-color: transparent; -fx-font-size: 12px; -fx-padding: 0;";
+                expandBtn.setStyle(buttonStyle);
+                collapseBtn.setStyle(buttonStyle);
 
-                toggleBtn.textProperty().bind(
-                    javafx.beans.binding.Bindings.when(allExpanded)
-                        .then("-")
-                        .otherwise("+")
-                );
+                // Set fixed small size so row height remains normal and arrow/label align
+                expandBtn.setPrefSize(18, 18);
+                expandBtn.setMinSize(18, 18);
+                expandBtn.setMaxSize(18, 18);
 
-                toggleBtn.setOnAction(e -> {
-                    if (allExpanded.get()) {
-                        handleCollapseAll();
-                    } else {
-                        handleExpandAll();
-                    }
-                });
+                collapseBtn.setPrefSize(18, 18);
+                collapseBtn.setMinSize(18, 18);
+                collapseBtn.setMaxSize(18, 18);
+
+                expandBtn.setOnAction(e -> handleExpandAll());
+                collapseBtn.setOnAction(e -> handleCollapseAll());
             }
 
             @Override
@@ -320,7 +322,8 @@ public class GatlingTestReportViewModel implements Initializable {
                     setGraphic(null);
                     setText(null);
                 } else {
-                    if (getTreeTableRow() != null && getTreeTableRow().getTreeItem() == getTreeTableView().getRoot()) {
+                    TreeItem<Object> treeItem = getTreeTableRow() != null ? getTreeTableRow().getTreeItem() : null;
+                    if (treeItem != null && treeItem.getParent() == null) { // More robust check for root
                         setGraphic(graphic);
                         setText(null);
                     } else {
@@ -360,6 +363,7 @@ public class GatlingTestReportViewModel implements Initializable {
         root.setExpanded(true);
         requestsTreeTableView.setRoot(root);
         requestsTreeTableView.setShowRoot(true);
+        allExpanded.set(true); // Reset expand/collapse state
 
         TreeItem<Object> reportItem = new TreeItem<>(report);
         reportItem.setExpanded(true);
@@ -433,6 +437,7 @@ public class GatlingTestReportViewModel implements Initializable {
         root.setExpanded(true);
         requestsTreeTableView.setRoot(root);
         requestsTreeTableView.setShowRoot(true);
+        allExpanded.set(true); // Reset expand/collapse state
 
         for (FunctionalTestReport report : reports) {
             TreeItem<Object> reportItem = new TreeItem<>(report);
