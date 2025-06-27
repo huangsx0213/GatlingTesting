@@ -136,6 +136,9 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
                 GatlingLoadParameters params = objectMapper.readValue(sc.getThreadGroupJson(), GatlingLoadParameters.class);
 
                 java.util.List<ScenarioStep> steps = scenarioDao.getStepsByScenarioId(sc.getId());
+                if (steps == null || steps.isEmpty()) {
+                    throw new ServiceException("Scenario '" + sc.getName() + "' has no steps defined – cannot run.");
+                }
                 java.util.List<java.util.Map<String, Object>> batchItems = new java.util.ArrayList<>();
                 for (ScenarioStep step : steps) {
                     GatlingTest gt = testService.findTestByTcid(step.getTestTcid());
@@ -164,12 +167,18 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
                     map.put("endpoint", endpointService.getEndpointByName(gt.getEndpointName()));
                     batchItems.add(map);
                 }
+                if (batchItems.isEmpty()) {
+                    throw new ServiceException("Scenario '" + sc.getName() + "' has no executable steps (tests/endpoints not found).");
+                }
                 runItems.add(new ScenarioRunItem(sc, params, batchItems));
             }
 
             // ===== 2. 序列化到临时文件 =====
             java.io.File multiFile = java.io.File.createTempFile("gatling_multiscenario_", ".json");
             multiFile.deleteOnExit();
+            if (runItems.isEmpty()) {
+                throw new ServiceException("No valid scenario steps found to execute.");
+            }
             new com.fasterxml.jackson.databind.ObjectMapper().writeValue(multiFile, runItems);
 
             // ===== 3. 启动 Gatling =====

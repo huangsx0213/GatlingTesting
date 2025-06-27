@@ -51,6 +51,12 @@ public class GatlingScenarioSimulation extends Simulation {
             throw new RuntimeException("No scenarios found in JSON");
         }
 
+        // Remove scenarios that have no step items to prevent runtime errors
+        runItems.removeIf(item -> item.items == null || item.items.isEmpty());
+        if (runItems.isEmpty()) {
+            throw new RuntimeException("Selected scenarios contain no steps to execute");
+        }
+
         List<PopulationBuilder> popBuilders = new ArrayList<>();
         long maxDurationSec = 0;
 
@@ -61,10 +67,25 @@ public class GatlingScenarioSimulation extends Simulation {
             maxDurationSec = Math.max(maxDurationSec, estimateMaxDuration(item.params));
         }
 
-        // Use first endpoint for httpProtocol baseUrl
+        // ---- Resolve first endpoint for http protocol in a safe way ----
+        Endpoint firstEp = null;
         com.fasterxml.jackson.databind.ObjectMapper omConv = new com.fasterxml.jackson.databind.ObjectMapper();
-        Object epObj = runItems.get(0).items.get(0).get("endpoint");
-        Endpoint firstEp = (epObj instanceof Endpoint) ? (Endpoint) epObj : omConv.convertValue(epObj, Endpoint.class);
+        outer:
+        for (ScenarioRunItem ri : runItems) {
+            if (ri.items == null) continue;
+            for (Map<String, Object> map : ri.items) {
+                Object epObj = map.get("endpoint");
+                if (epObj != null) {
+                    firstEp = (epObj instanceof Endpoint) ? (Endpoint) epObj : omConv.convertValue(epObj, Endpoint.class);
+                    if (firstEp != null && firstEp.getUrl() != null && !firstEp.getUrl().isBlank()) {
+                        break outer;
+                    }
+                }
+            }
+        }
+        if (firstEp == null) {
+            throw new RuntimeException("Unable to determine baseUrl – no endpoint found in scenario steps");
+        }
         HttpProtocolBuilder httpProtocol = http.baseUrl(firstEp.getUrl());
 
         SetUp s = setUp(popBuilders.toArray(new PopulationBuilder[0])).protocols(httpProtocol);
