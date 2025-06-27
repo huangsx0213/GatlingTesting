@@ -9,6 +9,10 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.scene.web.WebView;
+import javafx.scene.control.Tab;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 
 import java.io.File;
 import java.io.IOException;
@@ -64,20 +68,21 @@ public class GatlingTestReportViewModel implements Initializable {
     @FXML
     private TableColumn<CheckReport, String> checkResultColumn;
     @FXML
-    private Label totalLabel;
-    @FXML
-    private Label passedLabel;
-    @FXML
-    private Label failedLabel;
-    @FXML
     private javafx.scene.control.ComboBox<File> recentFilesCombo;
+    @FXML
+    private WebView summaryWebView;
+    @FXML
+    private Tab summaryTab;
     //</editor-fold>
 
-    private final javafx.beans.property.IntegerProperty totalCases = new javafx.beans.property.SimpleIntegerProperty(0);
-    private final javafx.beans.property.IntegerProperty passedCases = new javafx.beans.property.SimpleIntegerProperty(0);
-    private final javafx.beans.property.IntegerProperty failedCases = new javafx.beans.property.SimpleIntegerProperty(0);
-
     private java.nio.file.Path lastDir;
+
+    // --------------------------------------------------------------------
+    // Newly added fields
+    private java.util.List<com.qa.app.model.reports.FunctionalTestReport> currentReports = new java.util.ArrayList<>();
+    // --------------------------------------------------------------------
+
+    private final BooleanProperty allExpanded = new SimpleBooleanProperty(true);
 
     public void refresh() {
         loadLastDirAndFiles();
@@ -88,7 +93,6 @@ public class GatlingTestReportViewModel implements Initializable {
         setupColumns();
         setupSelectionListener();
         clearDetails();
-        bindSummaryLabels();
 
         // Configure ComboBox to display file names
         recentFilesCombo.setCellFactory(param -> new ListCell<>() {
@@ -116,6 +120,9 @@ public class GatlingTestReportViewModel implements Initializable {
             }
         }
         loadLastDirAndFiles();
+
+        // Ensure summary tab starts disabled (FXML sets it, but we double-check)
+        if (summaryTab != null) summaryTab.setDisable(true);
     }
 
     @FXML
@@ -156,10 +163,12 @@ public class GatlingTestReportViewModel implements Initializable {
                 // Aggregated batch file
                 java.util.List<FunctionalTestReport> reports = mapper.readValue(json,
                         new com.fasterxml.jackson.core.type.TypeReference<java.util.List<FunctionalTestReport>>() {});
+                currentReports = reports; // store
                 populateReports(reports);
             } else {
                 // Single report file (backward compatibility)
                 FunctionalTestReport report = mapper.readValue(json, FunctionalTestReport.class);
+                currentReports = java.util.List.of(report); // store
                 populateReport(report);
             }
         } catch (IOException e) {
@@ -170,9 +179,15 @@ public class GatlingTestReportViewModel implements Initializable {
 
     private void setupColumns() {
         nameColumn.setCellValueFactory(p -> {
+            if (p == null || p.getValue() == null || p.getValue().getValue() == null) {
+                return new SimpleStringProperty("");
+            }
             Object value = p.getValue().getValue();
             if (value instanceof FunctionalTestReport) {
                 return new SimpleStringProperty(((FunctionalTestReport) value).getOriginTcid());
+            }
+            if (value instanceof String str) {
+                return new SimpleStringProperty(str);
             }
             if (value instanceof ModeGroup) {
                 return new SimpleStringProperty(((ModeGroup) value).getMode().toString());
@@ -185,6 +200,9 @@ public class GatlingTestReportViewModel implements Initializable {
         });
 
         statusColumn.setCellValueFactory(p -> {
+            if (p == null || p.getValue() == null || p.getValue().getValue() == null) {
+                return new SimpleStringProperty("");
+            }
             Object value = p.getValue().getValue();
             if (value instanceof FunctionalTestReport) {
                 return new SimpleStringProperty("");
@@ -200,6 +218,9 @@ public class GatlingTestReportViewModel implements Initializable {
         });
 
         resultColumn.setCellValueFactory(p -> {
+            if (p == null || p.getValue() == null || p.getValue().getValue() == null) {
+                return new SimpleStringProperty("");
+            }
             Object value = p.getValue().getValue();
             if (value instanceof FunctionalTestReport) {
                 boolean passed = ((FunctionalTestReport) value).getGroups().stream()
@@ -263,6 +284,52 @@ public class GatlingTestReportViewModel implements Initializable {
                 }
             }
         });
+
+        // Custom cell to embed expand/collapse buttons on ROOT row
+        nameColumn.setCellFactory(col -> new javafx.scene.control.TreeTableCell<>() {
+            private final javafx.scene.control.Button toggleBtn = new javafx.scene.control.Button();
+            private final javafx.scene.control.Label rootLabel = new Label("ROOT");
+            private final javafx.scene.layout.HBox graphic = new javafx.scene.layout.HBox(6, rootLabel, toggleBtn);
+
+            {
+                graphic.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                toggleBtn.getStyleClass().add("icon-button");
+                
+                // Make the button background transparent
+                toggleBtn.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
+
+                toggleBtn.textProperty().bind(
+                    javafx.beans.binding.Bindings.when(allExpanded)
+                        .then("-")
+                        .otherwise("+")
+                );
+
+                toggleBtn.setOnAction(e -> {
+                    if (allExpanded.get()) {
+                        handleCollapseAll();
+                    } else {
+                        handleExpandAll();
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                    setText(null);
+                } else {
+                    if (getTreeTableRow() != null && getTreeTableRow().getTreeItem() == getTreeTableView().getRoot()) {
+                        setGraphic(graphic);
+                        setText(null);
+                    } else {
+                        setGraphic(null);
+                        setText(item);
+                    }
+                }
+            }
+        });
     }
 
     private void setupSelectionListener() {
@@ -289,17 +356,19 @@ public class GatlingTestReportViewModel implements Initializable {
     }
 
     private void populateReport(FunctionalTestReport report) {
-        computeSummary(report);
-
-        TreeItem<Object> root = new TreeItem<>(report);
+        TreeItem<Object> root = new TreeItem<>("ROOT");
         root.setExpanded(true);
         requestsTreeTableView.setRoot(root);
-        requestsTreeTableView.setShowRoot(false);
+        requestsTreeTableView.setShowRoot(true);
+
+        TreeItem<Object> reportItem = new TreeItem<>(report);
+        reportItem.setExpanded(true);
+        root.getChildren().add(reportItem);
 
         for (ModeGroup group : report.getGroups()) {
             TreeItem<Object> groupItem = new TreeItem<>(group);
             groupItem.setExpanded(true);
-            root.getChildren().add(groupItem);
+            reportItem.getChildren().add(groupItem);
             for (CaseReport caseReport : group.getCases()) {
                 TreeItem<Object> caseItem = new TreeItem<>(caseReport);
                 caseItem.setExpanded(true);
@@ -356,8 +425,6 @@ public class GatlingTestReportViewModel implements Initializable {
      * Populate UI with multiple FunctionalTestReport objects (aggregated batch file).
      */
     private void populateReports(java.util.List<FunctionalTestReport> reports) {
-        computeSummary(reports);
-
         if (reports == null || reports.isEmpty()) {
             return;
         }
@@ -365,7 +432,7 @@ public class GatlingTestReportViewModel implements Initializable {
         TreeItem<Object> root = new TreeItem<>("ROOT");
         root.setExpanded(true);
         requestsTreeTableView.setRoot(root);
-        requestsTreeTableView.setShowRoot(false);
+        requestsTreeTableView.setShowRoot(true);
 
         for (FunctionalTestReport report : reports) {
             TreeItem<Object> reportItem = new TreeItem<>(report);
@@ -389,36 +456,6 @@ public class GatlingTestReportViewModel implements Initializable {
                 }
             }
         }
-    }
-
-    private void bindSummaryLabels() {
-        totalLabel.textProperty().bind(totalCases.asString());
-        passedLabel.textProperty().bind(passedCases.asString());
-        failedLabel.textProperty().bind(failedCases.asString());
-    }
-
-    private void computeSummary(FunctionalTestReport report) {
-        totalCases.set(1);
-        boolean originPassed = report.getGroups().stream()
-                .flatMap(g -> g.getCases().stream())
-                .allMatch(CaseReport::isPassed);
-        passedCases.set(originPassed ? 1 : 0);
-        failedCases.set(originPassed ? 0 : 1);
-    }
-
-    private void computeSummary(java.util.List<FunctionalTestReport> reports) {
-        int total = reports.size();
-        int passed = 0;
-        for (FunctionalTestReport r : reports) {
-            boolean originPassed = r.getGroups().stream()
-                    .flatMap(g -> g.getCases().stream())
-                    .allMatch(CaseReport::isPassed);
-            if (originPassed) passed++;
-        }
-        int failed = total - passed;
-        totalCases.set(total);
-        passedCases.set(passed);
-        failedCases.set(failed);
     }
 
     private void loadLastDirAndFiles() {
@@ -469,6 +506,68 @@ public class GatlingTestReportViewModel implements Initializable {
                 e.printStackTrace();
                 // Show error alert
             }
+        }
+    }
+
+    @FXML
+    private void handleExportHtml() {
+        if (currentReports == null || currentReports.isEmpty()) {
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,
+                    "Please load a report before exporting the HTML summary.");
+            alert.showAndWait();
+            return;
+        }
+
+        try {
+            java.nio.file.Path summaryDir = java.nio.file.Paths.get(System.getProperty("user.home"), ".gatling");
+            java.nio.file.Files.createDirectories(summaryDir);
+            java.nio.file.Path summaryPath = summaryDir.resolve("gatling-summary.html");
+            com.qa.app.util.HtmlSummaryReportGenerator.generateHtml(currentReports, summaryPath);
+
+            // Load into embedded WebView
+            if (summaryWebView != null) {
+                summaryWebView.getEngine().load(summaryPath.toUri().toString());
+            }
+
+            if (summaryTab != null) {
+                summaryTab.setDisable(false);
+                // Switch to Summary tab automatically
+                // The parent TabPane is the TabPane above; we can request selection.
+                summaryTab.getTabPane().getSelectionModel().select(summaryTab);
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR,
+                    "Failed to export HTML summary: " + ex.getMessage());
+            alert.showAndWait();
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Expand/Collapse helpers
+    private void handleExpandAll() {
+        TreeItem<Object> root = requestsTreeTableView.getRoot();
+        if (root != null) {
+            setExpandedRecursively(root, true);
+        }
+        allExpanded.set(true);
+    }
+
+    private void handleCollapseAll() {
+        TreeItem<Object> root = requestsTreeTableView.getRoot();
+        if (root != null) {
+            setExpandedRecursively(root, false);
+        }
+        allExpanded.set(false);
+    }
+
+    private void setExpandedRecursively(TreeItem<?> item, boolean expanded) {
+        // The root item itself should not be collapsed, only its children.
+        if (item != requestsTreeTableView.getRoot()) {
+            item.setExpanded(expanded);
+        }
+        for (TreeItem<?> child : item.getChildren()) {
+            setExpandedRecursively(child, expanded);
         }
     }
 } 

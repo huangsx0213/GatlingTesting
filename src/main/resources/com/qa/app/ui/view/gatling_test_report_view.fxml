@@ -20,6 +20,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.web.WebView?>
 
 <AnchorPane prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.qa.app.ui.vm.GatlingTestReportViewModel">
    <children>
@@ -31,174 +32,176 @@
             <Label style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" text="Gatling Test Reports" />
             <Separator />
             <VBox spacing="15.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
-               
-               <!-- 模拟表格的统计信息区域 -->
-               <GridPane hgap="20.0" vgap="10.0" style="-fx-border-color: #ccc; -fx-border-width: 1; -fx-padding: 10;">
-                  <columnConstraints>
-                        <ColumnConstraints halignment="CENTER" />
-                        <ColumnConstraints halignment="CENTER" />
-                        <ColumnConstraints halignment="CENTER" />
-                  </columnConstraints>
-                  <rowConstraints>
-                        <RowConstraints />
-                        <RowConstraints />
-                  </rowConstraints>
-
-                  <!-- 表头 -->
-                  <Label text="Total Tests" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-weight: bold;" />
-                  <Label text="Passed" GridPane.rowIndex="0" GridPane.columnIndex="1" style="-fx-font-weight: bold;" />
-                  <Label text="Failed" GridPane.rowIndex="0" GridPane.columnIndex="2" style="-fx-font-weight: bold;" />
-
-                  <!-- 表格内容 -->
-                  <Label fx:id="totalLabel" text="-" GridPane.rowIndex="1" GridPane.columnIndex="0" />
-                  <Label fx:id="passedLabel" text="-" GridPane.rowIndex="1" GridPane.columnIndex="1" />
-                  <Label fx:id="failedLabel" text="-" GridPane.rowIndex="1" GridPane.columnIndex="2" />
-               </GridPane>
-
-               <!-- Recent Reports 区域放在统计信息下方，靠右 -->
+               <!-- File selection / actions -->
                <HBox alignment="CENTER_LEFT" spacing="10.0">
                   <children>
                         <Label text="Gatling Test Reports:" />
                         <ComboBox fx:id="recentFilesCombo" onAction="#handleRecentSelection" prefWidth="300.0" promptText="Select a report..."/>
                         <Button onAction="#handleLoadReport" text="Browse..." />
+                        <Button onAction="#handleExportHtml" text="Export Summary" />
                   </children>
                </HBox>
             </VBox>
 
-            <SplitPane dividerPositions="0.4" VBox.vgrow="ALWAYS">
-               <items>
-                  <AnchorPane>
-                     <children>
-                        <TreeTableView fx:id="requestsTreeTableView" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                           <columns>
-                              <TreeTableColumn fx:id="nameColumn" prefWidth="150.0" text="Name" />
-                              <TreeTableColumn fx:id="statusColumn" minWidth="0.0" prefWidth="75.0" text="Status" />
-                              <TreeTableColumn fx:id="resultColumn" prefWidth="75.0" text="Result" />
-                           </columns>
-                           <columnResizePolicy>
-                              <TreeTableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                           </columnResizePolicy>
-                        </TreeTableView>
-                     </children>
-                  </AnchorPane>
-                  <AnchorPane>
-                     <children>
-                        <TabPane fx:id="detailsTabPane" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                           <tabs>
-                              <Tab text="Request">
-                                 <content>
+            <!-- Main content area represented by two tabs -->
+            <TabPane VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
+                <tabs>
+                    <!-- Details Tab -->
+                    <Tab text="Details">
+                        <content>
+                            <SplitPane dividerPositions="0.4" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                <items>
                                     <AnchorPane>
-                                       <children>
-                                          <VBox AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                                             <children>
-                                                <TitledPane animated="false" text="URL &amp; Method">
-                                                   <content>
-                                                      <GridPane>
-                                                         <columnConstraints>
-                                                            <ColumnConstraints hgrow="SOMETIMES" maxWidth="285.0" minWidth="10.0" prefWidth="68.0" />
-                                                            <ColumnConstraints hgrow="SOMETIMES" maxWidth="519.0" minWidth="10.0" prefWidth="519.0" />
-                                                         </columnConstraints>
-                                                         <rowConstraints>
-                                                            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                                            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                                         </rowConstraints>
-                                                         <children>
-                                                            <Label text="Method:" />
-                                                            <Label text="URL:" GridPane.rowIndex="1" />
-                                                            <Label fx:id="methodLabel" text="-" GridPane.columnIndex="1" />
-                                                            <Label fx:id="urlLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                                                         </children>
-                                                      </GridPane>
-                                                   </content>
-                                                </TitledPane>
-                                                <TitledPane animated="false" text="Headers">
-                                                   <content>
-                                                      <TextArea fx:id="requestHeadersTextArea" editable="false" prefHeight="150.0" />
-                                                   </content>
-                                                </TitledPane>
-                                                <TitledPane animated="false" text="Body" VBox.vgrow="ALWAYS">
-                                                   <content>
-                                                      <TextArea fx:id="requestBodyTextArea" editable="false" prefHeight="330.0" />
-                                                   </content>
-                                                </TitledPane>
-                                             </children>
-                                          </VBox>
-                                       </children>
+                                        <children>
+                                            <VBox AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" spacing="6.0">
+                                                <children>
+                                                    <TreeTableView fx:id="requestsTreeTableView" VBox.vgrow="ALWAYS">
+                                                        <columns>
+                                                            <TreeTableColumn fx:id="nameColumn" prefWidth="150.0" text="Name" />
+                                                            <TreeTableColumn fx:id="statusColumn" minWidth="0.0" prefWidth="75.0" text="Status" />
+                                                            <TreeTableColumn fx:id="resultColumn" prefWidth="75.0" text="Result" />
+                                                        </columns>
+                                                        <columnResizePolicy>
+                                                            <TreeTableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                        </columnResizePolicy>
+                                                    </TreeTableView>
+                                                </children>
+                                            </VBox>
+                                        </children>
                                     </AnchorPane>
-                                 </content>
-                              </Tab>
-                              <Tab text="Response">
-                                 <content>
                                     <AnchorPane>
-                                       <children>
-                                          <VBox AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" >
-                                             <children>
-                                                <TitledPane animated="false" text="Status &amp; Timings">
-                                                   <content>
-                                                      <GridPane>
-                                                         <columnConstraints>
-                                                            <ColumnConstraints hgrow="SOMETIMES" maxWidth="285.0" minWidth="10.0" prefWidth="100.0" />
-                                                            <ColumnConstraints hgrow="SOMETIMES" maxWidth="519.0" minWidth="10.0" prefWidth="519.0" />
-                                                         </columnConstraints>
-                                                         <rowConstraints>
-                                                            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                                            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                                            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                                         </rowConstraints>
-                                                         <children>
-                                                            <Label text="Status:" />
-                                                            <Label text="Latency (ms):" GridPane.rowIndex="1" />
-                                                            <Label fx:id="responseStatusLabel" text="-" GridPane.columnIndex="1" />
-                                                            <Label fx:id="latencyLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                                                            <Label text="Size (bytes):" GridPane.rowIndex="2" />
-                                                            <Label fx:id="sizeLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-                                                         </children>
-                                                      </GridPane>
-                                                   </content>
-                                                </TitledPane>
-                                                <TitledPane animated="false" text="Headers">
-                                                   <content>
-                                                      <TextArea fx:id="responseHeadersTextArea" editable="false" prefHeight="150.0" />
-                                                   </content>
-                                                </TitledPane>
-                                                <TitledPane animated="false" text="Body Sample" VBox.vgrow="ALWAYS">
-                                                   <content>
-                                                      <TextArea fx:id="responseBodyTextArea" editable="false" prefHeight="300.0" />
-                                                   </content>
-                                                </TitledPane>
-                                             </children>
-                                          </VBox>
-                                       </children>
-                                    </AnchorPane>
-                                 </content>
-                              </Tab>
-                              <Tab fx:id="checksTab" text="Checks">
-                                 <content>
-                                    <AnchorPane>
-                                       <children>
-                                          <TableView fx:id="checksTableView" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                                             <columns>
-                                                <TableColumn fx:id="checkTypeColumn" prefWidth="75.0" text="Type" />
-                                                <TableColumn fx:id="checkExpressionColumn" prefWidth="75.0" text="Expression" />
-                                                <TableColumn fx:id="checkOperatorColumn" prefWidth="75.0" text="Operator" />
-                                                <TableColumn fx:id="checkExpectedColumn" prefWidth="75.0" text="Expected" />
-                                                <TableColumn fx:id="checkActualColumn" prefWidth="75.0" text="Actual" />
-                                                <TableColumn fx:id="checkResultColumn" prefWidth="75.0" text="Result" />
-                                             </columns>
-                                             <columnResizePolicy>
-                                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                             </columnResizePolicy>
-                                          </TableView>
-                                       </children>
-                                    </AnchorPane>
-                                 </content>
-                              </Tab>
-                           </tabs>
-                        </TabPane>
-                     </children>
-                  </AnchorPane>
-               </items>
-            </SplitPane>
+                                        <children>
+                                            <TabPane fx:id="detailsTabPane" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                                <tabs>
+                                                   <Tab text="Request">
+                                                      <content>
+                                                         <AnchorPane>
+                                                            <children>
+                                                               <VBox AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                                                  <children>
+                                                                     <TitledPane animated="false" text="URL &amp; Method">
+                                                                        <content>
+                                                                           <GridPane>
+                                                                              <columnConstraints>
+                                                                                 <ColumnConstraints hgrow="SOMETIMES" maxWidth="285.0" minWidth="10.0" prefWidth="68.0" />
+                                                                                 <ColumnConstraints hgrow="SOMETIMES" maxWidth="519.0" minWidth="10.0" prefWidth="519.0" />
+                                                                              </columnConstraints>
+                                                                              <rowConstraints>
+                                                                                 <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                                                 <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                                              </rowConstraints>
+                                                                              <children>
+                                                                                 <Label text="Method:" />
+                                                                                 <Label text="URL:" GridPane.rowIndex="1" />
+                                                                                 <Label fx:id="methodLabel" text="-" GridPane.columnIndex="1" />
+                                                                                 <Label fx:id="urlLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                                                              </children>
+                                                                           </GridPane>
+                                                                        </content>
+                                                                     </TitledPane>
+                                                                     <TitledPane animated="false" text="Headers">
+                                                                        <content>
+                                                                           <TextArea fx:id="requestHeadersTextArea" editable="false" prefHeight="150.0" />
+                                                                        </content>
+                                                                     </TitledPane>
+                                                                     <TitledPane animated="false" text="Body" VBox.vgrow="ALWAYS">
+                                                                        <content>
+                                                                           <TextArea fx:id="requestBodyTextArea" editable="false" prefHeight="330.0" />
+                                                                        </content>
+                                                                     </TitledPane>
+                                                                  </children>
+                                                               </VBox>
+                                                            </children>
+                                                         </AnchorPane>
+                                                      </content>
+                                                   </Tab>
+                                                   <Tab text="Response">
+                                                      <content>
+                                                         <AnchorPane>
+                                                            <children>
+                                                               <VBox AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" >
+                                                                  <children>
+                                                                     <TitledPane animated="false" text="Status &amp; Timings">
+                                                                        <content>
+                                                                           <GridPane>
+                                                                              <columnConstraints>
+                                                                                 <ColumnConstraints hgrow="SOMETIMES" maxWidth="285.0" minWidth="10.0" prefWidth="100.0" />
+                                                                                 <ColumnConstraints hgrow="SOMETIMES" maxWidth="519.0" minWidth="10.0" prefWidth="519.0" />
+                                                                              </columnConstraints>
+                                                                              <rowConstraints>
+                                                                                 <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                                                 <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                                                 <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                                              </rowConstraints>
+                                                                              <children>
+                                                                                 <Label text="Status:" />
+                                                                                 <Label text="Latency (ms):" GridPane.rowIndex="1" />
+                                                                                 <Label fx:id="responseStatusLabel" text="-" GridPane.columnIndex="1" />
+                                                                                 <Label fx:id="latencyLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                                                                 <Label text="Size (bytes):" GridPane.rowIndex="2" />
+                                                                                 <Label fx:id="sizeLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                                                              </children>
+                                                                           </GridPane>
+                                                                        </content>
+                                                                     </TitledPane>
+                                                                     <TitledPane animated="false" text="Headers">
+                                                                        <content>
+                                                                           <TextArea fx:id="responseHeadersTextArea" editable="false" prefHeight="150.0" />
+                                                                        </content>
+                                                                     </TitledPane>
+                                                                     <TitledPane animated="false" text="Body Sample" VBox.vgrow="ALWAYS">
+                                                                        <content>
+                                                                           <TextArea fx:id="responseBodyTextArea" editable="false" prefHeight="300.0" />
+                                                                        </content>
+                                                                     </TitledPane>
+                                                                  </children>
+                                                               </VBox>
+                                                            </children>
+                                                         </AnchorPane>
+                                                      </content>
+                                                   </Tab>
+                                                   <Tab fx:id="checksTab" text="Checks">
+                                                      <content>
+                                                         <AnchorPane>
+                                                            <children>
+                                                               <TableView fx:id="checksTableView" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                                                  <columns>
+                                                                     <TableColumn fx:id="checkTypeColumn" prefWidth="75.0" text="Type" />
+                                                                     <TableColumn fx:id="checkExpressionColumn" prefWidth="75.0" text="Expression" />
+                                                                     <TableColumn fx:id="checkOperatorColumn" prefWidth="75.0" text="Operator" />
+                                                                     <TableColumn fx:id="checkExpectedColumn" prefWidth="75.0" text="Expected" />
+                                                                     <TableColumn fx:id="checkActualColumn" prefWidth="75.0" text="Actual" />
+                                                                     <TableColumn fx:id="checkResultColumn" prefWidth="75.0" text="Result" />
+                                                                  </columns>
+                                                                  <columnResizePolicy>
+                                                                     <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                                  </columnResizePolicy>
+                                                               </TableView>
+                                                            </children>
+                                                         </AnchorPane>
+                                                      </content>
+                                                   </Tab>
+                                                </tabs>
+                                             </TabPane>
+                                        </children>
+                                     </AnchorPane>
+                                </items>
+                            </SplitPane>
+                        </content>
+                    </Tab>
+
+                    <!-- Summary Tab -->
+                    <Tab fx:id="summaryTab" text="Summary" disable="true">
+                        <content>
+                            <AnchorPane>
+                                <children>
+                                    <WebView fx:id="summaryWebView" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                                </children>
+                            </AnchorPane>
+                        </content>
+                    </Tab>
+                </tabs>
+            </TabPane>
          </children>
       </VBox>
    </children>
