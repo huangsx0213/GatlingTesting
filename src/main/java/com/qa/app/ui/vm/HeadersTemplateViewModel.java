@@ -150,6 +150,18 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
             }
             return;
         }
+        // Validate YAML before saving
+        try {
+            validateYaml(content);
+        } catch (Exception ex) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Validation Error: Invalid YAML. " + ex.getMessage(), MainViewModel.StatusType.ERROR);
+            } else {
+                showAlert("Validation Error", "Invalid YAML: " + ex.getMessage());
+            }
+            return;
+        }
+
         try {
             HeadersTemplate t = new HeadersTemplate(name, content);
             t.setProjectId(AppConfig.getCurrentProjectId());
@@ -175,8 +187,21 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
             }
             return;
         }
+        // Validate YAML before updating
+        String updatedContent = headersTemplateContentArea.getText().trim();
         try {
-            HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), headersTemplateContentArea.getText().trim(), AppConfig.getCurrentProjectId());
+            validateYaml(updatedContent);
+        } catch (Exception ex) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Validation Error: Invalid YAML. " + ex.getMessage(), MainViewModel.StatusType.ERROR);
+            } else {
+                showAlert("Validation Error", "Invalid YAML: " + ex.getMessage());
+            }
+            return;
+        }
+
+        try {
+            HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), updatedContent, AppConfig.getCurrentProjectId());
             headersTemplateService.updateHeadersTemplate(t);
             loadData();
             clearFields();
@@ -223,6 +248,8 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
         String content = headersTemplateContentArea.getText();
         if (content == null || content.isEmpty()) return;
         try {
+            // 先校验，后格式化
+            validateYaml(content);
             String formatted = formatYaml(content);
             headersTemplateContentArea.setText(formatted);
             if (mainViewModel != null) {
@@ -233,8 +260,9 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
         } catch (Exception e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Format Error: Failed to format content.", MainViewModel.StatusType.ERROR);
+            } else {
+                showAlert("Format Error", "Failed to format content: " + e.getMessage());
             }
-            showAlert("Format Error", "Failed to format content: " + e.getMessage());
         }
     }
 
@@ -251,9 +279,10 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
             }
         } catch (Exception e) {
             if (mainViewModel != null) {
-                mainViewModel.updateStatus("Validation Error: Invalid YAML.", MainViewModel.StatusType.ERROR);
+                mainViewModel.updateStatus("Validation Error: Invalid YAML. " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            } else {
+                showAlert("Validation Error", "Invalid YAML: " + e.getMessage());
             }
-            showAlert("Validation Error", "Invalid YAML: " + e.getMessage());
         }
     }
 
