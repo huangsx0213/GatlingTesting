@@ -81,6 +81,8 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     @FXML
     private TableColumn<DynamicVariable, String> bodyDynamicValueColumn;
     @FXML
+    private TableColumn<DynamicVariable, Void> bodyDynamicActionColumn;
+    @FXML
     private TextField tagsInputField;
     @FXML
     private Spinner<Integer> waitTimeSpinner;
@@ -120,6 +122,8 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     private TableColumn<DynamicVariable, String> headersTemplateKeyColumn;
     @FXML
     private TableColumn<DynamicVariable, String> headersTemplateValueColumn;
+    @FXML
+    private TableColumn<DynamicVariable, Void> headersTemplateActionColumn;
     @FXML
     private TableColumn<GatlingTest, String> headersTemplateNameColumn;
     @FXML
@@ -299,10 +303,10 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         // Initialize TemplateHandler
         bodyTemplateHandler = new TemplateHandler(
                 bodyTemplateComboBox, bodyTemplateVariables, bodyTemplates, bodyTemplateIdNameMap,
-                bodyDynamicVarsTable, bodyDynamicKeyColumn, bodyDynamicValueColumn, generatedBodyArea);
+                bodyDynamicVarsTable, bodyDynamicKeyColumn, bodyDynamicValueColumn, bodyDynamicActionColumn, generatedBodyArea);
         headersTemplateHandler = new TemplateHandler(
                 headersTemplateComboBox, headersTemplateVariables, headersTemplates, headersTemplateIdNameMap,
-                headersTemplateVarsTable, headersTemplateKeyColumn, headersTemplateValueColumn, generatedHeadersArea);
+                headersTemplateVarsTable, headersTemplateKeyColumn, headersTemplateValueColumn, headersTemplateActionColumn, generatedHeadersArea);
         bodyTemplateHandler.setup();
         headersTemplateHandler.setup();
     }

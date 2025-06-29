@@ -19,6 +19,8 @@ import com.qa.app.util.VariableGenerator;
 import javafx.collections.FXCollections;
 import javafx.scene.control.cell.ComboBoxTableCell;
 import com.qa.app.util.RuntimeTemplateProcessor;
+import javafx.stage.Stage;
+import javafx.scene.image.Image;
 
 public class TemplateHandler {
     private final ComboBox<String> templateComboBox;
@@ -28,6 +30,7 @@ public class TemplateHandler {
     private final TableView<DynamicVariable> varsTable;
     private final TableColumn<DynamicVariable, String> keyColumn;
     private final TableColumn<DynamicVariable, String> valueColumn;
+    private final TableColumn<DynamicVariable, Void> actionColumn;
     private final TextArea generatedArea;
     private final Configuration freemarkerCfg = new Configuration(new Version("2.3.32"));
 
@@ -50,6 +53,7 @@ public class TemplateHandler {
         TableView<DynamicVariable> varsTable,
         TableColumn<DynamicVariable, String> keyColumn,
         TableColumn<DynamicVariable, String> valueColumn,
+        TableColumn<DynamicVariable, Void> actionColumn,
         TextArea generatedArea
     ) {
         this.templateComboBox = templateComboBox;
@@ -59,6 +63,7 @@ public class TemplateHandler {
         this.varsTable = varsTable;
         this.keyColumn = keyColumn;
         this.valueColumn = valueColumn;
+        this.actionColumn = actionColumn;
         this.generatedArea = generatedArea;
         // FreeMarker configuration
         freemarkerCfg.setDefaultEncoding("UTF-8");
@@ -76,11 +81,14 @@ public class TemplateHandler {
         valueColumn.setCellValueFactory(new PropertyValueFactory<>("value"));
         varsTable.setItems(variables);
         varsTable.setEditable(true);
+        // Custom cell factory: keep combobox suggestions & support large text editing via double-click
         valueColumn.setCellFactory(col -> {
             ComboBoxTableCell<DynamicVariable, String> cell = new ComboBoxTableCell<>(
                     new javafx.util.converter.DefaultStringConverter(),
                     FXCollections.observableArrayList(VariableGenerator.getRuleFormats()));
             cell.setComboBoxEditable(true);
+
+            // Return configured cell
             return cell;
         });
         valueColumn.setOnEditCommit(event -> {
@@ -109,6 +117,37 @@ public class TemplateHandler {
                 }
             }
         });
+
+        // Configure action column (already defined in FXML)
+        if (actionColumn != null) {
+            actionColumn.setSortable(false);
+            actionColumn.setCellFactory(col -> new TableCell<>() {
+                private final Button editBtn = new Button("Edit");
+                {
+                    // Transparent button style
+                    editBtn.setStyle("-fx-background-color: transparent; -fx-border-color: transparent; -fx-cursor: hand;");
+                    editBtn.setMaxWidth(Double.MAX_VALUE);
+                    editBtn.setOnAction(evt -> {
+                        DynamicVariable var = getTableView().getItems().get(getIndex());
+                        String edited = showLargeTextEditDialog(var.getKey(), var.getValue());
+                        if (edited != null) {
+                            var.setValue(edited);
+                            TemplateHandler.this.updateGenerated();
+                        }
+                    });
+                }
+
+                @Override
+                protected void updateItem(Void item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty) {
+                        setGraphic(null);
+                    } else {
+                        setGraphic(editBtn);
+                    }
+                }
+            });
+        }
     }
 
     public void populateDynamicVariables(String template) {
@@ -187,5 +226,30 @@ public class TemplateHandler {
         // By replacing user-defined @{...} with [=...], we avoid syntax collisions.
         // ${...} is reserved for system/environment properties, so we maintain that separation.
         return content.replaceAll("@\\{([^}]+)\\}", "[=$1]");
+    }
+
+    /**
+     * Opens a resizable dialog with a TextArea for editing long / JSON values.
+     * Returns the user input when OK is pressed, or null when cancelled.
+     */
+    private String showLargeTextEditDialog(String key, String initialValue) {
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Edit Value - " + key);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        TextArea textArea = new TextArea(initialValue);
+        textArea.setWrapText(true);
+        textArea.setPrefSize(400, 300);
+        dialog.getDialogPane().setContent(textArea);
+        dialog.setResizable(true);
+
+        dialog.setResultConverter(btn -> btn == ButtonType.OK ? textArea.getText() : null);
+
+        // Set Icon
+        Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
+        stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
+
+        java.util.Optional<String> result = dialog.showAndWait();
+        return result.orElse(null);
     }
 } 
