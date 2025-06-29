@@ -187,7 +187,7 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
         String content = bodyTemplateContentArea.getText();
         if (format == null || content.isEmpty()) return;
 
-        // 先做格式校验，通过后才尝试格式化
+        // Validate before formatting
         TemplateValidator.ValidationResult validationResult = TemplateValidator.validate(content, format);
         if (!validationResult.isValid) {
             showError("Validation Error: " + validationResult.errorMessage);

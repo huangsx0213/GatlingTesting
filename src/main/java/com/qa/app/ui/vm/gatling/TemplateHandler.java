@@ -18,6 +18,7 @@ import java.util.Set;
 import com.qa.app.util.VariableGenerator;
 import javafx.collections.FXCollections;
 import javafx.scene.control.cell.ComboBoxTableCell;
+import com.qa.app.util.RuntimeTemplateProcessor;
 
 public class TemplateHandler {
     private final ComboBox<String> templateComboBox;
@@ -152,9 +153,8 @@ public class TemplateHandler {
         Map<String, Object> dataModel = new java.util.HashMap<>();
         for (DynamicVariable var : variables) {
             String value = VariableGenerator.generate(var.getValue());
-            // Only add variables with actual values to the data model.
             if (value != null && !value.isEmpty()) {
-                dataModel.put(var.getKey(), value);
+                dataModel.put(var.getKey(), RuntimeTemplateProcessor.convertToModelValue(value));
             }
         }
 
