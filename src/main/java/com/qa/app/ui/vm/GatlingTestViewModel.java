@@ -831,21 +831,15 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             } else {
                 bodyTemplateComboBox.setValue(null);
             }
-            bodyTemplateVariables.clear();
-            if (test.getBodyDynamicVariables() != null) {
-                test.getBodyDynamicVariables()
-                        .forEach((key, value) -> bodyTemplateVariables.add(new DynamicVariable(key, value)));
-            }
+            bodyTemplateHandler.setAndFormatVariables(test.getBodyDynamicVariables());
+
             if (headersTemplateIdNameMap.containsKey(test.getHeadersTemplateId())) {
                 headersTemplateComboBox.setValue(headersTemplateIdNameMap.get(test.getHeadersTemplateId()));
             } else {
                 headersTemplateComboBox.setValue(null);
             }
-            headersTemplateVariables.clear();
-            if (test.getHeadersDynamicVariables() != null) {
-                test.getHeadersDynamicVariables()
-                        .forEach((key, value) -> headersTemplateVariables.add(new DynamicVariable(key, value)));
-            }
+            headersTemplateHandler.setAndFormatVariables(test.getHeadersDynamicVariables());
+
             tagHandler.setTagsFromString(test.getTags());
             waitTimeSpinner.getValueFactory().setValue(test.getWaitTime());
 

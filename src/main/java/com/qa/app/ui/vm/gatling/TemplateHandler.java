@@ -21,6 +21,14 @@ import javafx.scene.control.cell.ComboBoxTableCell;
 import com.qa.app.util.RuntimeTemplateProcessor;
 import javafx.stage.Stage;
 import javafx.scene.image.Image;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.Button;
+import javafx.scene.control.Alert;
+import javafx.event.ActionEvent;
+import java.util.List;
+import java.util.ArrayList;
 
 public class TemplateHandler {
     private final ComboBox<String> templateComboBox;
@@ -33,6 +41,7 @@ public class TemplateHandler {
     private final TableColumn<DynamicVariable, Void> actionColumn;
     private final TextArea generatedArea;
     private final Configuration freemarkerCfg = new Configuration(new Version("2.3.32"));
+    private final ObjectMapper mapper = new ObjectMapper();
 
     private static final Configuration staticFreemarkerCfg;
 
@@ -150,6 +159,29 @@ public class TemplateHandler {
         }
     }
 
+    public void setAndFormatVariables(Map<String, String> newVariables) {
+        List<DynamicVariable> tempVars = new ArrayList<>();
+        if (newVariables != null) {
+            newVariables.forEach((key, value) -> tempVars.add(new DynamicVariable(key, value)));
+        }
+
+        // Format
+        for (DynamicVariable var : tempVars) {
+            String value = var.getValue();
+            if (value != null && !value.isBlank() && (value.trim().startsWith("{") || value.trim().startsWith("["))) {
+                try {
+                    Object jsonObject = mapper.readValue(value, Object.class);
+                    String formattedJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObject);
+                    var.setValue(formattedJson);
+                } catch (Exception e) {
+                    // Ignore if it's not a valid JSON
+                }
+            }
+        }
+        
+        variables.setAll(tempVars);
+    }
+
     public void populateDynamicVariables(String template) {
         variables.clear();
         if (template == null || template.isBlank()) {
@@ -235,7 +267,12 @@ public class TemplateHandler {
     private String showLargeTextEditDialog(String key, String initialValue) {
         Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Edit Value - " + key);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        ButtonType okButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelButtonType = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType formatJsonButtonType = new ButtonType("Format JSON", ButtonBar.ButtonData.RIGHT);
+
+        dialog.getDialogPane().getButtonTypes().addAll(okButtonType, cancelButtonType, formatJsonButtonType);
 
         TextArea textArea = new TextArea(initialValue);
         textArea.setWrapText(true);
@@ -243,7 +280,24 @@ public class TemplateHandler {
         dialog.getDialogPane().setContent(textArea);
         dialog.setResizable(true);
 
-        dialog.setResultConverter(btn -> btn == ButtonType.OK ? textArea.getText() : null);
+        // Add action for the Format JSON button without closing the dialog
+        final Button formatJsonButton = (Button) dialog.getDialogPane().lookupButton(formatJsonButtonType);
+        formatJsonButton.addEventFilter(ActionEvent.ACTION, event -> {
+            try {
+                Object json = mapper.readValue(textArea.getText(), Object.class);
+                String formattedJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json);
+                textArea.setText(formattedJson);
+            } catch (JsonProcessingException e) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("JSON Format Error");
+                alert.setHeaderText("Invalid JSON");
+                alert.setContentText("The text could not be formatted as JSON. Please check the syntax.");
+                alert.showAndWait();
+            }
+            event.consume();
+        });
+
+        dialog.setResultConverter(btn -> btn == okButtonType ? textArea.getText() : null);
 
         // Set Icon
         Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
