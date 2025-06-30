@@ -177,6 +177,7 @@ public class GatlingTestReportViewModel implements Initializable {
         }
     }
 
+    @SuppressWarnings("deprecation")
     private void setupColumns() {
         nameColumn.setCellValueFactory(p -> {
             if (p == null || p.getValue() == null || p.getValue().getValue() == null) {

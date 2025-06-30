@@ -17,8 +17,6 @@ import com.qa.app.model.HeadersTemplate;
 import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.api.IHeadersTemplateService;
 
-import java.sql.ResultSet;
-
 public class GatlingTestServiceImpl implements IGatlingTestService {
 
     private final IGatlingTestDao testDao = new GatlingTestDaoImpl(); // In a real app, use dependency injection
@@ -282,9 +280,4 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         return res;
     }
 
-    private GatlingTest createTestFromResultSet(ResultSet rs) throws SQLException {
-        GatlingTest test = new GatlingTest();
-        // ... existing code ...
-        return test;
-    }
 }

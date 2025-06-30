@@ -11,7 +11,6 @@ import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
 import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
-import com.qa.app.util.RuntimeTemplateProcessor;
 
 import java.io.File;
 import java.io.IOException;
@@ -220,7 +219,6 @@ public class GatlingScenarioSimulation extends Simulation {
 
         // Add response checks and variable extraction
         List<CheckBuilder> checkBuilders = new ArrayList<>();
-        final String tcid = test.getTcid();
         
         try {
             String json = test.getResponseChecks();
