@@ -138,6 +138,10 @@ public class GatlingTestRunner {
                     if (origins != null && modes != null) {
                         map.put("origin", origins.get(i));
                         map.put("mode", modes.get(i));
+                    } else {
+                        // Default to self-origin and MAIN mode if not specified
+                        map.put("origin", tests.get(i).getTcid());
+                        map.put("mode", "MAIN");
                     }
                     batchItems.add(map);
                 }
@@ -243,22 +247,10 @@ public class GatlingTestRunner {
 
             IGatlingTestDao testDao = new GatlingTestDaoImpl();
 
-            // Collect all final reports for batch aggregation
             // Use LinkedHashMap to maintain execution order
             Map<String, FunctionalTestReport> reportMap = new LinkedHashMap<>();
-            
-            // First create a report object placeholder in the order of the original test list
-            for (GatlingTest test : executedTests) {
-                if (!reportMap.containsKey(test.getTcid())) {
-                    FunctionalTestReport report = new FunctionalTestReport();
-                    report.setOriginTcid(test.getTcid());
-                    report.setSuite(test.getSuite());
-                    report.setExecutedAt(ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
-                    reportMap.put(test.getTcid(), report);
-                }
-            }
 
-            // Then fill the report content
+            // Now process the grouped results
             for (Map.Entry<String, List<Map<String, Object>>> entry : groupedByOrigin.entrySet()) {
                 String originTcid = entry.getKey();
                 List<Map<String, Object>> itemsForOrigin = entry.getValue();

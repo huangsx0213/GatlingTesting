@@ -158,6 +158,17 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     @FXML private TextField tagFilterField;          // Tag keyword filter field
     @FXML private ComboBox<String> enabledFilterCombo; // Enabled status filter
 
+    @FXML
+    private TableView<DynamicVariable> urlDynamicVarsTable;
+    @FXML
+    private TableColumn<DynamicVariable, String> urlDynamicKeyColumn;
+    @FXML
+    private TableColumn<DynamicVariable, String> urlDynamicValueColumn;
+    @FXML
+    private TableColumn<DynamicVariable, Void> urlDynamicActionColumn;
+    @FXML
+    private TextArea generatedUrlArea;
+
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
     private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
@@ -169,6 +180,11 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     private Map<String, String> headersTemplates = new HashMap<>();
     private final ObservableList<Endpoint> endpointList = FXCollections.observableArrayList();
     private final ObservableList<String> endpointNameList = FXCollections.observableArrayList();
+    // Map for quick id-to-endpoint lookup
+    private final Map<Integer, Endpoint> endpointIdMap = new HashMap<>();
+
+    // New list for URL dynamic variables
+    private final ObservableList<DynamicVariable> urlDynamicVariables = FXCollections.observableArrayList();
 
     // Response checks data list
     private final ObservableList<ResponseCheck> responseChecks = FXCollections.observableArrayList();
@@ -241,6 +257,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         loadTests();
         loadTemplates();
         loadHeadersTemplates();
+        setupUrlDynamicVariablesHandler();
 
         if (viewReportButton != null) {
             viewReportButton.disableProperty().bind(
@@ -393,6 +410,12 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
                 }
             }
         });
+
+        // Listener to populate URL variables when endpoint changes
+        endpointComboBox.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            populateUrlDynamicVariables(newVal);
+            updateGeneratedUrl();
+        });
     }
 
     private void setupTagHandler() {
@@ -465,28 +488,11 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             }
         });
         endpointColumn.setCellValueFactory(cellData -> {
-            String endpointName = cellData.getValue().getEndpointName();
-            // 查找当前环境下的endpoint
-            String envName = AppConfig.getCurrentEnv();
-            Integer envId = null;
-            try {
-                for (Environment env : environmentService.findAllEnvironments()) {
-                    if (env.getName().equals(envName)) {
-                        envId = env.getId();
-                        break;
-                    }
-                }
-            } catch (Exception e) {
-                // ignore
-            }
-            String display = endpointName == null ? "" : endpointName;
-            if (envId != null) {
-                for (Endpoint ep : endpointList) {
-                    if (ep.getName().equals(endpointName) && envId.equals(ep.getEnvironmentId())) {
-                        display = ep.getName() + " [ " + ep.getMethod() + " " + ep.getUrl() + " ]";
-                        break;
-                    }
-                }
+            int eid = cellData.getValue().getEndpointId();
+            Endpoint ep = endpointIdMap.get(eid);
+            String display = "";
+            if (ep != null) {
+                display = ep.getName() + " [ " + ep.getMethod() + " " + ep.getUrl() + " ]";
             }
             return new javafx.beans.property.SimpleStringProperty(display);
         });
@@ -600,6 +606,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     private void loadEndpoints() {
         endpointList.clear();
         endpointNameList.clear();
+        endpointIdMap.clear();
         try {
             // get current environment
             String envName = AppConfig.getCurrentEnv();
@@ -615,6 +622,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
                 for (Endpoint ep : endpointService.getAllEndpoints()) {
                     if (envId.equals(ep.getEnvironmentId())) {
                         endpointList.add(ep);
+                        endpointIdMap.put(ep.getId(), ep);
                     }
                 }
             }
@@ -797,6 +805,9 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         if (responseChecksTable != null) {
             responseChecksTable.refresh();
         }
+
+        urlDynamicVariables.clear();
+        generatedUrlArea.setText("");
     }
 
     private void updateGeneratedBody() {
@@ -819,11 +830,9 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             conditionHandler.deserializeConditions(test.getConditions());
             expResultArea.setText(test.getResponseChecks());
             String display = null;
-            for (Endpoint ep : endpointList) {
-                if (ep.getName().equals(test.getEndpointName())) {
-                    display = ep.getName() + " [ " + ep.getMethod() + " " + ep.getUrl() + " ]";
-                    break;
-                }
+            Endpoint epFound = endpointIdMap.get(test.getEndpointId());
+            if (epFound != null) {
+                display = epFound.getName() + " [ " + epFound.getMethod() + " " + epFound.getUrl() + " ]";
             }
             endpointComboBox.setValue(display);
             if (bodyTemplateIdNameMap.containsKey(test.getBodyTemplateId())) {
@@ -854,6 +863,18 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             // Ensure default status row
             ensureDefaultStatusCheck();
 
+            // Populate URL dynamic variables based on endpoint URL and saved values
+            populateUrlDynamicVariables(display);
+            if(test!=null){
+                Map<String,String> saved = test.getEndpointDynamicVariables();
+                for (DynamicVariable dv : urlDynamicVariables) {
+                    if (saved!=null && saved.containsKey(dv.getKey())) {
+                        dv.setValue(saved.get(dv.getKey()));
+                    }
+                }
+            }
+            updateGeneratedUrl();
+
             updateGeneratedBody();
             updateGeneratedHeaders();
         } else {
@@ -868,12 +889,20 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         String endpointDisplay = endpointComboBox.getValue();
         String endpointName = endpointDisplay == null ? "" : endpointDisplay.split(" \\[")[0].trim();
 
+        // Resolve endpoint ID
+        int endpointId = 0;
+        for (Endpoint ep : endpointList) {
+            if (ep.getName().equals(endpointName)) { endpointId = ep.getId(); break; }
+        }
+
         test.setEnabled(isEnabledCheckBox.isSelected());
         test.setSuite(suite);
         test.setTcid(tcid);
         test.setDescriptions(descriptions);
         test.setConditions(serializeConditions());
         test.setResponseChecks(expResultArea.getText());
+        test.setEndpointId(endpointId);
+        // keep name for UI convenience (not persisted)
         test.setEndpointName(endpointName);
         test.setBodyTemplateId(getBodyTemplateIdByName(bodyTemplateComboBox.getSelectionModel().getSelectedItem()));
         test.setHeadersTemplateId(
@@ -889,7 +918,11 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         test.setHeadersDynamicVariables(headersVars);
         
-        // 存储原始模板（含占位符）以便运行时动态渲染
+        Map<String, String> urlVars = new HashMap<>();
+        urlDynamicVariables.forEach(dv -> urlVars.put(dv.getKey(), dv.getValue()));
+        test.setEndpointDynamicVariables(urlVars);
+
+        // Store raw templates for runtime rendering
         String selectedBodyTemplateName = bodyTemplateComboBox.getSelectionModel().getSelectedItem();
         if (selectedBodyTemplateName != null && bodyTemplates.containsKey(selectedBodyTemplateName)) {
             test.setBody(bodyTemplates.get(selectedBodyTemplateName));
@@ -906,7 +939,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
         test.setProjectId(AppConfig.getCurrentProjectId());
 
-        // Serialize response checks to JSON and set to expResult field
+        // Serialize response checks to JSON
         try{
             String json = mapper.writeValueAsString(responseChecks);
             test.setResponseChecks(json);
@@ -914,7 +947,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             test.setResponseChecks(null);
         }
 
-        // new suite auto-add to dropdown
+        // new suite added to dropdown
         if (suite != null && !suite.isEmpty() && !suiteComboBox.getItems().contains(suite)) {
             suiteComboBox.getItems().add(suite);
         }
@@ -1364,5 +1397,113 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         loadTests();
         updateSuiteFilterOptions();
         updateSelectAllCheckBoxState();
+    }
+
+    private void setupUrlDynamicVariablesHandler() {
+        if (urlDynamicVarsTable == null) return; // FXML not loaded (unit tests)
+        urlDynamicKeyColumn.setCellValueFactory(new PropertyValueFactory<>("key"));
+        urlDynamicValueColumn.setCellValueFactory(new PropertyValueFactory<>("value"));
+        urlDynamicVarsTable.setItems(urlDynamicVariables);
+        urlDynamicVarsTable.setEditable(true);
+
+        // Value column with ComboBox suggestions (reuse VariableGenerator rules)
+        urlDynamicValueColumn.setCellFactory(col -> {
+            ComboBoxTableCell<DynamicVariable, String> cell = new ComboBoxTableCell<>(
+                    new DefaultStringConverter(),
+                    FXCollections.observableArrayList(VariableGenerator.getRuleFormats()));
+            cell.setComboBoxEditable(true);
+            return cell;
+        });
+        urlDynamicValueColumn.setOnEditCommit(e -> {
+            e.getRowValue().setValue(e.getNewValue());
+            updateGeneratedUrl();
+        });
+
+        // Optional action column (Edit dialog for long text)
+        if (urlDynamicActionColumn != null) {
+            urlDynamicActionColumn.setSortable(false);
+            urlDynamicActionColumn.setCellFactory(col -> new TableCell<>() {
+                private final Button editBtn = new Button("Edit");
+                {
+                    editBtn.setStyle("-fx-background-color: transparent; -fx-border-color: transparent; -fx-cursor: hand;");
+                    editBtn.setMaxWidth(Double.MAX_VALUE);
+                    editBtn.setOnAction(evt -> {
+                        DynamicVariable var = getTableView().getItems().get(getIndex());
+                        String edited = showLargeTextEditDialog(var.getKey(), var.getValue());
+                        if (edited != null) {
+                            var.setValue(edited);
+                            updateGeneratedUrl();
+                        }
+                    });
+                }
+                @Override
+                protected void updateItem(Void item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty) {
+                        setGraphic(null);
+                    } else {
+                        setGraphic(editBtn);
+                    }
+                }
+            });
+        }
+
+        urlDynamicVariables.addListener((javafx.collections.ListChangeListener<DynamicVariable>) c -> updateGeneratedUrl());
+    }
+
+    private void populateUrlDynamicVariables(String endpointDisplay) {
+        urlDynamicVariables.clear();
+        if (endpointDisplay == null || endpointDisplay.isBlank()) return;
+        String endpointName = endpointDisplay.split(" \\[")[0].trim();
+        Endpoint ep = endpointList.stream().filter(e -> e.getName().equals(endpointName)).findFirst().orElse(null);
+        if (ep == null || ep.getUrl() == null) return;
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("@\\{([^}]+)\\}");
+        java.util.regex.Matcher matcher = pattern.matcher(ep.getUrl());
+        java.util.Set<String> found = new java.util.LinkedHashSet<>();
+        while (matcher.find()) {
+            found.add(matcher.group(1).trim());
+        }
+        for (String varName : found) {
+            urlDynamicVariables.add(new DynamicVariable(varName, ""));
+        }
+    }
+
+    private String buildGeneratedUrl() {
+        String endpointDisplay = endpointComboBox == null ? null : endpointComboBox.getValue();
+        if (endpointDisplay == null || endpointDisplay.isBlank()) return null;
+        String endpointName = endpointDisplay.split(" \\[")[0].trim();
+        Endpoint ep = endpointList.stream().filter(e -> e.getName().equals(endpointName)).findFirst().orElse(null);
+        if (ep == null || ep.getUrl() == null) return null;
+        String url = ep.getUrl();
+        for (DynamicVariable dv : urlDynamicVariables) {
+            String value = VariableGenerator.generate(dv.getValue());
+            if (value == null) value = "";
+            url = url.replaceAll("@\\{" + java.util.regex.Pattern.quote(dv.getKey()) + "\\}", java.util.regex.Matcher.quoteReplacement(value));
+        }
+        return url;
+    }
+
+    private void updateGeneratedUrl() {
+        if (generatedUrlArea != null) {
+            String u = buildGeneratedUrl();
+            generatedUrlArea.setText(u == null ? "" : u);
+        }
+    }
+
+    // Helper method (copied from TemplateHandler)
+    private String showLargeTextEditDialog(String key, String initialValue) {
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Edit Value - " + key);
+        ButtonType okButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelButtonType = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialog.getDialogPane().getButtonTypes().addAll(okButtonType, cancelButtonType);
+        TextArea textArea = new TextArea(initialValue);
+        textArea.setWrapText(true);
+        textArea.setPrefSize(400, 300);
+        dialog.getDialogPane().setContent(textArea);
+        dialog.setResizable(true);
+        dialog.setResultConverter(btn -> btn == okButtonType ? textArea.getText() : null);
+        java.util.Optional<String> result = dialog.showAndWait();
+        return result.orElse(null);
     }
 }

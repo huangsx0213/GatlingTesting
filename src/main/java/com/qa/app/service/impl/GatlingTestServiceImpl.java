@@ -17,7 +17,7 @@ import com.qa.app.model.HeadersTemplate;
 import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.api.IHeadersTemplateService;
 
-
+import java.sql.ResultSet;
 
 public class GatlingTestServiceImpl implements IGatlingTestService {
 
@@ -48,8 +48,9 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     }
 
     private void validateTestBasicFields(GatlingTest test) throws ServiceException {
-        if (test == null || isBlank(test.getTcid()) || isBlank(test.getSuite()) || isBlank(test.getEndpointName())) {
-            throw new ServiceException("Test validation failed: TCID, Suite, and Endpoint Name are required.");
+        boolean endpointInfoMissing = (test.getEndpointId() <= 0) && isBlank(test.getEndpointName());
+        if (test == null || isBlank(test.getTcid()) || isBlank(test.getSuite()) || endpointInfoMissing) {
+            throw new ServiceException("Test validation failed: TCID, Suite, and Endpoint (ID or Name) are required.");
         }
     }
 
@@ -99,8 +100,8 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             if (test == null || test.getId() <= 0 ||
                 test.getTcid() == null || test.getTcid().trim().isEmpty() ||
                 test.getSuite() == null || test.getSuite().trim().isEmpty() ||
-                test.getEndpointName() == null || test.getEndpointName().trim().isEmpty()) {
-                throw new ServiceException("Test validation failed: ID, TCID, Suite, and Endpoint Name are required.");
+                (test.getEndpointId() <= 0 && (test.getEndpointName() == null || test.getEndpointName().trim().isEmpty()))) {
+                throw new ServiceException("Test validation failed: ID, TCID, Suite, and Endpoint (ID or Name) are required.");
             }
             GatlingTest existingTest = testDao.getTestById(test.getId());
             if (existingTest == null) {
@@ -155,16 +156,29 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         }
 
         // ① Expand dependencies and capture extra meta (origin, mode)
-        ExpandedResult expanded = expandTestsWithDependencies(tests);
+        ExpandedResult expanded = expandTestsWithDependenciesForRun(tests);
         List<GatlingTest> executionList = expanded.tests;
 
         java.util.List<Endpoint> endpoints = new java.util.ArrayList<>();
         for (GatlingTest test : executionList) {
             enrichTemplates(test);
-            Endpoint endpoint = endpointService.getEndpointByName(test.getEndpointName());
+
+            Endpoint endpoint = null;
+            try {
+                if (test.getEndpointId() > 0) {
+                    endpoint = endpointService.getEndpointById(test.getEndpointId());
+                }
+                if (endpoint == null) {
+                    endpoint = endpointService.getEndpointByName(test.getEndpointName());
+                }
+            } catch (Exception ex) {
+                throw new ServiceException("Error retrieving endpoint for test: " + test.getTcid() + ": " + ex.getMessage(), ex);
+            }
+
             if (endpoint == null) {
                 throw new ServiceException("Endpoint not found for test: " + test.getTcid());
             }
+
             endpoints.add(endpoint);
         }
 
@@ -230,7 +244,7 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         List<String> modes = new java.util.ArrayList<>();
     }
 
-    private ExpandedResult expandTestsWithDependencies(List<GatlingTest> selected) throws ServiceException {
+    private ExpandedResult expandTestsWithDependenciesForRun(List<GatlingTest> selected) throws ServiceException {
         ExpandedResult res = new ExpandedResult();
 
         for (GatlingTest main : selected) {
@@ -266,5 +280,11 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             }
         }
         return res;
+    }
+
+    private GatlingTest createTestFromResultSet(ResultSet rs) throws SQLException {
+        GatlingTest test = new GatlingTest();
+        // ... existing code ...
+        return test;
     }
 }

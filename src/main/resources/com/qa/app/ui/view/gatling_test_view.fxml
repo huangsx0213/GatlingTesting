@@ -118,6 +118,32 @@
                                                                             <ComboBox fx:id="endpointComboBox" promptText="Select Endpoint" maxWidth="Infinity" VBox.vgrow="NEVER" />
                                                                         </children>
                                                                     </VBox>
+                                                                    <!-- New URL Variable Section -->
+                                                                    <HBox spacing="15.0" alignment="TOP_LEFT">
+                                                                        <children>
+                                                                            <VBox spacing="5.0" prefWidth="400.0" VBox.vgrow="ALWAYS">
+                                                                                <children>
+                                                                                    <Label text="URL User Defined Variables:" style="-fx-font-weight: bold;" />
+                                                                                    <TableView fx:id="urlDynamicVarsTable" VBox.vgrow="ALWAYS" styleClass="table-view">
+                                                                                        <columns>
+                                                                                            <TableColumn fx:id="urlDynamicKeyColumn" prefWidth="150.0" text="Key" />
+                                                                                            <TableColumn fx:id="urlDynamicValueColumn" prefWidth="250.0" text="Value" />
+                                                                                            <TableColumn fx:id="urlDynamicActionColumn" prefWidth="60.0" text="Action" />
+                                                                                        </columns>
+                                                                                        <columnResizePolicy>
+                                                                                            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                                                        </columnResizePolicy>
+                                                                                    </TableView>
+                                                                                </children>
+                                                                            </VBox>
+                                                                            <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+                                                                                <children>
+                                                                                    <Label text="Generated URL Preview:" style="-fx-font-weight: bold;" />
+                                                                                    <TextArea fx:id="generatedUrlArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" />
+                                                                                </children>
+                                                                            </VBox>
+                                                                        </children>
+                                                                    </HBox>
                                                                 </VBox>
                                                             </content>
                                                         </Tab>

@@ -6,7 +6,7 @@ public class FunctionalTestReport {
     private String originTcid;
     private String suite;
     private String executedAt;
-    private List<ModeGroup> groups;
+    private List<ModeGroup> groups = new java.util.ArrayList<>();
     private boolean passed;
 
     // Getters and Setters

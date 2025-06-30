@@ -316,19 +316,24 @@ public class GatlingTestSimulation extends Simulation {
         HttpRequestActionBuilder request;
         String method = endpoint.getMethod() == null ? "GET" : endpoint.getMethod().toUpperCase();
 
+        // Process URL with test variables
+        String processedUrl = TestRunContext.processVariableReferences(endpoint.getUrl());
+        // Then render user-defined @{var} placeholders
+        processedUrl = RuntimeTemplateProcessor.render(processedUrl, test.getEndpointDynamicVariables());
+
         switch (method) {
             case "POST":
-                request = http(requestName).post(endpoint.getUrl());
+                request = http(requestName).post(processedUrl);
                 break;
             case "PUT":
-                request = http(requestName).put(endpoint.getUrl());
+                request = http(requestName).put(processedUrl);
                 break;
             case "DELETE":
-                request = http(requestName).delete(endpoint.getUrl());
+                request = http(requestName).delete(processedUrl);
                 break;
             case "GET":
             default:
-                request = http(requestName).get(endpoint.getUrl());
+                request = http(requestName).get(processedUrl);
                 break;
         }
 

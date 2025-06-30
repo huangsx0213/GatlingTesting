@@ -10,6 +10,7 @@ import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IEndpointService;
 
 import java.util.List;
+import java.util.Map;
 
 public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
 
@@ -139,14 +140,44 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
                 if (steps == null || steps.isEmpty()) {
                     throw new ServiceException("Scenario '" + sc.getName() + "' has no steps defined – cannot run.");
                 }
-                java.util.List<java.util.Map<String, Object>> batchItems = new java.util.ArrayList<>();
+                
+                // This list will contain all tests in the correct order: setup, main, teardown
+                List<GatlingTest> allTestsWithDeps = new java.util.ArrayList<>();
                 for (ScenarioStep step : steps) {
-                    GatlingTest gt = testService.findTestByTcid(step.getTestTcid());
-                    if (gt == null) {
+                    GatlingTest mainTest = testService.findTestByTcid(step.getTestTcid());
+                    if (mainTest == null) {
                         throw new ServiceException("Test not found for tcid: " + step.getTestTcid());
                     }
-                    gt.setWaitTime(step.getWaitTime());
+                    mainTest.setWaitTime(step.getWaitTime());
 
+                    Map<String, List<String>> condMap = parseConditionString(mainTest.getConditions());
+
+                    // 1) Add Setup tests
+                    List<String> setups = condMap.getOrDefault("Setup", java.util.Collections.emptyList());
+                    for (String tcid : setups) {
+                        GatlingTest setupTest = testService.findTestByTcid(tcid);
+                        if (setupTest == null) {
+                            throw new ServiceException("Setup test not found: " + tcid + " (required by " + mainTest.getTcid() + ")");
+                        }
+                        allTestsWithDeps.add(setupTest);
+                    }
+
+                    // 2) Add Main test
+                    allTestsWithDeps.add(mainTest);
+
+                    // 3) Add Teardown tests
+                    List<String> teardowns = condMap.getOrDefault("Teardown", java.util.Collections.emptyList());
+                    for (String tcid : teardowns) {
+                        GatlingTest teardownTest = testService.findTestByTcid(tcid);
+                        if (teardownTest == null) {
+                            throw new ServiceException("Teardown test not found: " + tcid + " (required by " + mainTest.getTcid() + ")");
+                        }
+                        allTestsWithDeps.add(teardownTest);
+                    }
+                }
+
+                java.util.List<java.util.Map<String, Object>> batchItems = new java.util.ArrayList<>();
+                for (GatlingTest gt : allTestsWithDeps) {
                     // enrich templates (same logic as GatlingTestServiceImpl)
                     try {
                         if ((gt.getBody() == null || gt.getBody().isEmpty()) && gt.getBodyTemplateId() > 0) {
@@ -164,7 +195,24 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
 
                     java.util.Map<String, Object> map = new java.util.HashMap<>();
                     map.put("test", gt);
-                    map.put("endpoint", endpointService.getEndpointByName(gt.getEndpointName()));
+                    // Resolve endpoint – prefer ID when available, otherwise fall back to name
+                    com.qa.app.model.Endpoint endpoint = null;
+                    try {
+                        if (gt.getEndpointId() > 0) {
+                            endpoint = endpointService.getEndpointById(gt.getEndpointId());
+                        }
+                        if (endpoint == null) {
+                            endpoint = endpointService.getEndpointByName(gt.getEndpointName());
+                        }
+                    } catch (Exception ex) {
+                        throw new ServiceException("Error retrieving endpoint for test: " + gt.getTcid() + ": " + ex.getMessage(), ex);
+                    }
+
+                    if (endpoint == null) {
+                        throw new ServiceException("Endpoint not found for test: " + gt.getTcid());
+                    }
+
+                    map.put("endpoint", endpoint);
                     batchItems.add(map);
                 }
                 if (batchItems.isEmpty()) {
@@ -281,5 +329,27 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             }
         } catch (Exception ignored) { }
         return cp;
+    }
+
+    /**
+     * Parse the Condition string, e.g. "[Setup]TC001,TC002;[Teardown]TC003" -> Map
+     * Copied from GatlingTestServiceImpl for standalone use.
+     */
+    private Map<String, java.util.List<String>> parseConditionString(String cond) {
+        java.util.Map<String, java.util.List<String>> map = new java.util.HashMap<>();
+        if (cond == null || cond.isBlank()) return map;
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("\\[(\\w+)\\]([^\\[]*)");
+        java.util.regex.Matcher m = p.matcher(cond);
+        while (m.find()) {
+            String prefix = m.group(1);
+            String body = m.group(2).trim().replace(";", ""); // remove stray semicolons
+            if (body.isBlank()) continue;
+            java.util.List<String> tcids = java.util.Arrays.stream(body.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isBlank())
+                    .toList();
+            map.put(prefix, tcids);
+        }
+        return map;
     }
 } 

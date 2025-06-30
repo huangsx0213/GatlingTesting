@@ -11,6 +11,7 @@ import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
 import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
+import com.qa.app.util.RuntimeTemplateProcessor;
 
 import java.io.File;
 import java.io.IOException;
@@ -91,7 +92,9 @@ public class GatlingScenarioSimulation extends Simulation {
         if (firstEp == null) {
             throw new RuntimeException("Unable to determine baseUrl – no endpoint found in scenario steps");
         }
-        HttpProtocolBuilder httpProtocol = http.baseUrl(firstEp.getUrl());
+        // The baseUrl should be static and not contain dynamic placeholders.
+        // We will render the full URL for each request instead.
+        HttpProtocolBuilder httpProtocol = http.baseUrl("/");
 
         SetUp s = setUp(popBuilders.toArray(new PopulationBuilder[0])).protocols(httpProtocol);
         if (maxDurationSec > 0) {
@@ -186,8 +189,10 @@ public class GatlingScenarioSimulation extends Simulation {
         String reqName = test.getTcid();
         String method = ep.getMethod() == null ? "GET" : ep.getMethod().toUpperCase();
         
-        // Process URL with test variables
+        // First replace any ${VAR} placeholders from previous test results
         String processedUrl = TestRunContext.processVariableReferences(ep.getUrl());
+        // Then render user-defined @{var} placeholders using the test's dynamic variables
+        processedUrl = RuntimeTemplateProcessor.render(processedUrl, test.getEndpointDynamicVariables());
         
         HttpRequestActionBuilder req;
         switch(method){

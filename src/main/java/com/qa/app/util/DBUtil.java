@@ -47,16 +47,20 @@ public class DBUtil {
                     + " wait_time INTEGER DEFAULT 0,"
                     + " conditions TEXT,"
                     + " descriptions TEXT,"
-                    + " endpoint_name TEXT NOT NULL,"
+                    + " endpoint_id INTEGER,"
                     + " headers_template_id INTEGER,"
                     + " body_template_id INTEGER,"
+                    + " endpoint_dynamic_variables TEXT,"
                     + " headers_dynamic_variables TEXT,"
                     + " body_dynamic_variables TEXT,"
                     + " response_checks TEXT,"
                     + " project_id INTEGER,"
                     + " report_path TEXT,"
                     + " last_run_passed BOOLEAN,"
-                    + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE"
+                    + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
+                    + " FOREIGN KEY(endpoint_id) REFERENCES endpoints(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
+                    + " FOREIGN KEY(headers_template_id) REFERENCES headers_templates(id) ON DELETE SET NULL ON UPDATE CASCADE,"
+                    + " FOREIGN KEY(body_template_id) REFERENCES body_templates(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
             stmt.execute(testsSql);
 
