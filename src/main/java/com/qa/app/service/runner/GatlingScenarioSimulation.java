@@ -1,16 +1,17 @@
-package com.qa.app.util;
+package com.qa.app.service.runner;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qa.app.model.Endpoint;
 import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.GatlingTest;
+import com.qa.app.model.ResponseCheck;
+import com.qa.app.model.CheckType;
+import com.qa.app.model.Scenario;
 import com.qa.app.model.threadgroups.*;
 import io.gatling.javaapi.core.*;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
-import com.qa.app.model.ResponseCheck;
-import com.qa.app.model.CheckType;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,7 +31,7 @@ public class GatlingScenarioSimulation extends Simulation {
     private static final String VARIABLES_PREFIX = "TEST_VARIABLES:";
 
     private static class ScenarioRunItem {
-        public com.qa.app.model.Scenario scenario;
+        public Scenario scenario;
         public GatlingLoadParameters params;
         public List<Map<String, Object>> items; // each map contains "test" and "endpoint"
     }

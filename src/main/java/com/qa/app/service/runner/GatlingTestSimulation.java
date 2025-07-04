@@ -1,4 +1,4 @@
-package com.qa.app.util;
+package com.qa.app.service.runner;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

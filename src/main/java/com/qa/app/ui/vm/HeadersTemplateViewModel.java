@@ -15,6 +15,7 @@ import java.util.ResourceBundle;
 import org.yaml.snakeyaml.Yaml;
 
 import com.qa.app.model.HeadersTemplate;
+import com.qa.app.service.ProjectContext;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IHeadersTemplateService;
 import com.qa.app.service.impl.HeadersTemplateServiceImpl;
@@ -63,7 +64,7 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
                 headersTemplateNameField.setText(newSelection.getName());
             }
         });
-        loadData();
+        loadTemplates();
         AppConfig.addChangeListener(this);
 
         // double click row to show content in popup
@@ -123,12 +124,12 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
 
     @Override
     public void onConfigChanged() {
-        loadData();
+        loadTemplates();
     }
 
-    public void loadData() {
+    private void loadTemplates() {
         headersTemplateList.clear();
-        Integer projectId = AppConfig.getCurrentProjectId();
+        Integer projectId = ProjectContext.getCurrentProjectId();
         if (projectId != null) {
             try {
                 for (HeadersTemplate t : headersTemplateService.getHeadersTemplatesByProjectId(projectId)) {
@@ -164,9 +165,9 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
 
         try {
             HeadersTemplate t = new HeadersTemplate(name, content);
-            t.setProjectId(AppConfig.getCurrentProjectId());
+            t.setProjectId(ProjectContext.getCurrentProjectId());
             headersTemplateService.addHeadersTemplate(t);
-            loadData();
+            loadTemplates();
             clearFields();
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Template added successfully.", MainViewModel.StatusType.SUCCESS);
@@ -201,9 +202,9 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
         }
 
         try {
-            HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), updatedContent, AppConfig.getCurrentProjectId());
+            HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), updatedContent, ProjectContext.getCurrentProjectId());
             headersTemplateService.updateHeadersTemplate(t);
-            loadData();
+            loadTemplates();
             clearFields();
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Template updated successfully.", MainViewModel.StatusType.SUCCESS);
@@ -221,7 +222,7 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
         if (selected != null) {
             try {
                 headersTemplateService.deleteHeadersTemplate(selected.getId());
-                loadData();
+                loadTemplates();
                 clearFields();
                 if (mainViewModel != null) {
                     mainViewModel.updateStatus("Template deleted successfully.", MainViewModel.StatusType.SUCCESS);
@@ -323,7 +324,7 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
     }
 
     public void refresh() {
-        loadData();
+        loadTemplates();
     }
 
     public static class HeadersTemplateItem {

@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import javafx.scene.control.Button;
 import com.qa.app.util.AppConfig;
 import com.qa.app.common.listeners.AppConfigChangeListener;
+import com.qa.app.service.ProjectContext;
 
 public class GatlingScenarioViewModel implements AppConfigChangeListener {
 
@@ -262,7 +263,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     private void reloadTests() {
         try {
             availableTests.clear();
-            Integer projectId = AppConfig.getCurrentProjectId();
+            Integer projectId = ProjectContext.getCurrentProjectId();
             if (projectId != null) {
                 availableTests.addAll(testService.findAllTestsByProjectId(projectId));
             }
@@ -276,7 +277,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         try {
             selectionMap.clear();
             scenarios.clear();
-            Integer projectId = AppConfig.getCurrentProjectId();
+            Integer projectId = ProjectContext.getCurrentProjectId();
             if (projectId != null) {
                 scenarios.setAll(scenarioService.findAllScenarios(projectId));
             }
@@ -423,7 +424,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         Scenario sc = new Scenario();
         sc.setName(name);
         sc.setDescription(scenarioDescArea.getText());
-        Integer projectId = AppConfig.getCurrentProjectId();
+        Integer projectId = ProjectContext.getCurrentProjectId();
         if (projectId == null) {
             showError("No project selected!");
             return;

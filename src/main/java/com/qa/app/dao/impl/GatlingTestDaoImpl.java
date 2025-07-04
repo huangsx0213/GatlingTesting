@@ -3,8 +3,8 @@ package com.qa.app.dao.impl;
 import org.json.JSONObject;
 
 import com.qa.app.dao.api.IGatlingTestDao;
+import com.qa.app.dao.util.DBUtil;
 import com.qa.app.model.GatlingTest;
-import com.qa.app.util.DBUtil;
 
 import org.json.JSONException;
 

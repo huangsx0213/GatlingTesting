@@ -1,4 +1,4 @@
-package com.qa.app.util;
+package com.qa.app.dao.util;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

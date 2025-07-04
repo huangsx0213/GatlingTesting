@@ -1,8 +1,8 @@
 package com.qa.app.dao.impl;
 
 import com.qa.app.dao.api.IGroovyVariableDao;
+import com.qa.app.dao.util.DBUtil;
 import com.qa.app.model.GroovyVariable;
-import com.qa.app.util.DBUtil;
 
 import java.sql.*;
 import java.util.ArrayList;

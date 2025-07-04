@@ -1,6 +1,7 @@
 package com.qa.app.ui.vm;
 
 import com.qa.app.model.Project;
+import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IProjectService;
 import com.qa.app.service.impl.ProjectServiceImpl;
 import javafx.collections.FXCollections;
@@ -42,8 +43,14 @@ public class ProjectViewModel implements Initializable {
     }
 
     private void loadProjects() {
-        projectList.clear();
-        projectList.addAll(projectService.getAllProjects());
+        try {
+            projectList.clear();
+            projectList.addAll(projectService.getAllProjects());
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to load projects: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+        }
     }
 
     private void onTableSelectionChanged(Project project) {
@@ -72,7 +79,7 @@ public class ProjectViewModel implements Initializable {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Project added successfully.", MainViewModel.StatusType.SUCCESS);
             }
-        } catch (Exception e) {
+        } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to add project: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
@@ -95,7 +102,7 @@ public class ProjectViewModel implements Initializable {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Project updated successfully.", MainViewModel.StatusType.SUCCESS);
             }
-        } catch (Exception e) {
+        } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to update project: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
@@ -116,7 +123,7 @@ public class ProjectViewModel implements Initializable {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Project deleted successfully.", MainViewModel.StatusType.SUCCESS);
             }
-        } catch (Exception e) {
+        } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to delete project: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }

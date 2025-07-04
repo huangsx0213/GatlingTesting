@@ -1,4 +1,4 @@
-package com.qa.app.util;
+package com.qa.app.service.script;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class GroovyVariable {
+public class GroovyScriptEngine {
 
     private Integer id;
     private final String name;
@@ -26,7 +26,7 @@ public class GroovyVariable {
     private Class<? extends Script> compiledScriptClass;
 
     @JsonCreator
-    public GroovyVariable(
+    public GroovyScriptEngine(
             @JsonProperty("name") String name,
             @JsonProperty("format") String format,
             @JsonProperty("description") String description,
@@ -52,12 +52,12 @@ public class GroovyVariable {
             Class<? extends Script> cls = (Class<? extends Script>) GLOBAL_GROOVY_CLASS_LOADER.parseClass(groovyScript).asSubclass(Script.class);
             this.compiledScriptClass = cls;
         } catch (Exception e) {
-            System.err.println("[GroovyVariable] 脚本预编译失败: " + e.getMessage());
+            System.err.println("[GroovyScriptEngine] 脚本预编译失败: " + e.getMessage());
             this.compiledScriptClass = null;
         }
     }
 
-    public GroovyVariable(Integer id, String name, String format, String description, String groovyScript) {
+    public GroovyScriptEngine(Integer id, String name, String format, String description, String groovyScript) {
         this.id = id;
         this.name = name;
         this.format = format;
@@ -80,7 +80,7 @@ public class GroovyVariable {
             Class<? extends Script> cls = (Class<? extends Script>) GLOBAL_GROOVY_CLASS_LOADER.parseClass(groovyScript).asSubclass(Script.class);
             this.compiledScriptClass = cls;
         } catch (Exception e) {
-            System.err.println("[GroovyVariable] 脚本预编译失败: " + e.getMessage());
+            System.err.println("[GroovyScriptEngine] 脚本预编译失败: " + e.getMessage());
             this.compiledScriptClass = null;
         }
     }

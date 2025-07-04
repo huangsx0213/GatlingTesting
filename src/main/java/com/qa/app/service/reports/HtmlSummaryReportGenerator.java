@@ -1,4 +1,4 @@
-package com.qa.app.util;
+package com.qa.app.service.reports;
 
 import com.qa.app.model.reports.CaseReport;
 import com.qa.app.model.reports.FunctionalTestReport;

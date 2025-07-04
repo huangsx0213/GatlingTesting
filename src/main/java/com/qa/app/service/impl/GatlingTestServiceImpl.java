@@ -11,7 +11,7 @@ import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IEndpointService;
 import com.qa.app.model.Endpoint;
-import com.qa.app.util.GatlingTestRunner;
+import com.qa.app.service.runner.GatlingTestRunner;
 import com.qa.app.model.BodyTemplate;
 import com.qa.app.model.HeadersTemplate;
 import com.qa.app.service.api.IBodyTemplateService;

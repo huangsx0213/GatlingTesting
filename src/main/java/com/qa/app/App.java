@@ -9,7 +9,8 @@ import javafx.scene.image.Image;
 
 import java.io.IOException;
 
-import com.qa.app.util.DBUtil;
+import com.qa.app.dao.util.DBUtil;
+import com.qa.app.util.AppConfig;
 
 public class App extends Application {
 
@@ -17,6 +18,9 @@ public class App extends Application {
     public void start(Stage primaryStage) throws IOException {
         // Initialize database and create tables if they don't exist
         DBUtil.initializeDatabase();
+        
+        // Force load configuration before UI initialization
+        AppConfig.reload();
         
         // Load the FXML file for the main view
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/qa/app/ui/view/main_view.fxml"));

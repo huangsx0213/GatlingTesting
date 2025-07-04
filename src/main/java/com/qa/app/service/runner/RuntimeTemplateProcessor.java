@@ -1,14 +1,18 @@
-package com.qa.app.util;
+package com.qa.app.service.runner;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.qa.app.service.script.VariableGenerator;
 import freemarker.core.JSONOutputFormat;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
-import freemarker.template.TemplateException;
 import freemarker.template.Version;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -51,12 +55,8 @@ public class RuntimeTemplateProcessor {
         char last = trimmed.charAt(trimmed.length() - 1);
         if ((first == '{' && last == '}') || (first == '[' && last == ']')) {
             try {
-                com.fasterxml.jackson.databind.JsonNode node = JSON_MAPPER.readTree(trimmed);
-
-                // Recursively process strings within the JSON structure for dynamic variables
-                Object processed = processJsonNode(node);
-
-                return processed;
+                JsonNode node = JSON_MAPPER.readTree(trimmed);
+                return processJsonNode(node);
             } catch (Exception ignored) {
                 // Not valid JSON, ignore and treat as plain string
             }
@@ -69,26 +69,22 @@ public class RuntimeTemplateProcessor {
      * by the result of VariableGenerator.generate(). The resulting structure is
      * returned as Map/List compatible with FreeMarker.
      */
-    private static Object processJsonNode(com.fasterxml.jackson.databind.JsonNode node) {
+    private static Object processJsonNode(JsonNode node) {
         if (node.isObject()) {
-            java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
+            Map<String, Object> map = new LinkedHashMap<>();
             node.fieldNames().forEachRemaining(field -> {
-                com.fasterxml.jackson.databind.JsonNode child = node.get(field);
+                JsonNode child = node.get(field);
                 map.put(field, processJsonNode(child));
             });
             return map;
         } else if (node.isArray()) {
-            java.util.List<Object> list = new java.util.ArrayList<>();
-            for (com.fasterxml.jackson.databind.JsonNode child : node) {
+            List<Object> list = new ArrayList<>();
+            for (JsonNode child : node) {
                 list.add(processJsonNode(child));
             }
             return list;
         } else if (node.isTextual()) {
-            String text = node.asText();
-            if (text.contains("@{")) {
-                return VariableGenerator.generate(text);
-            }
-            return text;
+            return VariableGenerator.getInstance().resolveVariables(node.asText());
         } else if (node.isNumber()) {
             return node.numberValue();
         } else if (node.isBoolean()) {
@@ -133,7 +129,7 @@ public class RuntimeTemplateProcessor {
                 // Process test variable references in variable values
                 String processedValue = TestRunContext.processVariableReferences(entry.getValue());
                 // Call VariableGenerator.generate on variable expressions again to achieve true dynamic effects
-                String value = VariableGenerator.generate(processedValue);
+                String value = VariableGenerator.getInstance().resolveVariables(processedValue);
                 dataModel.put(entry.getKey(), convertToModelValue(value));
             }
         }
@@ -143,7 +139,7 @@ public class RuntimeTemplateProcessor {
             StringWriter out = new StringWriter();
             template.process(dataModel, out);
             return out.toString();
-        } catch (TemplateException | java.io.IOException e) {
+        } catch (Exception e) {
             // Return an error message if runtime rendering fails, to prevent the entire stress test from crashing
             return "TEMPLATE_RUNTIME_ERROR: " + e.getMessage();
         }

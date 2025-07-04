@@ -1,9 +1,9 @@
 package com.qa.app.dao.impl;
 
 import com.qa.app.dao.api.IGatlingScenarioDao;
+import com.qa.app.dao.util.DBUtil;
 import com.qa.app.model.Scenario;
 import com.qa.app.model.ScenarioStep;
-import com.qa.app.util.DBUtil;
 
 import java.sql.*;
 import java.util.ArrayList;

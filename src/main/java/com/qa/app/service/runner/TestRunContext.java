@@ -1,4 +1,4 @@
-package com.qa.app.util;
+package com.qa.app.service.runner;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

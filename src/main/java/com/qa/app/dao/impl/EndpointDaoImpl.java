@@ -6,7 +6,7 @@ import java.util.List;
 
 import com.qa.app.dao.api.IEndpointDao;
 import com.qa.app.model.Endpoint;
-import com.qa.app.util.DBUtil;
+import com.qa.app.dao.util.DBUtil;
 
 public class EndpointDaoImpl implements IEndpointDao {
     @Override

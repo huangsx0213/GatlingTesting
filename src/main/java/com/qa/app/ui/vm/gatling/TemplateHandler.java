@@ -15,10 +15,10 @@ import java.io.IOException;
 import java.io.StringWriter;
 import freemarker.core.JSONOutputFormat;
 import java.util.Set;
-import com.qa.app.util.VariableGenerator;
+import com.qa.app.service.script.VariableGenerator;
 import javafx.collections.FXCollections;
 import javafx.scene.control.cell.ComboBoxTableCell;
-import com.qa.app.util.RuntimeTemplateProcessor;
+import com.qa.app.service.runner.RuntimeTemplateProcessor;
 import javafx.stage.Stage;
 import javafx.scene.image.Image;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -92,9 +92,12 @@ public class TemplateHandler {
         varsTable.setEditable(true);
         // Custom cell factory: keep combobox suggestions & support large text editing via double-click
         valueColumn.setCellFactory(col -> {
+            List<String> suggestions = VariableGenerator.getInstance().getVariableDefinitions().stream()
+                .map(def -> def.get("format"))
+                .collect(java.util.stream.Collectors.toList());
             ComboBoxTableCell<DynamicVariable, String> cell = new ComboBoxTableCell<>(
                     new javafx.util.converter.DefaultStringConverter(),
-                    FXCollections.observableArrayList(VariableGenerator.getRuleFormats()));
+                    FXCollections.observableArrayList(suggestions));
             cell.setComboBoxEditable(true);
 
             // Return configured cell
@@ -223,7 +226,7 @@ public class TemplateHandler {
         // Build the data model
         Map<String, Object> dataModel = new java.util.HashMap<>();
         for (DynamicVariable var : variables) {
-            String value = VariableGenerator.generate(var.getValue());
+            String value = VariableGenerator.getInstance().resolveVariables(var.getValue());
             if (value != null && !value.isEmpty()) {
                 dataModel.put(var.getKey(), RuntimeTemplateProcessor.convertToModelValue(value));
             }

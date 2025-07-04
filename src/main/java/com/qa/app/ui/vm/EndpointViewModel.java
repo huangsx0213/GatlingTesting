@@ -16,6 +16,7 @@ import com.qa.app.service.api.IEndpointService;
 import com.qa.app.service.api.IEnvironmentService;
 import com.qa.app.service.impl.EndpointServiceImpl;
 import com.qa.app.service.impl.EnvironmentServiceImpl;
+import com.qa.app.service.ProjectContext;
 import com.qa.app.util.AppConfig;
 import com.qa.app.common.listeners.AppConfigChangeListener;
 
@@ -104,7 +105,7 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
 
     private void loadEndpoints() {
         endpointList.clear();
-        Integer projectId = AppConfig.getCurrentProjectId();
+        Integer projectId = ProjectContext.getCurrentProjectId();
         if (projectId != null) {
             try {
                 for (Endpoint e : endpointService.getEndpointsByProjectId(projectId)) {
@@ -172,7 +173,7 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
             return;
         }
         try {
-            Endpoint e = new Endpoint(name, method, url, envId, AppConfig.getCurrentProjectId());
+            Endpoint e = new Endpoint(name, method, url, envId, ProjectContext.getCurrentProjectId());
             endpointService.addEndpoint(e);
             loadEndpoints();
             clearFields();
@@ -213,7 +214,7 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
             return;
         }
         try {
-            Endpoint e = new Endpoint(selected.getId(), name, method, url, envId, AppConfig.getCurrentProjectId());
+            Endpoint e = new Endpoint(selected.getId(), name, method, url, envId, ProjectContext.getCurrentProjectId());
             endpointService.updateEndpoint(e);
             loadEndpoints();
             for (EndpointItem item : endpointList) {

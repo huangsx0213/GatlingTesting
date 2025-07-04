@@ -13,6 +13,8 @@ import javafx.scene.web.WebView;
 import javafx.scene.control.Tab;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import com.qa.app.model.reports.FunctionalTestReport;
+import com.qa.app.service.reports.HtmlSummaryReportGenerator;
 
 import java.io.File;
 import java.io.IOException;
@@ -518,9 +520,7 @@ public class GatlingTestReportViewModel implements Initializable {
     @FXML
     private void handleExportHtml() {
         if (currentReports == null || currentReports.isEmpty()) {
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,
-                    "Please load a report before exporting the HTML summary.");
-            alert.showAndWait();
+            new Alert(Alert.AlertType.WARNING, "Please load a report before exporting the HTML summary.").showAndWait();
             return;
         }
 
@@ -528,7 +528,7 @@ public class GatlingTestReportViewModel implements Initializable {
             java.nio.file.Path summaryDir = java.nio.file.Paths.get(System.getProperty("user.home"), ".gatling");
             java.nio.file.Files.createDirectories(summaryDir);
             java.nio.file.Path summaryPath = summaryDir.resolve("gatling-summary.html");
-            com.qa.app.util.HtmlSummaryReportGenerator.generateHtml(currentReports, summaryPath);
+            HtmlSummaryReportGenerator.generateHtml(currentReports, summaryPath);
 
             // Load into embedded WebView
             if (summaryWebView != null) {
@@ -538,14 +538,11 @@ public class GatlingTestReportViewModel implements Initializable {
             if (summaryTab != null) {
                 summaryTab.setDisable(false);
                 // Switch to Summary tab automatically
-                // The parent TabPane is the TabPane above; we can request selection.
                 summaryTab.getTabPane().getSelectionModel().select(summaryTab);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR,
-                    "Failed to export HTML summary: " + ex.getMessage());
-            alert.showAndWait();
+            new Alert(Alert.AlertType.ERROR, "Failed to export HTML summary: " + ex.getMessage()).showAndWait();
         }
     }
 

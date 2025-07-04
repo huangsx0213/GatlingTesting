@@ -234,7 +234,7 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             String javaBin = java.nio.file.Paths.get(javaHome, "bin", "java").toString();
             String classpath = assembleClasspath();
             String gatlingMain = "io.gatling.app.Gatling";
-            String simulationClass = com.qa.app.util.GatlingScenarioSimulation.class.getName();
+            String simulationClass = com.qa.app.service.runner.GatlingScenarioSimulation.class.getName();
             String resultsPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
 
             java.util.List<String> command = new java.util.ArrayList<>();

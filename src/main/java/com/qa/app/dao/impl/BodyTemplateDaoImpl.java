@@ -6,7 +6,7 @@ import java.util.List;
 
 import com.qa.app.dao.api.IBodyTemplateDao;
 import com.qa.app.model.BodyTemplate;
-import com.qa.app.util.DBUtil;
+import com.qa.app.dao.util.DBUtil;
 
 public class BodyTemplateDaoImpl implements IBodyTemplateDao {
     @Override

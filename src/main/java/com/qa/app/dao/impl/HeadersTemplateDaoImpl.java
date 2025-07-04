@@ -6,7 +6,7 @@ import java.util.List;
 
 import com.qa.app.dao.api.IHeadersTemplateDao;
 import com.qa.app.model.HeadersTemplate;
-import com.qa.app.util.DBUtil;
+import com.qa.app.dao.util.DBUtil;
 
 public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
     @Override

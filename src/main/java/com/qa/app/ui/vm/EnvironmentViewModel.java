@@ -13,6 +13,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import java.net.URL;
 import java.util.ResourceBundle;
+import com.qa.app.service.ProjectContext;
 
 public class EnvironmentViewModel implements Initializable, AppConfigChangeListener {
     @FXML private TextField environmentNameField;
@@ -51,14 +52,18 @@ public class EnvironmentViewModel implements Initializable, AppConfigChangeListe
 
     private void loadEnvironments() {
         environmentList.clear();
-        Integer projectId = com.qa.app.util.AppConfig.getCurrentProjectId();
-        if (projectId != null) {
-            try {
-                environmentList.addAll(environmentService.findEnvironmentsByProjectId(projectId));
-            } catch (ServiceException e) {
-                if (mainViewModel != null) {
-                    mainViewModel.updateStatus("Failed to load environments: " + e.getMessage(), MainViewModel.StatusType.ERROR);
-                }
+        Integer projectId = ProjectContext.getCurrentProjectId();
+        if (projectId == null) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Please select a project first.", MainViewModel.StatusType.INFO);
+            }
+            return;
+        }
+        try {
+            environmentList.addAll(environmentService.findEnvironmentsByProjectId(projectId));
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to load environments: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
         }
     }
@@ -83,7 +88,7 @@ public class EnvironmentViewModel implements Initializable, AppConfigChangeListe
             }
             return;
         }
-        Environment environment = new Environment(name, description, com.qa.app.util.AppConfig.getCurrentProjectId());
+        Environment environment = new Environment(name, description, ProjectContext.getCurrentProjectId());
         try {
             environmentService.createEnvironment(environment);
             loadEnvironments();

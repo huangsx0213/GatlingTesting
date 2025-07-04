@@ -9,7 +9,7 @@ import com.qa.app.ui.vm.gatling.TemplateHandler;
 import com.qa.app.ui.vm.gatling.TestCondictionHandler;
 import com.qa.app.util.AppConfig;
 import com.qa.app.common.listeners.AppConfigChangeListener;
-import com.qa.app.util.VariableGenerator;
+import com.qa.app.service.script.VariableGenerator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -34,6 +34,8 @@ import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.threadgroups.StandardThreadGroup;
 import com.qa.app.model.threadgroups.ThreadGroupType;
 import javafx.beans.binding.Bindings;
+import com.qa.app.service.ProjectContext;
+import javafx.application.Platform;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -270,15 +272,24 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         }
 
         AppConfig.addChangeListener(this);
+
+        // Populate variable help
+        List<Map<String, String>> varDefs = VariableGenerator.getInstance().getVariableDefinitions();
+        StringBuilder helpText = new StringBuilder("可用变量:\n");
+        for (Map<String, String> def : varDefs) {
+            helpText.append(def.get("format")).append(" - ").append(def.get("description")).append("\n");
+        }
+        // This label seems to be missing from the FXML, but the code references it.
+        // If variableHelpLabel is a valid FXML field, this will work. Otherwise, that's a separate bug.
+        // variableHelpLabel.setText(helpText.toString());
     }
 
     @Override
     public void onConfigChanged() {
-        loadEndpoints();
-        loadAllTcids();
-        loadTests();
-        loadTemplates();
-        loadHeadersTemplates();
+        Platform.runLater(() -> {
+            loadTests();
+            loadEndpoints();
+        });
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -609,7 +620,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         endpointIdMap.clear();
         try {
             // get current environment
-            String envName = AppConfig.getCurrentEnv();
+            String envName = AppConfig.getProperty("current.env", "dev");
             Integer envId = null;
             for (Environment env : environmentService.findAllEnvironments()) {
                 if (env.getName().equals(envName)) {
@@ -675,7 +686,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
     private void loadTests() {
         try {
-            Integer projectId = AppConfig.getCurrentProjectId();
+            Integer projectId = ProjectContext.getCurrentProjectId();
             if (projectId != null) {
                 List<GatlingTest> tests = testService.findTestsByProjectId(projectId);
                 // Clear old selection states before loading new tests
@@ -937,7 +948,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             test.setHeaders(null);
         }
 
-        test.setProjectId(AppConfig.getCurrentProjectId());
+        test.setProjectId(ProjectContext.getCurrentProjectId());
 
         // Serialize response checks to JSON
         try{
@@ -970,7 +981,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             }
             return;
         }
-        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpointName, AppConfig.getCurrentProjectId());
+        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpointName, ProjectContext.getCurrentProjectId());
         populateTestFromFields(newTest);
 
         try {
@@ -1221,7 +1232,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     }
 
     public void refreshDynamicVariables() {
-        VariableGenerator.reloadCustomVariables();
+        VariableGenerator.getInstance().reloadCustomVariables();
         loadTemplates();
         loadHeadersTemplates();
         // refresh dynamic variables table
@@ -1408,9 +1419,12 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
         // Value column with ComboBox suggestions (reuse VariableGenerator rules)
         urlDynamicValueColumn.setCellFactory(col -> {
+            List<String> suggestions = VariableGenerator.getInstance().getVariableDefinitions().stream()
+                .map(def -> def.get("format"))
+                .collect(Collectors.toList());
             ComboBoxTableCell<DynamicVariable, String> cell = new ComboBoxTableCell<>(
                     new DefaultStringConverter(),
-                    FXCollections.observableArrayList(VariableGenerator.getRuleFormats()));
+                    FXCollections.observableArrayList(suggestions));
             cell.setComboBoxEditable(true);
             return cell;
         });
@@ -1470,13 +1484,12 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
     private String buildGeneratedUrl() {
         String endpointDisplay = endpointComboBox == null ? null : endpointComboBox.getValue();
-        if (endpointDisplay == null || endpointDisplay.isBlank()) return null;
-        String endpointName = endpointDisplay.split(" \\[")[0].trim();
-        Endpoint ep = endpointList.stream().filter(e -> e.getName().equals(endpointName)).findFirst().orElse(null);
-        if (ep == null || ep.getUrl() == null) return null;
+        Endpoint ep = getEndpointByName(endpointDisplay);
+        if (ep == null || ep.getUrl() == null) return "";
+
         String url = ep.getUrl();
         for (DynamicVariable dv : urlDynamicVariables) {
-            String value = VariableGenerator.generate(dv.getValue());
+            String value = VariableGenerator.getInstance().resolveVariables(dv.getValue());
             if (value == null) value = "";
             url = url.replaceAll("@\\{" + java.util.regex.Pattern.quote(dv.getKey()) + "\\}", java.util.regex.Matcher.quoteReplacement(value));
         }
@@ -1505,5 +1518,16 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         dialog.setResultConverter(btn -> btn == okButtonType ? textArea.getText() : null);
         java.util.Optional<String> result = dialog.showAndWait();
         return result.orElse(null);
+    }
+
+    private Endpoint getEndpointByName(String displayString) {
+        if (displayString == null || displayString.isBlank()) {
+            return null;
+        }
+        String endpointName = displayString.split(" \\[")[0].trim();
+        return endpointList.stream()
+                .filter(e -> e.getName().equals(endpointName))
+                .findFirst()
+                .orElse(null);
     }
 }

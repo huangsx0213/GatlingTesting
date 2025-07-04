@@ -20,6 +20,7 @@ import com.qa.app.common.listeners.AppConfigChangeListener;
 import com.qa.app.ui.vm.gatling.TemplateValidator;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Alert.AlertType;
+import com.qa.app.service.ProjectContext;
 
 public class BodyTemplateViewModel implements Initializable, AppConfigChangeListener {
     @FXML
@@ -92,7 +93,7 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
 
     private void loadBodyTemplates() {
         bodyTemplateList.clear();
-        Integer projectId = AppConfig.getCurrentProjectId();
+        Integer projectId = ProjectContext.getCurrentProjectId();
         if (projectId != null) {
             try {
                 for (BodyTemplate t : bodyTemplateService.findBodyTemplatesByProjectId(projectId)) {
@@ -121,7 +122,7 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
         }
 
         try {
-            BodyTemplate t = new BodyTemplate(name, content, AppConfig.getCurrentProjectId());
+            BodyTemplate t = new BodyTemplate(name, content, ProjectContext.getCurrentProjectId());
             bodyTemplateService.createBodyTemplate(t);
             loadBodyTemplates();
             clearFields();
@@ -149,7 +150,7 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
         }
 
         try {
-            BodyTemplate t = new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), content, AppConfig.getCurrentProjectId());
+            BodyTemplate t = new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), content, ProjectContext.getCurrentProjectId());
             bodyTemplateService.updateBodyTemplate(t);
             loadBodyTemplates();
             clearFields();

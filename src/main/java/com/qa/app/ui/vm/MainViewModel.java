@@ -19,6 +19,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ResourceBundle;
 
+import com.qa.app.model.Project;
+import com.qa.app.service.ProjectContext;
+import com.qa.app.service.ServiceException;
+import com.qa.app.service.api.IProjectService;
+import com.qa.app.service.impl.ProjectServiceImpl;
+import com.qa.app.util.AppConfig;
+import javafx.application.Platform;
+
 public class MainViewModel implements Initializable {
 
     @FXML
@@ -57,26 +65,39 @@ public class MainViewModel implements Initializable {
         ERROR
     }
 
+    private IProjectService projectService;
     private static MainViewModel instance;
 
     public MainViewModel() {
         instance = this;
-    }
-
-    public static void showGlobalStatus(String message, StatusType type) {
-        if (instance != null) {
-            // 确保在 JavaFX Application Thread 上更新 UI
-            if (javafx.application.Platform.isFxApplicationThread()) {
-                instance.updateStatus(message, type);
-            } else {
-                javafx.application.Platform.runLater(() -> instance.updateStatus(message, type));
-            }
-        }
+        this.projectService = new ProjectServiceImpl();
     }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         reinitialize();
+        loadAndSetCurrentProject();
+        AppConfig.addChangeListener(this::onConfigChanged);
+        
+        // Force refresh the initial tab content
+        if (!navItems.isEmpty() && !contentTabPane.getTabs().isEmpty()) {
+            Tab initialTab = contentTabPane.getTabs().get(0);
+            if (initialTab != null && initialTab.getContent() != null) {
+                Node contentNode = initialTab.getContent();
+                Object controller = contentNode.getProperties().get("controller");
+                if (controller == null) {
+                    controller = contentNode.getUserData();
+                }
+                if (controller instanceof GatlingTestViewModel) {
+                    ((GatlingTestViewModel) controller).refreshDynamicVariables();
+                    ((GatlingTestViewModel) controller).refresh();
+                }
+            }
+        }
+    }
+
+    private void onConfigChanged() {
+        Platform.runLater(this::loadAndSetCurrentProject);
     }
 
     public void reinitialize() {
@@ -123,7 +144,7 @@ public class MainViewModel implements Initializable {
     }
 
     private void openOrSelectTab(String tabName) {
-        com.qa.app.util.AppConfig.reload();
+        // AppConfig.reload(); // It's better to reload config only when necessary, e.g., in App Properties tab
         // Check if tab is already open
         for (Tab tab : contentTabPane.getTabs()) {
             if (tab.getText().equals(tabName)) {
@@ -271,7 +292,7 @@ public class MainViewModel implements Initializable {
     }
 
     public void updateStatus(String message, StatusType type) {
-        if (statusLabel != null) {
+        Platform.runLater(() -> {
             statusLabel.setText(message);
             switch (type) {
                 case INFO:
@@ -284,12 +305,65 @@ public class MainViewModel implements Initializable {
                     statusLabel.setTextFill(Color.RED);
                     break;
             }
-        }
+        });
     }
 
     public void reloadAllTabs() {
         loadedTabs.clear();
         contentTabPane.getTabs().clear();
         reinitialize();
+    }
+
+    private void loadAndSetCurrentProject() {
+        String currentProjectName = AppConfig.getProperty("current.project.name");
+        if (currentProjectName != null && !currentProjectName.isEmpty()) {
+            try {
+                Project project = projectService.getProjectByName(currentProjectName);
+                if (project != null) {
+                    ProjectContext.setCurrentProject(project);
+                    updateStatus("Current project: " + project.getName(), StatusType.INFO);
+                } else {
+                    handleNoProject("Project '" + currentProjectName + "' not found.");
+                }
+            } catch (ServiceException e) {
+                updateStatus("Failed to load project: " + e.getMessage(), StatusType.ERROR);
+                handleNoProject(e.getMessage());
+            }
+        } else {
+            handleNoProject("No project selected. Please select or create a project.");
+        }
+    }
+
+    private void handleNoProject(String message) {
+        ProjectContext.clearCurrentProject();
+        updateStatus(message, StatusType.INFO);
+    }
+
+    public void closeProject() {
+        Project currentProject = ProjectContext.getCurrentProject();
+        if (currentProject != null) {
+            currentProject.setLastUsed(false);
+            try {
+                projectService.updateProject(currentProject);
+            } catch (ServiceException e) {
+                updateStatus("Failed to update project state on close: " + e.getMessage(), StatusType.ERROR);
+            }
+        }
+        ProjectContext.clearCurrentProject();
+        AppConfig.removeProperty("current.project.name");
+        AppConfig.saveProperties();
+        loadAndSetCurrentProject(); // Reload to reflect closed state
+    }
+    
+    @FXML
+    private void handleReloadConfig() {
+        AppConfig.reload();
+        updateStatus("Configuration reloaded.", StatusType.INFO);
+    }
+
+    public static void showGlobalStatus(String message, StatusType type) {
+        if (instance != null) {
+            instance.updateStatus(message, type);
+        }
     }
 }
