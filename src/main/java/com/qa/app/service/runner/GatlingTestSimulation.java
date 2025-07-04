@@ -7,6 +7,7 @@ import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.GatlingTest;
 import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
+import com.qa.app.model.Operator;
 import com.qa.app.model.reports.*;
 import com.qa.app.model.threadgroups.*;
 import io.gatling.javaapi.core.*;
@@ -14,6 +15,10 @@ import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
 import com.qa.app.dao.impl.GatlingTestDaoImpl;
 import com.qa.app.dao.impl.EndpointDaoImpl;
+import com.qa.app.service.impl.BodyTemplateServiceImpl;
+import com.qa.app.service.impl.HeadersTemplateServiceImpl;
+import com.qa.app.model.BodyTemplate;
+import com.qa.app.model.HeadersTemplate;
 
 import java.io.File;
 import java.io.IOException;
@@ -660,18 +665,16 @@ public class GatlingTestSimulation extends Simulation {
                     }
                 }
                 // 2) fallback to DB lookup (once per tcid)
-                if (refEndpoint == null) {
-                    refEndpoint = refEndpointCache.get(refTcid);
-                    if (refEndpoint == null) {
-                        refEndpoint = findEndpointByTcid(refTcid, endpoint);
-                        if (refEndpoint != null) {
-                            refEndpointCache.put(refTcid, refEndpoint);
-                        }
-                    }
+                final GatlingTest refTest = findRefTestByTcid(refTcid);
+                if (refTest != null) {
+                    enrichRefTestTemplates(refTest);
+                }
+                if (refTest != null) {
+                    refEndpoint = findEndpointForTest(refTest, endpoint);
                 }
                 if (refEndpoint == null) continue; // skip if not found
 
-                String refName = refTcid + "_before";
+                String refName = test.getTcid() + "." + refTcid + "_PRE";
 
                 // Build simple GET/POST etc for reference
                 String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
@@ -685,18 +688,103 @@ public class GatlingTestSimulation extends Simulation {
                     default -> refReq = http(refName).get(refUrl);
                 }
 
+                // Add headers and body from refTest
+                Map<String, String> beforeHeaderTemplates = parseHeaders(refTest.getHeaders());
+                for (Map.Entry<String, String> headerEntry : beforeHeaderTemplates.entrySet()) {
+                    refReq = refReq.header(headerEntry.getKey(), session ->
+                            RuntimeTemplateProcessor.render(headerEntry.getValue(), refTest.getHeadersDynamicVariables()));
+                }
+                if (refTest != null && refTest.getBody() != null && !refTest.getBody().trim().isEmpty()) {
+                    refReq = refReq.body(StringBody(session ->
+                            RuntimeTemplateProcessor.render(refTest.getBody(), refTest.getBodyDynamicVariables())));
+                }
+                
                 // Extract the value using JSON Path (assumption)
-                String saveAsKey = "diff_" + dc.hashCode() + "_before";
-                refReq = refReq.check(jsonPath(path).saveAs(saveAsKey), status().is(200));
+                String saveAsKey = "diff_" + dc.hashCode() + "_PRE";
+                refReq = refReq.check(
+                    jsonPath(path).saveAs(saveAsKey), 
+                    status().is(200),
+                    bodyString().saveAs("responseBody"),
+                    responseTimeInMillis().saveAs("latencyMs"),
+                    bodyLength().saveAs("sizeBytes")
+                );
+                
+                // Capture selected response headers
+                for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
+                    String sessionKey = "respHeader_" + headerName.replace("-", "_");
+                    refReq = refReq.check(header(headerName).optional().saveAs(sessionKey));
+                }
 
-                // Basic reporting for ref-before
+                // Full reporting for ref-before (like main request)
                 ChainBuilder refReporting = exec(s -> {
                     RequestReport rpt = new RequestReport();
                     rpt.setRequestName(refName);
-                    rpt.setChecks(new java.util.ArrayList<>());
-                    rpt.setPassed(true); // Simple mark
+                    
+                    // 1. Build RequestInfo with resolved values
+                    RequestInfo reqInfo = new RequestInfo();
+                    reqInfo.setMethod(refMethod);
+                    reqInfo.setUrl(refUrl);
+                    
+                    // Dynamically process headers for each request using a session function
+                    Map<String, String> finalHeadersMap = new HashMap<>();
+                    if (refTest.getHeaders() != null && !refTest.getHeaders().isEmpty()) {
+                        String finalHeaders = RuntimeTemplateProcessor.render(refTest.getHeaders(), refTest.getHeadersDynamicVariables());
+                        finalHeadersMap = parseHeaders(finalHeaders);
+                    }
+                    reqInfo.setHeaders(finalHeadersMap);
+                    
+                    // Add minimal body if needed
+                    if (refTest.getBody() != null && !refTest.getBody().trim().isEmpty()) {
+                        String finalBody = RuntimeTemplateProcessor.render(refTest.getBody(), refTest.getBodyDynamicVariables());
+                        reqInfo.setBody(finalBody);
+                    } else {
+                        reqInfo.setBody("{}");
+                    }
+                    rpt.setRequest(reqInfo);
+                    
+                    // 2. Build ResponseInfo
+                    ResponseInfo respInfo = new ResponseInfo();
+                    if (s.contains("responseBody")) {
+                        respInfo.setBodySample(s.getString("responseBody"));
+                    }
+                    if (s.contains("latencyMs")) {
+                        respInfo.setLatencyMs(s.getLong("latencyMs"));
+                    }
+                    if (s.contains("sizeBytes")) {
+                        respInfo.setSizeBytes((long) s.getInt("sizeBytes"));
+                    }
+                    
+                    // Capture headers
+                    Map<String, String> capturedHeaders = new HashMap<>();
+                    for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
+                        String key = "respHeader_" + headerName.replace("-", "_");
+                        if (s.contains(key)) {
+                            capturedHeaders.put(headerName, s.getString(key));
+                        }
+                    }
+                    respInfo.setHeaders(capturedHeaders);
+                    
+                    // Set status
+                    respInfo.setStatus(200); // Assume success since we're checking status().is(200)
+                    rpt.setResponse(respInfo);
+                    
+                    // 3. Add check report for status
+                    List<CheckReport> checks = new ArrayList<>();
+                    CheckReport statusCheck = new CheckReport();
+                    statusCheck.setType(CheckType.STATUS);
+                    statusCheck.setOperator(Operator.IS);
+                    statusCheck.setExpect("200");
+                    statusCheck.setActual("200");
+                    statusCheck.setPassed(true);
+                    checks.add(statusCheck);
+                    rpt.setChecks(checks);
+                    
+                    // 4. Set overall status
+                    rpt.setPassed(true);
+                    rpt.setStatus("200");
+                    
                     caseReports.get(reportKey).getItems().add(rpt);
-
+ 
                     // Save value to TestRunContext for later diff
                     if (s.contains(saveAsKey)) {
                         Object val = s.get(saveAsKey);
@@ -725,10 +813,16 @@ public class GatlingTestSimulation extends Simulation {
                 for (BatchItem bi : batchItems) {
                     if (bi.test != null && refTcid.equals(bi.test.getTcid())) { refEndpoint = bi.endpoint; break; }
                 }
-                if (refEndpoint == null) refEndpoint = refEndpointCache.computeIfAbsent(refTcid, k -> findEndpointByTcid(k, endpoint));
+                final GatlingTest refTestAfter = findRefTestByTcid(refTcid);
+                if (refTestAfter != null) {
+                    enrichRefTestTemplates(refTestAfter);
+                }
+                if (refTestAfter != null) {
+                    refEndpoint = findEndpointForTest(refTestAfter, endpoint);
+                }
                 if (refEndpoint == null) continue;
 
-                String refName = refTcid + "_after";
+                String refName = test.getTcid() + "." + refTcid + "_PST";
                 String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
                 String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), Collections.emptyMap());
 
@@ -740,16 +834,102 @@ public class GatlingTestSimulation extends Simulation {
                     default -> refReq = http(refName).get(refUrl);
                 }
 
-                String saveAsKey = "diff_" + dc.hashCode() + "_after";
-                refReq = refReq.check(jsonPath(path).saveAs(saveAsKey), status().is(200));
+                // Add headers and body from refTest
+                Map<String, String> afterHeaderTemplates = parseHeaders(refTestAfter.getHeaders());
+                for (Map.Entry<String, String> headerEntry : afterHeaderTemplates.entrySet()) {
+                    refReq = refReq.header(headerEntry.getKey(), session ->
+                            RuntimeTemplateProcessor.render(headerEntry.getValue(), refTestAfter.getHeadersDynamicVariables()));
+                }
+                if (refTestAfter != null && refTestAfter.getBody() != null && !refTestAfter.getBody().trim().isEmpty()) {
+                    refReq = refReq.body(StringBody(session ->
+                            RuntimeTemplateProcessor.render(refTestAfter.getBody(), refTestAfter.getBodyDynamicVariables())));
+                }
 
+                String saveAsKey = "diff_" + dc.hashCode() + "_PST";
+                refReq = refReq.check(
+                    jsonPath(path).saveAs(saveAsKey), 
+                    status().is(200),
+                    bodyString().saveAs("responseBody"),
+                    responseTimeInMillis().saveAs("latencyMs"),
+                    bodyLength().saveAs("sizeBytes")
+                );
+                
+                // Capture selected response headers
+                for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
+                    String sessionKey = "respHeader_" + headerName.replace("-", "_");
+                    refReq = refReq.check(header(headerName).optional().saveAs(sessionKey));
+                }
+
+                // Full reporting for ref-after (like main request)
                 ChainBuilder refReporting = exec(s -> {
                     RequestReport rpt = new RequestReport();
                     rpt.setRequestName(refName);
-                    rpt.setChecks(new java.util.ArrayList<>());
+                    
+                    // 1. Build RequestInfo with resolved values
+                    RequestInfo reqInfo = new RequestInfo();
+                    reqInfo.setMethod(refMethod);
+                    reqInfo.setUrl(refUrl);
+                    
+                    // Dynamically process headers for each request using a session function
+                    Map<String, String> finalHeadersMap = new HashMap<>();
+                    if (refTestAfter.getHeaders() != null && !refTestAfter.getHeaders().isEmpty()) {
+                        String finalHeaders = RuntimeTemplateProcessor.render(refTestAfter.getHeaders(), refTestAfter.getHeadersDynamicVariables());
+                        finalHeadersMap = parseHeaders(finalHeaders);
+                    }
+                    reqInfo.setHeaders(finalHeadersMap);
+                    
+                    // Add minimal body if needed
+                    if (refTestAfter.getBody() != null && !refTestAfter.getBody().trim().isEmpty()) {
+                        String finalBody = RuntimeTemplateProcessor.render(refTestAfter.getBody(), refTestAfter.getBodyDynamicVariables());
+                        reqInfo.setBody(finalBody);
+                    } else {
+                        reqInfo.setBody("{}");
+                    }
+                    rpt.setRequest(reqInfo);
+                    
+                    // 2. Build ResponseInfo
+                    ResponseInfo respInfo = new ResponseInfo();
+                    if (s.contains("responseBody")) {
+                        respInfo.setBodySample(s.getString("responseBody"));
+                    }
+                    if (s.contains("latencyMs")) {
+                        respInfo.setLatencyMs(s.getLong("latencyMs"));
+                    }
+                    if (s.contains("sizeBytes")) {
+                        respInfo.setSizeBytes((long) s.getInt("sizeBytes"));
+                    }
+                    
+                    // Capture headers
+                    Map<String, String> capturedHeaders = new HashMap<>();
+                    for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
+                        String key = "respHeader_" + headerName.replace("-", "_");
+                        if (s.contains(key)) {
+                            capturedHeaders.put(headerName, s.getString(key));
+                        }
+                    }
+                    respInfo.setHeaders(capturedHeaders);
+                    
+                    // Set status
+                    respInfo.setStatus(200); // Assume success since we're checking status().is(200)
+                    rpt.setResponse(respInfo);
+                    
+                    // 3. Add check report for status
+                    List<CheckReport> checks = new ArrayList<>();
+                    CheckReport statusCheck = new CheckReport();
+                    statusCheck.setType(CheckType.STATUS);
+                    statusCheck.setOperator(Operator.IS);
+                    statusCheck.setExpect("200");
+                    statusCheck.setActual("200");
+                    statusCheck.setPassed(true);
+                    checks.add(statusCheck);
+                    rpt.setChecks(checks);
+                    
+                    // 4. Set overall status
                     rpt.setPassed(true);
+                    rpt.setStatus("200");
+                    
                     caseReports.get(reportKey).getItems().add(rpt);
-
+ 
                     if (s.contains(saveAsKey)) {
                         Object val = s.get(saveAsKey);
                         TestRunContext.saveAfter(expr, String.valueOf(val));
@@ -781,12 +961,37 @@ public class GatlingTestSimulation extends Simulation {
                 cr.setType(CheckType.DIFF);
                 cr.setExpression(expr);
                 cr.setOperator(dc.getOperator());
-                cr.setExpect(dc.getExpect());
-                cr.setActual(diffVal == null ? "N/A" : String.valueOf(diffVal));
+                
+                // Format expected value with +/- sign if it's numeric
+                String expectValue = dc.getExpect();
+                try {
+                    // Parse as number regardless of existing sign
+                    double expectNum = Double.parseDouble(expectValue.replaceFirst("^\\+", ""));
+                    // Format with correct sign
+                    expectValue = (expectNum >= 0 ? "+" : "-") + Math.abs(expectNum);
+                } catch (NumberFormatException ignored) {
+                    // Keep original if not numeric
+                }
+                cr.setExpect(expectValue);
+                
+                // Format actual value with +/- sign
+                String actualValue = diffVal == null ? "N/A" : 
+                    (diffVal >= 0 ? "+" : "") + String.valueOf(diffVal);
+                cr.setActual(actualValue);
+                
                 boolean passed = false;
                 if (diffVal != null) {
                     switch (dc.getOperator()) {
-                        case IS -> passed = String.valueOf(diffVal).equals(dc.getExpect());
+                        case IS -> {
+                            // Compare numeric values when possible
+                            try {
+                                double expectNum = Double.parseDouble(dc.getExpect());
+                                passed = Math.abs(diffVal - expectNum) < 0.0001; // Allow small floating point difference
+                            } catch (NumberFormatException e) {
+                                // Fallback to string comparison
+                                passed = String.valueOf(diffVal).equals(dc.getExpect());
+                            }
+                        }
                         case CONTAINS -> passed = String.valueOf(diffVal).contains(dc.getExpect());
                         default -> passed = false;
                     }
@@ -795,8 +1000,8 @@ public class GatlingTestSimulation extends Simulation {
 
                 // Console logging similar to other check types
                 String logPrefix = passed ? "CHECK_PASS" : "CHECK_FAIL";
-                System.out.println(String.format("%s|%s|%s|%s|expected:%s|actual:%s",
-                        test.getTcid(), expr, dc.getOperator().toString(), dc.getExpect(), cr.getActual() == null ? "N/A" : cr.getActual(), cr.getActual()));
+                System.out.println(String.format("%s|%s|%s|expected:%s|actual:%s",
+                        test.getTcid(), expr, dc.getOperator().toString(), expectValue, actualValue));
 
                 if (mainRpt.getChecks() == null) {
                     mainRpt.setChecks(new java.util.ArrayList<>());
@@ -882,12 +1087,18 @@ public class GatlingTestSimulation extends Simulation {
      * Fallback lookup: use DAO to fetch GatlingTest & its endpoint when the reference TCID is not present in the batch.
      * Limits search to same project / environment as originEndpoint when possible.
      */
-    private Endpoint findEndpointByTcid(String tcid, Endpoint originEndpoint) {
+    private GatlingTest findRefTestByTcid(String tcid) {
         try {
             GatlingTestDaoImpl testDao = new GatlingTestDaoImpl();
-            GatlingTest refTest = testDao.getTestByTcid(tcid);
-            if (refTest == null) return null;
+            return testDao.getTestByTcid(tcid);
+        } catch (Exception ex) {
+            System.err.println("[WARN] Failed to lookup test for TCID " + tcid + ": " + ex.getMessage());
+            return null;
+        }
+    }
 
+    private Endpoint findEndpointForTest(GatlingTest refTest, Endpoint originEndpoint) {
+        try {
             EndpointDaoImpl epDao = new EndpointDaoImpl();
             Endpoint ep = null;
             if (refTest.getEndpointId() > 0) {
@@ -910,8 +1121,26 @@ public class GatlingTestSimulation extends Simulation {
             }
             return ep;
         } catch (Exception ex) {
-            System.err.println("[WARN] Failed to lookup endpoint for TCID " + tcid + ": " + ex.getMessage());
+            System.err.println("[WARN] Failed to lookup endpoint for test: " + ex.getMessage());
             return null;
         }
+    }
+
+    // ============= Helper to enrich templates for reference tests ==================
+    private void enrichRefTestTemplates(GatlingTest t) {
+        if (t == null) return;
+        try {
+            if ((t.getBody() == null || t.getBody().isEmpty()) && t.getBodyTemplateId() > 0) {
+                BodyTemplate bt = new BodyTemplateServiceImpl().findBodyTemplateById(t.getBodyTemplateId());
+                if (bt != null) t.setBody(bt.getContent());
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            if ((t.getHeaders() == null || t.getHeaders().isEmpty()) && t.getHeadersTemplateId() > 0) {
+                HeadersTemplate ht = new HeadersTemplateServiceImpl().getHeadersTemplateById(t.getHeadersTemplateId());
+                if (ht != null) t.setHeaders(ht.getContent());
+            }
+        } catch (Exception ignored) {}
     }
 } 
