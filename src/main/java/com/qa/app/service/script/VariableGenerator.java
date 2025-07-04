@@ -48,15 +48,15 @@ public class VariableGenerator {
      * 1. UUID: __UUID
      *    Example: "id": "__UUID" → "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
      * 
-     * 2. Timestamp: __TIMESTAMP
-     *    Example: "time": "__TIMESTAMP" → "time": "1684932156"
+     * 2. Timestamp (ms): __TIMESTAMP
+     *    Example: "time": "__TIMESTAMP" → "time": "1684932156123"
      * 
      * 3. Date/Time: __DATETIME(format)
      *    Example: "date": "__DATETIME(yyyy-MM-dd HH:mm:ss)" → "date": "2023-05-24 14:32:56"
      *    Common formats: yyyy-MM-dd, HH:mm:ss, yyyyMMddHHmmss
      * 
-     * 4. Prefix + Timestamp: __PREFIX_TIMESTAMP(prefix)
-     *    Example: "orderId": "__PREFIX_TIMESTAMP(ORDER_)" → "orderId": "ORDER_1684932156"
+     * 4. Prefix + Timestamp (ms): __PREFIX_TIMESTAMP(prefix)
+     *    Example: "orderId": "__PREFIX_TIMESTAMP(ORDER_)" → "orderId": "ORDER_1684932156123"
      * 
      * 5. Prefix + DateTime: __PREFIX_DATETIME(prefix,format)
      *    Example: "batchId": "__PREFIX_DATETIME(BATCH_,yyyyMMdd)" → "batchId": "BATCH_20230524"
@@ -78,9 +78,9 @@ public class VariableGenerator {
         List<Map<String, String>> definitions = new ArrayList<>();
         // Add built-in rules
         definitions.add(Map.of("format", "__UUID", "description", "Generates a random UUID"));
-        definitions.add(Map.of("format", "__TIMESTAMP", "description", "Generates the current Unix timestamp (seconds)"));
+        definitions.add(Map.of("format", "__TIMESTAMP", "description", "Generates the current Unix timestamp (milliseconds)"));
         definitions.add(Map.of("format", "__DATETIME(format)", "description", "Generates date/time, e.g., __DATETIME(yyyy-MM-dd HH:mm:ss)"));
-        definitions.add(Map.of("format", "__PREFIX_TIMESTAMP(prefix)", "description", "Generates a string with prefix and timestamp, e.g., __PREFIX_TIMESTAMP(test_)"));
+        definitions.add(Map.of("format", "__PREFIX_TIMESTAMP(prefix)", "description", "Generates a string with prefix and millisecond timestamp, e.g., __PREFIX_TIMESTAMP(test_)"));
         definitions.add(Map.of("format", "__PREFIX_DATETIME(prefix,format)", "description", "Generates a string with prefix and formatted date, e.g., __PREFIX_DATETIME(order_,yyyyMMdd)"));
         definitions.add(Map.of("format", "__RANDOM_STRING(length[,mode])", "description", "Generates a random string, e.g., __RANDOM_STRING(10,a) - modes: a=alphanumeric, u=uppercase, l=lowercase, m=mixed case, n=numeric only"));
 
@@ -132,7 +132,7 @@ public class VariableGenerator {
             resolvedValue = resolvedValue.replace("__UUID", UUID.randomUUID().toString());
         }
         if (resolvedValue.contains("__TIMESTAMP")) {
-            resolvedValue = resolvedValue.replace("__TIMESTAMP", String.valueOf(Instant.now().getEpochSecond()));
+            resolvedValue = resolvedValue.replace("__TIMESTAMP", String.valueOf(System.currentTimeMillis()));
         }
 
         Pattern datetimePattern = Pattern.compile("__DATETIME\\((.*?)\\)");
@@ -156,7 +156,7 @@ public class VariableGenerator {
         StringBuffer sbPrefixTs = new StringBuffer();
         while (prefixTimestampMatcher.find()) {
             String prefix = prefixTimestampMatcher.group(1);
-            String timestamp = String.valueOf(Instant.now().getEpochSecond());
+            String timestamp = String.valueOf(System.currentTimeMillis());
             prefixTimestampMatcher.appendReplacement(sbPrefixTs, Matcher.quoteReplacement(prefix + timestamp));
         }
         prefixTimestampMatcher.appendTail(sbPrefixTs);

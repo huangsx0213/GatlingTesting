@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static io.gatling.javaapi.core.CoreDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.*;
@@ -648,153 +649,215 @@ public class GatlingTestSimulation extends Simulation {
         // =====================
         ChainBuilder beforeChain = exec(session -> session); // no-op starter
 
-        for (ResponseCheck dc : diffChecks) {
-            try {
-                String expr = dc.getExpression();
-                if (expr == null || !expr.contains(".")) continue;
-                String refTcid = expr.substring(0, expr.indexOf('.'));
-                String path = expr.substring(expr.indexOf('.') + 1);
+        // Group diff checks by reference TCID to avoid duplicate BEFORE requests
+        java.util.Map<String, java.util.List<ResponseCheck>> diffGroupsBefore = diffChecks.stream()
+                .filter(dc -> dc.getExpression() != null && dc.getExpression().contains("."))
+                .collect(Collectors.groupingBy(
+                        dc -> dc.getExpression().substring(0, dc.getExpression().indexOf('.')),
+                        java.util.LinkedHashMap::new,
+                        Collectors.toList()));
 
-                // Locate reference endpoint in batchItems
-                Endpoint refEndpoint = null;
-                // 1) try from current batch
-                for (BatchItem bi : batchItems) {
-                    if (bi.test != null && refTcid.equals(bi.test.getTcid())) {
-                        refEndpoint = bi.endpoint;
-                        break;
-                    }
+        for (java.util.Map.Entry<String, java.util.List<ResponseCheck>> entry : diffGroupsBefore.entrySet()) {
+            String refTcid = entry.getKey();
+            java.util.List<ResponseCheck> dcList = entry.getValue();
+
+            // Locate reference endpoint (try batch first, then DB)
+            Endpoint refEndpoint = null;
+            for (BatchItem bi : batchItems) {
+                if (bi.test != null && refTcid.equals(bi.test.getTcid())) {
+                    refEndpoint = bi.endpoint;
+                    break;
                 }
-                // 2) fallback to DB lookup (once per tcid)
-                final GatlingTest refTest = findRefTestByTcid(refTcid);
-                if (refTest != null) {
-                    enrichRefTestTemplates(refTest);
-                }
-                if (refTest != null) {
-                    refEndpoint = findEndpointForTest(refTest, endpoint);
-                }
-                if (refEndpoint == null) continue; // skip if not found
+            }
+            final GatlingTest refTest = findRefTestByTcid(refTcid);
+            if (refTest != null) {
+                enrichRefTestTemplates(refTest);
+            }
+            if (refTest != null) {
+                refEndpoint = findEndpointForTest(refTest, endpoint);
+            }
+            if (refEndpoint == null) continue; // skip if endpoint not found
 
-                String refName = test.getTcid() + "." + refTcid + "_PRE";
+            String refName = test.getTcid() + "." + refTcid + "_PRE";
+            String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
+            String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), java.util.Collections.emptyMap());
 
-                // Build simple GET/POST etc for reference
-                String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
-                String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), Collections.emptyMap());
+            HttpRequestActionBuilder refReq;
+            switch (refMethod) {
+                case "POST" -> refReq = http(refName).post(refUrl);
+                case "PUT" -> refReq = http(refName).put(refUrl);
+                case "DELETE" -> refReq = http(refName).delete(refUrl);
+                default -> refReq = http(refName).get(refUrl);
+            }
 
-                HttpRequestActionBuilder refReq;
-                switch(refMethod) {
-                    case "POST" -> refReq = http(refName).post(refUrl);
-                    case "PUT"  -> refReq = http(refName).put(refUrl);
-                    case "DELETE" -> refReq = http(refName).delete(refUrl);
-                    default -> refReq = http(refName).get(refUrl);
-                }
-
-                // Add headers and body from refTest
-                Map<String, String> beforeHeaderTemplates = parseHeaders(refTest.getHeaders());
-                for (Map.Entry<String, String> headerEntry : beforeHeaderTemplates.entrySet()) {
+            // Add headers and body from refTest (if available)
+            if (refTest != null) {
+                java.util.Map<String, String> headersMapBefore = parseHeaders(refTest.getHeaders());
+                for (java.util.Map.Entry<String, String> headerEntry : headersMapBefore.entrySet()) {
                     refReq = refReq.header(headerEntry.getKey(), session ->
                             RuntimeTemplateProcessor.render(headerEntry.getValue(), refTest.getHeadersDynamicVariables()));
                 }
-                if (refTest != null && refTest.getBody() != null && !refTest.getBody().trim().isEmpty()) {
+                if (refTest.getBody() != null && !refTest.getBody().trim().isEmpty()) {
                     refReq = refReq.body(StringBody(session ->
                             RuntimeTemplateProcessor.render(refTest.getBody(), refTest.getBodyDynamicVariables())));
                 }
-                
-                // Extract the value using JSON Path (assumption)
+            }
+
+            // Add jsonPath checks for each diff check in this group
+            for (ResponseCheck dc : dcList) {
+                String path = dc.getExpression().substring(dc.getExpression().indexOf('.') + 1);
                 String saveAsKey = "diff_" + dc.hashCode() + "_PRE";
-                refReq = refReq.check(
-                    jsonPath(path).saveAs(saveAsKey), 
+                refReq = refReq.check(jsonPath(path).saveAs(saveAsKey));
+            }
+
+            // Add original checks from reference test
+            final java.util.List<CheckReport> refBeforeChecks = new java.util.ArrayList<>();
+            if (refTest != null && refTest.getResponseChecks() != null && !refTest.getResponseChecks().isBlank()) {
+                try {
+                    java.util.List<ResponseCheck> origChecks = new com.fasterxml.jackson.databind.ObjectMapper()
+                            .readValue(refTest.getResponseChecks(), 
+                                    new com.fasterxml.jackson.core.type.TypeReference<java.util.List<ResponseCheck>>() {});
+                    
+                    for (ResponseCheck rc : origChecks) {
+                        final String saveKey = "ref_check_" + rc.hashCode();
+                        switch (rc.getType()) {
+                            case STATUS:
+                                refReq = refReq.check(status().saveAs(saveKey));
+                                break;
+                            case JSON_PATH:
+                                refReq = refReq.check(jsonPath(rc.getExpression()).saveAs(saveKey));
+                                break;
+                            case XPATH:
+                                refReq = refReq.check(xpath(rc.getExpression()).saveAs(saveKey));
+                                break;
+                            case REGEX:
+                                refReq = refReq.check(regex(rc.getExpression()).saveAs(saveKey));
+                                break;
+                            default:
+                                continue;
+                        }
+                        
+                        // Create a check report with all data except actual value (filled later)
+                        CheckReport cr = new CheckReport();
+                        cr.setType(rc.getType());
+                        cr.setExpression(rc.getExpression());
+                        cr.setOperator(rc.getOperator());
+                        cr.setExpect(rc.getExpect());
+                        // Store the session key with the report so we can get the actual value later
+                        cr.setActual(saveKey); // Temporarily store the key here
+                        refBeforeChecks.add(cr);
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            // Always capture status and basic metrics once per request
+            refReq = refReq.check(
                     status().is(200),
                     bodyString().saveAs("responseBody"),
                     responseTimeInMillis().saveAs("latencyMs"),
                     bodyLength().saveAs("sizeBytes")
-                );
-                
-                // Capture selected response headers
-                for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
-                    String sessionKey = "respHeader_" + headerName.replace("-", "_");
-                    refReq = refReq.check(header(headerName).optional().saveAs(sessionKey));
+            );
+            for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
+                String sessionKey = "respHeader_" + headerName.replace("-", "_");
+                refReq = refReq.check(header(headerName).optional().saveAs(sessionKey));
+            }
+
+            // Reporting & variable saving
+            ChainBuilder refReporting = exec(s -> {
+                RequestReport rpt = new RequestReport();
+                rpt.setRequestName(refName);
+
+                RequestInfo reqInfo = new RequestInfo();
+                reqInfo.setMethod(refMethod);
+                reqInfo.setUrl(refUrl);
+                java.util.Map<String, String> finalHeadersMap = new java.util.HashMap<>();
+                if (refTest != null && refTest.getHeaders() != null && !refTest.getHeaders().isEmpty()) {
+                    String finalHeaders = RuntimeTemplateProcessor.render(refTest.getHeaders(), refTest.getHeadersDynamicVariables());
+                    finalHeadersMap = parseHeaders(finalHeaders);
                 }
+                reqInfo.setHeaders(finalHeadersMap);
+                if (refTest != null && refTest.getBody() != null && !refTest.getBody().trim().isEmpty()) {
+                    String finalBody = RuntimeTemplateProcessor.render(refTest.getBody(), refTest.getBodyDynamicVariables());
+                    reqInfo.setBody(finalBody);
+                } else {
+                    reqInfo.setBody("{}");
+                }
+                rpt.setRequest(reqInfo);
 
-                // Full reporting for ref-before (like main request)
-                ChainBuilder refReporting = exec(s -> {
-                    RequestReport rpt = new RequestReport();
-                    rpt.setRequestName(refName);
-                    
-                    // 1. Build RequestInfo with resolved values
-                    RequestInfo reqInfo = new RequestInfo();
-                    reqInfo.setMethod(refMethod);
-                    reqInfo.setUrl(refUrl);
-                    
-                    // Dynamically process headers for each request using a session function
-                    Map<String, String> finalHeadersMap = new HashMap<>();
-                    if (refTest.getHeaders() != null && !refTest.getHeaders().isEmpty()) {
-                        String finalHeaders = RuntimeTemplateProcessor.render(refTest.getHeaders(), refTest.getHeadersDynamicVariables());
-                        finalHeadersMap = parseHeaders(finalHeaders);
+                ResponseInfo respInfo = new ResponseInfo();
+                if (s.contains("responseBody")) {
+                    respInfo.setBodySample(s.getString("responseBody"));
+                }
+                if (s.contains("latencyMs")) {
+                    respInfo.setLatencyMs(s.getLong("latencyMs"));
+                }
+                if (s.contains("sizeBytes")) {
+                    respInfo.setSizeBytes((long) s.getInt("sizeBytes"));
+                }
+                java.util.Map<String, String> capturedHeaders = new java.util.HashMap<>();
+                for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
+                    String key = "respHeader_" + headerName.replace("-", "_");
+                    if (s.contains(key)) {
+                        capturedHeaders.put(headerName, s.getString(key));
                     }
-                    reqInfo.setHeaders(finalHeadersMap);
-                    
-                    // Add minimal body if needed
-                    if (refTest.getBody() != null && !refTest.getBody().trim().isEmpty()) {
-                        String finalBody = RuntimeTemplateProcessor.render(refTest.getBody(), refTest.getBodyDynamicVariables());
-                        reqInfo.setBody(finalBody);
-                    } else {
-                        reqInfo.setBody("{}");
-                    }
-                    rpt.setRequest(reqInfo);
-                    
-                    // 2. Build ResponseInfo
-                    ResponseInfo respInfo = new ResponseInfo();
-                    if (s.contains("responseBody")) {
-                        respInfo.setBodySample(s.getString("responseBody"));
-                    }
-                    if (s.contains("latencyMs")) {
-                        respInfo.setLatencyMs(s.getLong("latencyMs"));
-                    }
-                    if (s.contains("sizeBytes")) {
-                        respInfo.setSizeBytes((long) s.getInt("sizeBytes"));
-                    }
-                    
-                    // Capture headers
-                    Map<String, String> capturedHeaders = new HashMap<>();
-                    for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
-                        String key = "respHeader_" + headerName.replace("-", "_");
-                        if (s.contains(key)) {
-                            capturedHeaders.put(headerName, s.getString(key));
+                }
+                respInfo.setHeaders(capturedHeaders);
+                respInfo.setStatus(200);
+                rpt.setResponse(respInfo);
+                
+                // Process the check reports and fill in actual values
+                java.util.List<CheckReport> finalChecks = new java.util.ArrayList<>();
+                for (CheckReport cr : refBeforeChecks) {
+                    String saveKey = cr.getActual(); // The key was stored in the actual field
+                    String actualValue = "<NOT FOUND>";
+                    if (s.contains(saveKey)) {
+                        Object rawValue = s.get(saveKey);
+                        if (rawValue instanceof String) {
+                            actualValue = (String) rawValue;
+                        } else if (rawValue instanceof char[]) {
+                            actualValue = new String((char[]) rawValue);
+                        } else if (rawValue instanceof String[] arr) {
+                            actualValue = arr.length > 0 ? arr[0] : "";
+                        } else {
+                            actualValue = String.valueOf(rawValue);
                         }
+                        // Remove the key from session
+                        s = s.remove(saveKey);
                     }
-                    respInfo.setHeaders(capturedHeaders);
                     
-                    // Set status
-                    respInfo.setStatus(200); // Assume success since we're checking status().is(200)
-                    rpt.setResponse(respInfo);
-                    
-                    // 3. Add check report for status
-                    List<CheckReport> checks = new ArrayList<>();
-                    CheckReport statusCheck = new CheckReport();
-                    statusCheck.setType(CheckType.STATUS);
-                    statusCheck.setOperator(Operator.IS);
-                    statusCheck.setExpect("200");
-                    statusCheck.setActual("200");
-                    statusCheck.setPassed(true);
-                    checks.add(statusCheck);
-                    rpt.setChecks(checks);
-                    
-                    // 4. Set overall status
-                    rpt.setPassed(true);
-                    rpt.setStatus("200");
-                    
-                    caseReports.get(reportKey).getItems().add(rpt);
- 
-                    // Save value to TestRunContext for later diff
-                    if (s.contains(saveAsKey)) {
-                        Object val = s.get(saveAsKey);
-                        TestRunContext.saveBefore(expr, String.valueOf(val));
+                    cr.setActual(actualValue);
+                    boolean passed;
+                    switch (cr.getOperator()) {
+                        case CONTAINS:
+                            passed = actualValue.contains(cr.getExpect());
+                            break;
+                        case IS:
+                        default:
+                            passed = actualValue.equals(cr.getExpect());
+                            break;
                     }
-                    return s.remove(saveAsKey);
-                });
+                    cr.setPassed(passed);
+                    finalChecks.add(cr);
+                }
+                
+                rpt.setChecks(finalChecks);
+                rpt.setPassed(true);
+                rpt.setStatus("200");
+                caseReports.get(reportKey).getItems().add(rpt);
 
-                beforeChain = beforeChain.exec(refReq).exec(refReporting);
-            } catch (Exception ignored) { }
+                // Save extracted values to TestRunContext
+                for (ResponseCheck dcInner : dcList) {
+                    String key = "diff_" + dcInner.hashCode() + "_PRE";
+                    if (s.contains(key)) {
+                        Object val = s.get(key);
+                        TestRunContext.saveBefore(dcInner.getExpression(), String.valueOf(val));
+                        s = s.remove(key);
+                    }
+                }
+                return s;
+            });
+
+            beforeChain = beforeChain.exec(refReq).exec(refReporting);
         }
 
         // =====================
@@ -802,143 +865,202 @@ public class GatlingTestSimulation extends Simulation {
         // =====================
         ChainBuilder afterChain = exec(session -> session);
 
-        for (ResponseCheck dc : diffChecks) {
-            try {
-                String expr = dc.getExpression();
-                if (expr == null || !expr.contains(".")) continue;
-                String refTcid = expr.substring(0, expr.indexOf('.'));
-                String path = expr.substring(expr.indexOf('.') + 1);
+        java.util.Map<String, java.util.List<ResponseCheck>> diffGroupsAfter = diffGroupsBefore; // same grouping
+        for (java.util.Map.Entry<String, java.util.List<ResponseCheck>> entry : diffGroupsAfter.entrySet()) {
+            String refTcid = entry.getKey();
+            java.util.List<ResponseCheck> dcList = entry.getValue();
 
-                Endpoint refEndpoint = null;
-                for (BatchItem bi : batchItems) {
-                    if (bi.test != null && refTcid.equals(bi.test.getTcid())) { refEndpoint = bi.endpoint; break; }
-                }
-                final GatlingTest refTestAfter = findRefTestByTcid(refTcid);
-                if (refTestAfter != null) {
-                    enrichRefTestTemplates(refTestAfter);
-                }
-                if (refTestAfter != null) {
-                    refEndpoint = findEndpointForTest(refTestAfter, endpoint);
-                }
-                if (refEndpoint == null) continue;
+            Endpoint refEndpoint = null;
+            for (BatchItem bi : batchItems) {
+                if (bi.test != null && refTcid.equals(bi.test.getTcid())) { refEndpoint = bi.endpoint; break; }
+            }
+            final GatlingTest refTestAfter = findRefTestByTcid(refTcid);
+            if (refTestAfter != null) {
+                enrichRefTestTemplates(refTestAfter);
+            }
+            if (refTestAfter != null) {
+                refEndpoint = findEndpointForTest(refTestAfter, endpoint);
+            }
+            if (refEndpoint == null) continue;
 
-                String refName = test.getTcid() + "." + refTcid + "_PST";
-                String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
-                String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), Collections.emptyMap());
+            String refName = test.getTcid() + "." + refTcid + "_PST";
+            String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
+            String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), java.util.Collections.emptyMap());
 
-                HttpRequestActionBuilder refReq;
-                switch(refMethod) {
-                    case "POST" -> refReq = http(refName).post(refUrl);
-                    case "PUT"  -> refReq = http(refName).put(refUrl);
-                    case "DELETE" -> refReq = http(refName).delete(refUrl);
-                    default -> refReq = http(refName).get(refUrl);
-                }
+            HttpRequestActionBuilder refReq;
+            switch (refMethod) {
+                case "POST" -> refReq = http(refName).post(refUrl);
+                case "PUT" -> refReq = http(refName).put(refUrl);
+                case "DELETE" -> refReq = http(refName).delete(refUrl);
+                default -> refReq = http(refName).get(refUrl);
+            }
 
-                // Add headers and body from refTest
-                Map<String, String> afterHeaderTemplates = parseHeaders(refTestAfter.getHeaders());
-                for (Map.Entry<String, String> headerEntry : afterHeaderTemplates.entrySet()) {
+            // Headers & body
+            if (refTestAfter != null) {
+                java.util.Map<String, String> headersMapAfter = parseHeaders(refTestAfter.getHeaders());
+                for (java.util.Map.Entry<String, String> headerEntry : headersMapAfter.entrySet()) {
                     refReq = refReq.header(headerEntry.getKey(), session ->
                             RuntimeTemplateProcessor.render(headerEntry.getValue(), refTestAfter.getHeadersDynamicVariables()));
                 }
-                if (refTestAfter != null && refTestAfter.getBody() != null && !refTestAfter.getBody().trim().isEmpty()) {
+                if (refTestAfter.getBody() != null && !refTestAfter.getBody().trim().isEmpty()) {
                     refReq = refReq.body(StringBody(session ->
                             RuntimeTemplateProcessor.render(refTestAfter.getBody(), refTestAfter.getBodyDynamicVariables())));
                 }
+            }
 
+            // jsonPath checks for each diff check
+            for (ResponseCheck dc : dcList) {
+                String path = dc.getExpression().substring(dc.getExpression().indexOf('.') + 1);
                 String saveAsKey = "diff_" + dc.hashCode() + "_PST";
-                refReq = refReq.check(
-                    jsonPath(path).saveAs(saveAsKey), 
+                refReq = refReq.check(jsonPath(path).saveAs(saveAsKey));
+            }
+
+            // Add original checks from reference test
+            final java.util.List<CheckReport> refAfterChecks = new java.util.ArrayList<>();
+            if (refTestAfter != null && refTestAfter.getResponseChecks() != null && !refTestAfter.getResponseChecks().isBlank()) {
+                try {
+                    java.util.List<ResponseCheck> origChecks = new com.fasterxml.jackson.databind.ObjectMapper()
+                            .readValue(refTestAfter.getResponseChecks(), 
+                                    new com.fasterxml.jackson.core.type.TypeReference<java.util.List<ResponseCheck>>() {});
+                    
+                    for (ResponseCheck rc : origChecks) {
+                        final String saveKey = "ref_check_" + rc.hashCode();
+                        switch (rc.getType()) {
+                            case STATUS:
+                                refReq = refReq.check(status().saveAs(saveKey));
+                                break;
+                            case JSON_PATH:
+                                refReq = refReq.check(jsonPath(rc.getExpression()).saveAs(saveKey));
+                                break;
+                            case XPATH:
+                                refReq = refReq.check(xpath(rc.getExpression()).saveAs(saveKey));
+                                break;
+                            case REGEX:
+                                refReq = refReq.check(regex(rc.getExpression()).saveAs(saveKey));
+                                break;
+                            default:
+                                continue;
+                        }
+                        
+                        // Create a check report with all data except actual value (filled later)
+                        CheckReport cr = new CheckReport();
+                        cr.setType(rc.getType());
+                        cr.setExpression(rc.getExpression());
+                        cr.setOperator(rc.getOperator());
+                        cr.setExpect(rc.getExpect());
+                        // Store the session key with the report so we can get the actual value later
+                        cr.setActual(saveKey); // Temporarily store the key here
+                        refAfterChecks.add(cr);
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            refReq = refReq.check(
                     status().is(200),
                     bodyString().saveAs("responseBody"),
                     responseTimeInMillis().saveAs("latencyMs"),
                     bodyLength().saveAs("sizeBytes")
-                );
-                
-                // Capture selected response headers
-                for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
-                    String sessionKey = "respHeader_" + headerName.replace("-", "_");
-                    refReq = refReq.check(header(headerName).optional().saveAs(sessionKey));
+            );
+            for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
+                String sessionKey = "respHeader_" + headerName.replace("-", "_");
+                refReq = refReq.check(header(headerName).optional().saveAs(sessionKey));
+            }
+
+            ChainBuilder refReporting = exec(s -> {
+                RequestReport rpt = new RequestReport();
+                rpt.setRequestName(refName);
+
+                RequestInfo reqInfo = new RequestInfo();
+                reqInfo.setMethod(refMethod);
+                reqInfo.setUrl(refUrl);
+                java.util.Map<String, String> finalHeadersMap = new java.util.HashMap<>();
+                if (refTestAfter != null && refTestAfter.getHeaders() != null && !refTestAfter.getHeaders().isEmpty()) {
+                    String finalHeaders = RuntimeTemplateProcessor.render(refTestAfter.getHeaders(), refTestAfter.getHeadersDynamicVariables());
+                    finalHeadersMap = parseHeaders(finalHeaders);
                 }
+                reqInfo.setHeaders(finalHeadersMap);
+                if (refTestAfter != null && refTestAfter.getBody() != null && !refTestAfter.getBody().trim().isEmpty()) {
+                    String finalBody = RuntimeTemplateProcessor.render(refTestAfter.getBody(), refTestAfter.getBodyDynamicVariables());
+                    reqInfo.setBody(finalBody);
+                } else {
+                    reqInfo.setBody("{}");
+                }
+                rpt.setRequest(reqInfo);
 
-                // Full reporting for ref-after (like main request)
-                ChainBuilder refReporting = exec(s -> {
-                    RequestReport rpt = new RequestReport();
-                    rpt.setRequestName(refName);
-                    
-                    // 1. Build RequestInfo with resolved values
-                    RequestInfo reqInfo = new RequestInfo();
-                    reqInfo.setMethod(refMethod);
-                    reqInfo.setUrl(refUrl);
-                    
-                    // Dynamically process headers for each request using a session function
-                    Map<String, String> finalHeadersMap = new HashMap<>();
-                    if (refTestAfter.getHeaders() != null && !refTestAfter.getHeaders().isEmpty()) {
-                        String finalHeaders = RuntimeTemplateProcessor.render(refTestAfter.getHeaders(), refTestAfter.getHeadersDynamicVariables());
-                        finalHeadersMap = parseHeaders(finalHeaders);
+                ResponseInfo respInfo = new ResponseInfo();
+                if (s.contains("responseBody")) {
+                    respInfo.setBodySample(s.getString("responseBody"));
+                }
+                if (s.contains("latencyMs")) {
+                    respInfo.setLatencyMs(s.getLong("latencyMs"));
+                }
+                if (s.contains("sizeBytes")) {
+                    respInfo.setSizeBytes((long) s.getInt("sizeBytes"));
+                }
+                java.util.Map<String, String> capturedHeaders = new java.util.HashMap<>();
+                for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
+                    String key = "respHeader_" + headerName.replace("-", "_");
+                    if (s.contains(key)) {
+                        capturedHeaders.put(headerName, s.getString(key));
                     }
-                    reqInfo.setHeaders(finalHeadersMap);
-                    
-                    // Add minimal body if needed
-                    if (refTestAfter.getBody() != null && !refTestAfter.getBody().trim().isEmpty()) {
-                        String finalBody = RuntimeTemplateProcessor.render(refTestAfter.getBody(), refTestAfter.getBodyDynamicVariables());
-                        reqInfo.setBody(finalBody);
-                    } else {
-                        reqInfo.setBody("{}");
-                    }
-                    rpt.setRequest(reqInfo);
-                    
-                    // 2. Build ResponseInfo
-                    ResponseInfo respInfo = new ResponseInfo();
-                    if (s.contains("responseBody")) {
-                        respInfo.setBodySample(s.getString("responseBody"));
-                    }
-                    if (s.contains("latencyMs")) {
-                        respInfo.setLatencyMs(s.getLong("latencyMs"));
-                    }
-                    if (s.contains("sizeBytes")) {
-                        respInfo.setSizeBytes((long) s.getInt("sizeBytes"));
-                    }
-                    
-                    // Capture headers
-                    Map<String, String> capturedHeaders = new HashMap<>();
-                    for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
-                        String key = "respHeader_" + headerName.replace("-", "_");
-                        if (s.contains(key)) {
-                            capturedHeaders.put(headerName, s.getString(key));
+                }
+                respInfo.setHeaders(capturedHeaders);
+                respInfo.setStatus(200);
+                rpt.setResponse(respInfo);
+                
+                // Process the check reports and fill in actual values
+                java.util.List<CheckReport> finalChecksAfter = new java.util.ArrayList<>();
+                for (CheckReport cr : refAfterChecks) {
+                    String saveKey = cr.getActual(); // The key was stored in the actual field
+                    String actualValue = "<NOT FOUND>";
+                    if (s.contains(saveKey)) {
+                        Object rawValue = s.get(saveKey);
+                        if (rawValue instanceof String) {
+                            actualValue = (String) rawValue;
+                        } else if (rawValue instanceof char[]) {
+                            actualValue = new String((char[]) rawValue);
+                        } else if (rawValue instanceof String[] arr) {
+                            actualValue = arr.length > 0 ? arr[0] : "";
+                        } else {
+                            actualValue = String.valueOf(rawValue);
                         }
+                        // Remove the key from session
+                        s = s.remove(saveKey);
                     }
-                    respInfo.setHeaders(capturedHeaders);
                     
-                    // Set status
-                    respInfo.setStatus(200); // Assume success since we're checking status().is(200)
-                    rpt.setResponse(respInfo);
-                    
-                    // 3. Add check report for status
-                    List<CheckReport> checks = new ArrayList<>();
-                    CheckReport statusCheck = new CheckReport();
-                    statusCheck.setType(CheckType.STATUS);
-                    statusCheck.setOperator(Operator.IS);
-                    statusCheck.setExpect("200");
-                    statusCheck.setActual("200");
-                    statusCheck.setPassed(true);
-                    checks.add(statusCheck);
-                    rpt.setChecks(checks);
-                    
-                    // 4. Set overall status
-                    rpt.setPassed(true);
-                    rpt.setStatus("200");
-                    
-                    caseReports.get(reportKey).getItems().add(rpt);
- 
-                    if (s.contains(saveAsKey)) {
-                        Object val = s.get(saveAsKey);
-                        TestRunContext.saveAfter(expr, String.valueOf(val));
+                    cr.setActual(actualValue);
+                    boolean passed;
+                    switch (cr.getOperator()) {
+                        case CONTAINS:
+                            passed = actualValue.contains(cr.getExpect());
+                            break;
+                        case IS:
+                        default:
+                            passed = actualValue.equals(cr.getExpect());
+                            break;
                     }
-                    return s.remove(saveAsKey);
-                });
+                    cr.setPassed(passed);
+                    finalChecksAfter.add(cr);
+                }
+                
+                rpt.setChecks(finalChecksAfter);
+                rpt.setPassed(true);
+                rpt.setStatus("200");
+                caseReports.get(reportKey).getItems().add(rpt);
 
-                afterChain = afterChain.exec(refReq).exec(refReporting);
-            } catch (Exception ignored) { }
+                // Save extracted values
+                for (ResponseCheck dcInner : dcList) {
+                    String key = "diff_" + dcInner.hashCode() + "_PST";
+                    if (s.contains(key)) {
+                        Object val = s.get(key);
+                        TestRunContext.saveAfter(dcInner.getExpression(), String.valueOf(val));
+                        s = s.remove(key);
+                    }
+                }
+                return s;
+            });
+
+            afterChain = afterChain.exec(refReq).exec(refReporting);
         }
 
         // =====================
