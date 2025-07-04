@@ -16,11 +16,17 @@ public class TestRunContext {
     // Regular expression to match ${TCID.variableName} format
     private static final Pattern VARIABLE_REFERENCE_PATTERN = Pattern.compile("\\$\\{([\\w.-]+)\\.([\\w.-]+)\\}");
     
+    // Stores reference values for DIFF checks
+    private static final Map<String, Double> diffBeforeValues = new ConcurrentHashMap<>();
+    private static final Map<String, Double> diffAfterValues  = new ConcurrentHashMap<>();
+    
     /**
      * Clear all test variables
      */
     public static void clear() {
         testVariables.clear();
+        diffBeforeValues.clear();
+        diffAfterValues.clear();
     }
     
     /**
@@ -76,5 +82,45 @@ public class TestRunContext {
      */
     public static Map<String, String> getAllVariables() {
         return new ConcurrentHashMap<>(testVariables);
+    }
+    
+    /**
+     * Save the "before" value for a DIFF check.
+     * @param refKey logical key identifying the reference value (typically refTCID.path)
+     * @param value  numeric value captured before operation
+     */
+    public static void saveBefore(String refKey, String value) {
+        if (refKey == null || refKey.isBlank()) return;
+        try {
+            diffBeforeValues.put(refKey, Double.parseDouble(value));
+        } catch (NumberFormatException ignored) {
+            // Non-numeric value – skip storing to avoid NumberFormatException later
+        }
+    }
+    
+    /**
+     * Save the "after" value for a DIFF check.
+     * @param refKey logical key identifying the reference value (typically refTCID.path)
+     * @param value  numeric value captured after operation
+     */
+    public static void saveAfter(String refKey, String value) {
+        if (refKey == null || refKey.isBlank()) return;
+        try {
+            diffAfterValues.put(refKey, Double.parseDouble(value));
+        } catch (NumberFormatException ignored) {
+            // Non-numeric value – skip storing
+        }
+    }
+    
+    /**
+     * Calculate difference (after - before) for a given reference key.
+     * @param refKey reference key
+     * @return calculated difference, or null if missing either value
+     */
+    public static Double calcDiff(String refKey) {
+        if (!diffBeforeValues.containsKey(refKey) || !diffAfterValues.containsKey(refKey)) {
+            return null;
+        }
+        return diffAfterValues.get(refKey) - diffBeforeValues.get(refKey);
     }
 } 

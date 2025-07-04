@@ -12,6 +12,8 @@ import com.qa.app.model.threadgroups.*;
 import io.gatling.javaapi.core.*;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
+import com.qa.app.dao.impl.GatlingTestDaoImpl;
+import com.qa.app.dao.impl.EndpointDaoImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -353,6 +355,10 @@ public class GatlingTestSimulation extends Simulation {
         List<CheckBuilder> checkBuilders = new ArrayList<>();
         List<ChainBuilder> loggingActions = new ArrayList<>();
         boolean statusCheckExists = false;
+        // Collect DIFF checks for special processing (before/after reference)
+        List<ResponseCheck> diffChecks = new ArrayList<>();
+        // Cache to avoid duplicate DB lookups per TCID
+        java.util.Map<String, Endpoint> refEndpointCache = new java.util.HashMap<>();
 
         String checksJson = test.getResponseChecks();
         if (checksJson != null && !checksJson.isEmpty()) {
@@ -498,6 +504,11 @@ public class GatlingTestSimulation extends Simulation {
                             }));
                             break;
                         }
+                        case DIFF: {
+                            // Defer DIFF processing until after reference requests
+                            diffChecks.add(currentCheck);
+                            break;
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -505,7 +516,7 @@ public class GatlingTestSimulation extends Simulation {
             }
         }
 
-        // Apply all checks to the request builder
+        // Apply all checks to the request builder (excluding DIFF)
         if (!checkBuilders.isEmpty()) {
             request = request.check(checkBuilders.toArray(new CheckBuilder[0]));
         }
@@ -619,8 +630,188 @@ public class GatlingTestSimulation extends Simulation {
             return cleaned;
         });
 
-        // Link the request and the reporting logic
-        return exec(request).exec(loggingActions).exec(reportingChain);
+        // Main request chain
+        ChainBuilder mainChain = exec(request).exec(loggingActions).exec(reportingChain);
+
+        // If no DIFF checks, return main chain directly
+        if (diffChecks.isEmpty()) {
+            return mainChain;
+        }
+
+        // =====================
+        // Build reference BEFORE request(s)
+        // =====================
+        ChainBuilder beforeChain = exec(session -> session); // no-op starter
+
+        for (ResponseCheck dc : diffChecks) {
+            try {
+                String expr = dc.getExpression();
+                if (expr == null || !expr.contains(".")) continue;
+                String refTcid = expr.substring(0, expr.indexOf('.'));
+                String path = expr.substring(expr.indexOf('.') + 1);
+
+                // Locate reference endpoint in batchItems
+                Endpoint refEndpoint = null;
+                // 1) try from current batch
+                for (BatchItem bi : batchItems) {
+                    if (bi.test != null && refTcid.equals(bi.test.getTcid())) {
+                        refEndpoint = bi.endpoint;
+                        break;
+                    }
+                }
+                // 2) fallback to DB lookup (once per tcid)
+                if (refEndpoint == null) {
+                    refEndpoint = refEndpointCache.get(refTcid);
+                    if (refEndpoint == null) {
+                        refEndpoint = findEndpointByTcid(refTcid, endpoint);
+                        if (refEndpoint != null) {
+                            refEndpointCache.put(refTcid, refEndpoint);
+                        }
+                    }
+                }
+                if (refEndpoint == null) continue; // skip if not found
+
+                String refName = refTcid + "_before";
+
+                // Build simple GET/POST etc for reference
+                String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
+                String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), Collections.emptyMap());
+
+                HttpRequestActionBuilder refReq;
+                switch(refMethod) {
+                    case "POST" -> refReq = http(refName).post(refUrl);
+                    case "PUT"  -> refReq = http(refName).put(refUrl);
+                    case "DELETE" -> refReq = http(refName).delete(refUrl);
+                    default -> refReq = http(refName).get(refUrl);
+                }
+
+                // Extract the value using JSON Path (assumption)
+                String saveAsKey = "diff_" + dc.hashCode() + "_before";
+                refReq = refReq.check(jsonPath(path).saveAs(saveAsKey), status().is(200));
+
+                // Basic reporting for ref-before
+                ChainBuilder refReporting = exec(s -> {
+                    RequestReport rpt = new RequestReport();
+                    rpt.setRequestName(refName);
+                    rpt.setChecks(new java.util.ArrayList<>());
+                    rpt.setPassed(true); // Simple mark
+                    caseReports.get(reportKey).getItems().add(rpt);
+
+                    // Save value to TestRunContext for later diff
+                    if (s.contains(saveAsKey)) {
+                        Object val = s.get(saveAsKey);
+                        TestRunContext.saveBefore(expr, String.valueOf(val));
+                    }
+                    return s.remove(saveAsKey);
+                });
+
+                beforeChain = beforeChain.exec(refReq).exec(refReporting);
+            } catch (Exception ignored) { }
+        }
+
+        // =====================
+        // Build reference AFTER request(s)
+        // =====================
+        ChainBuilder afterChain = exec(session -> session);
+
+        for (ResponseCheck dc : diffChecks) {
+            try {
+                String expr = dc.getExpression();
+                if (expr == null || !expr.contains(".")) continue;
+                String refTcid = expr.substring(0, expr.indexOf('.'));
+                String path = expr.substring(expr.indexOf('.') + 1);
+
+                Endpoint refEndpoint = null;
+                for (BatchItem bi : batchItems) {
+                    if (bi.test != null && refTcid.equals(bi.test.getTcid())) { refEndpoint = bi.endpoint; break; }
+                }
+                if (refEndpoint == null) refEndpoint = refEndpointCache.computeIfAbsent(refTcid, k -> findEndpointByTcid(k, endpoint));
+                if (refEndpoint == null) continue;
+
+                String refName = refTcid + "_after";
+                String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
+                String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), Collections.emptyMap());
+
+                HttpRequestActionBuilder refReq;
+                switch(refMethod) {
+                    case "POST" -> refReq = http(refName).post(refUrl);
+                    case "PUT"  -> refReq = http(refName).put(refUrl);
+                    case "DELETE" -> refReq = http(refName).delete(refUrl);
+                    default -> refReq = http(refName).get(refUrl);
+                }
+
+                String saveAsKey = "diff_" + dc.hashCode() + "_after";
+                refReq = refReq.check(jsonPath(path).saveAs(saveAsKey), status().is(200));
+
+                ChainBuilder refReporting = exec(s -> {
+                    RequestReport rpt = new RequestReport();
+                    rpt.setRequestName(refName);
+                    rpt.setChecks(new java.util.ArrayList<>());
+                    rpt.setPassed(true);
+                    caseReports.get(reportKey).getItems().add(rpt);
+
+                    if (s.contains(saveAsKey)) {
+                        Object val = s.get(saveAsKey);
+                        TestRunContext.saveAfter(expr, String.valueOf(val));
+                    }
+                    return s.remove(saveAsKey);
+                });
+
+                afterChain = afterChain.exec(refReq).exec(refReporting);
+            } catch (Exception ignored) { }
+        }
+
+        // =====================
+        // DIFF evaluation chain
+        // =====================
+        ChainBuilder diffEvalChain = exec(s -> {
+            RequestReport mainRpt = null;
+            List<RequestReport> items = caseReports.get(reportKey).getItems();
+            for (RequestReport rr : items) {
+                if (rr.getRequestName().equals(requestName)) {
+                    mainRpt = rr; break;
+                }
+            }
+            if (mainRpt == null) return s;
+
+            for (ResponseCheck dc : diffChecks) {
+                String expr = dc.getExpression();
+                Double diffVal = TestRunContext.calcDiff(expr);
+                CheckReport cr = new CheckReport();
+                cr.setType(CheckType.DIFF);
+                cr.setExpression(expr);
+                cr.setOperator(dc.getOperator());
+                cr.setExpect(dc.getExpect());
+                cr.setActual(diffVal == null ? "N/A" : String.valueOf(diffVal));
+                boolean passed = false;
+                if (diffVal != null) {
+                    switch (dc.getOperator()) {
+                        case IS -> passed = String.valueOf(diffVal).equals(dc.getExpect());
+                        case CONTAINS -> passed = String.valueOf(diffVal).contains(dc.getExpect());
+                        default -> passed = false;
+                    }
+                }
+                cr.setPassed(passed);
+
+                // Console logging similar to other check types
+                String logPrefix = passed ? "CHECK_PASS" : "CHECK_FAIL";
+                System.out.println(String.format("%s|%s|%s|%s|expected:%s|actual:%s",
+                        test.getTcid(), expr, dc.getOperator().toString(), dc.getExpect(), cr.getActual() == null ? "N/A" : cr.getActual(), cr.getActual()));
+
+                if (mainRpt.getChecks() == null) {
+                    mainRpt.setChecks(new java.util.ArrayList<>());
+                }
+                mainRpt.getChecks().add(cr);
+            }
+
+            // Recompute pass status
+            boolean allOk = mainRpt.getChecks() == null || mainRpt.getChecks().isEmpty() || mainRpt.getChecks().stream().allMatch(CheckReport::isPassed);
+            mainRpt.setPassed(allOk);
+            return s;
+        });
+
+        // Final combined chain
+        return exec(beforeChain).exec(mainChain).exec(afterChain).exec(diffEvalChain);
     }
 
     private Map<String, String> parseHeaders(String headersString) {
@@ -684,6 +875,43 @@ public class GatlingTestSimulation extends Simulation {
         } catch (Exception ex) {
             System.err.println("Failed to output response check results: " + ex.getMessage());
             ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Fallback lookup: use DAO to fetch GatlingTest & its endpoint when the reference TCID is not present in the batch.
+     * Limits search to same project / environment as originEndpoint when possible.
+     */
+    private Endpoint findEndpointByTcid(String tcid, Endpoint originEndpoint) {
+        try {
+            GatlingTestDaoImpl testDao = new GatlingTestDaoImpl();
+            GatlingTest refTest = testDao.getTestByTcid(tcid);
+            if (refTest == null) return null;
+
+            EndpointDaoImpl epDao = new EndpointDaoImpl();
+            Endpoint ep = null;
+            if (refTest.getEndpointId() > 0) {
+                ep = epDao.getEndpointById(refTest.getEndpointId());
+            }
+            if (ep == null && refTest.getEndpointName() != null) {
+                ep = epDao.getEndpointByName(refTest.getEndpointName());
+            }
+
+            // Ensure environment / project matches when both sides有值
+            if (ep != null && originEndpoint != null) {
+                if (originEndpoint.getEnvironmentId() != null && ep.getEnvironmentId() != null
+                        && !originEndpoint.getEnvironmentId().equals(ep.getEnvironmentId())) {
+                    return null; // env mismatch
+                }
+                if (originEndpoint.getProjectId() != null && ep.getProjectId() != null
+                        && !originEndpoint.getProjectId().equals(ep.getProjectId())) {
+                    return null; // project mismatch
+                }
+            }
+            return ep;
+        } catch (Exception ex) {
+            System.err.println("[WARN] Failed to lookup endpoint for TCID " + tcid + ": " + ex.getMessage());
+            return null;
         }
     }
 } 

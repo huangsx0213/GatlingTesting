@@ -4,5 +4,6 @@ public enum CheckType {
     STATUS, // HTTP status code
     JSON_PATH,
     XPATH,
-    REGEX
+    REGEX,
+    DIFF    // Difference check: compare value changes before and after an operation
 } 

@@ -62,6 +62,7 @@ public class MainViewModel implements Initializable {
     public enum StatusType {
         INFO,
         SUCCESS,
+        WARNING,
         ERROR
     }
 
@@ -300,6 +301,9 @@ public class MainViewModel implements Initializable {
                     break;
                 case SUCCESS:
                     statusLabel.setTextFill(Color.GREEN);
+                    break;
+                case WARNING:
+                    statusLabel.setTextFill(Color.ORANGE);
                     break;
                 case ERROR:
                     statusLabel.setTextFill(Color.RED);
