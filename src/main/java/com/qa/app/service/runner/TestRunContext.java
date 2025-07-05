@@ -20,6 +20,10 @@ public class TestRunContext {
     private static final Map<String, Double> diffBeforeValues = new ConcurrentHashMap<>();
     private static final Map<String, Double> diffAfterValues  = new ConcurrentHashMap<>();
     
+    // Stores reference values for PRE_CHECK and PST_CHECK
+    private static final Map<String, String> preCheckValues = new ConcurrentHashMap<>();
+    private static final Map<String, String> pstCheckValues = new ConcurrentHashMap<>();
+    
     /**
      * Clear all test variables
      */
@@ -27,6 +31,8 @@ public class TestRunContext {
         testVariables.clear();
         diffBeforeValues.clear();
         diffAfterValues.clear();
+        preCheckValues.clear();
+        pstCheckValues.clear();
     }
     
     /**
@@ -122,5 +128,43 @@ public class TestRunContext {
             return null;
         }
         return diffAfterValues.get(refKey) - diffBeforeValues.get(refKey);
+    }
+    
+    /**
+     * Save a PRE_CHECK value from a reference API.
+     * @param refKey logical key identifying the reference value (typically refTCID.path)
+     * @param value value from reference API (can be any string value)
+     */
+    public static void savePreCheck(String refKey, String value) {
+        if (refKey == null || refKey.isBlank() || value == null) return;
+        preCheckValues.put(refKey, value);
+    }
+    
+    /**
+     * Save a PST_CHECK value from a reference API.
+     * @param refKey logical key identifying the reference value (typically refTCID.path)
+     * @param value value from reference API (can be any string value)
+     */
+    public static void savePstCheck(String refKey, String value) {
+        if (refKey == null || refKey.isBlank() || value == null) return;
+        pstCheckValues.put(refKey, value);
+    }
+    
+    /**
+     * Get a PRE_CHECK value for evaluation.
+     * @param refKey reference key
+     * @return stored value, or null if not found
+     */
+    public static String getPreCheckValue(String refKey) {
+        return preCheckValues.get(refKey);
+    }
+    
+    /**
+     * Get a PST_CHECK value for evaluation.
+     * @param refKey reference key
+     * @return stored value, or null if not found
+     */
+    public static String getPstCheckValue(String refKey) {
+        return pstCheckValues.get(refKey);
     }
 } 

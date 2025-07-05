@@ -275,7 +275,18 @@ public class GatlingTestRunner {
                 }
 
                 List<ModeGroup> modeGroups = new ArrayList<>();
-                EnumSet.of(TestMode.SETUP, TestMode.MAIN, TestMode.TEARDOWN, TestMode.CONDITION).forEach(mode -> {
+                // Define display order including new modes
+                List<TestMode> displayOrder = java.util.Arrays.asList(
+                        TestMode.SETUP,
+                        TestMode.DIFF_PRE,
+                        TestMode.PRE_CHECK,
+                        TestMode.MAIN,
+                        TestMode.PST_CHECK,
+                        TestMode.DIFF_PST,
+                        TestMode.TEARDOWN,
+                        TestMode.CONDITION
+                );
+                displayOrder.forEach(mode -> {
                     if (casesByMode.containsKey(mode)) {
                         ModeGroup group = new ModeGroup();
                         group.setMode(mode);

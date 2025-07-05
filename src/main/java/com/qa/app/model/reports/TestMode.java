@@ -4,5 +4,9 @@ public enum TestMode {
     SETUP,
     MAIN,
     TEARDOWN,
-    CONDITION
+    CONDITION,
+    DIFF_PRE,
+    DIFF_PST,
+    PRE_CHECK,
+    PST_CHECK
 } 
