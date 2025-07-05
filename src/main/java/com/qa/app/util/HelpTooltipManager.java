@@ -119,7 +119,9 @@ public final class HelpTooltipManager {
                 "  - Expression: Reference key `TCID.JSONPath` (e.g., Position.$.balance).\n" +
                 "  - Operator: IS\n" +
                 "  - Expect: Expected numerical difference (after - before).\n" +
-                "  - Save As: (Not used).";
+                "  - Save As: (Not used).\n\n" +
+                "Note: If \"Save As\" is provided, the extracted value will be saved as a variable named \"TCID.variableName\".\n" +
+                "You can use it in later test cases with ${TCID.variableName}.";
 
         Tooltip tooltip = new Tooltip(text);
         tooltip.setStyle("-fx-font-size: 14px;");
