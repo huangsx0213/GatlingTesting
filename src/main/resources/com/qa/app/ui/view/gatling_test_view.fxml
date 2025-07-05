@@ -158,7 +158,14 @@
                                                                                 <children>
                                                                                     <Label text="Headers Template:" style="-fx-font-weight: bold;" />
                                                                                     <ComboBox fx:id="headersTemplateComboBox" promptText="Select headers template" />
-                                                                                    <Label text="Headers User Defined Variables:" style="-fx-font-weight: bold;" />
+                                                                                    <HBox spacing="5" alignment="CENTER_LEFT">
+                                                                                        <Label text="Headers User Defined Variables:" style="-fx-font-weight: bold;" />
+                                                                                        <Label fx:id="headersHelpIcon" text="?" style="-fx-font-weight: bold; -fx-text-fill: blue; -fx-cursor: hand;">
+                                                                                            <font>
+                                                                                                <Font name="System Bold" size="14.0" />
+                                                                                            </font>
+                                                                                        </Label>
+                                                                                    </HBox>
                                                                                     <TableView fx:id="headersTemplateVarsTable" VBox.vgrow="ALWAYS" styleClass="table-view">
                                                                                         <columns>
                                                                                             <TableColumn fx:id="headersTemplateKeyColumn" prefWidth="150.0" text="Key" />
@@ -193,7 +200,14 @@
                                                                                 <children>
                                                                                     <Label text="Body Template:" style="-fx-font-weight: bold;" />
                                                                                     <ComboBox fx:id="bodyTemplateComboBox" promptText="Select body template" />
-                                                                                    <Label text="Body User Defined Variables:" style="-fx-font-weight: bold;" />
+                                                                                    <HBox spacing="5" alignment="CENTER_LEFT">
+                                                                                        <Label text="Body User Defined Variables:" style="-fx-font-weight: bold;" />
+                                                                                         <Label fx:id="bodyHelpIcon" text="?" style="-fx-font-weight: bold; -fx-text-fill: blue; -fx-cursor: hand;">
+                                                                                            <font>
+                                                                                                <Font name="System Bold" size="14.0" />
+                                                                                            </font>
+                                                                                        </Label>
+                                                                                    </HBox>
                                                                                     <TableView fx:id="bodyDynamicVarsTable" VBox.vgrow="ALWAYS" styleClass="table-view">
                                                                                         <columns>
                                                                                             <TableColumn fx:id="bodyDynamicKeyColumn" prefWidth="150.0" text="Key" />
@@ -225,7 +239,17 @@
                                 </TitledPane>
                                 
                                 <!-- Response Configuration Pane -->
-                                <TitledPane fx:id="responsePane" text="Response Configuration" expanded="false">
+                                <TitledPane fx:id="responsePane" expanded="false">
+                                    <graphic>
+                                        <HBox spacing="5" alignment="CENTER_LEFT">
+                                            <Label text="Response Configuration" style="-fx-font-weight: bold;" />
+                                            <Label fx:id="responseHelpIcon" text="?" style="-fx-font-weight: bold; -fx-text-fill: blue; -fx-cursor: hand;">
+                                                <font>
+                                                    <Font name="System Bold" size="14.0" />
+                                                </font>
+                                            </Label>
+                                        </HBox>
+                                    </graphic>
                                     <content>
                                         <HBox spacing="5.0" alignment="TOP_LEFT">
                                             <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
@@ -251,6 +275,9 @@
                                                         </Button>
                                                         <Button fx:id="pasteResponseCheckButton" text="⎘" onAction="#handlePasteResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0">
                                                             <tooltip><Tooltip text="Paste check(s) from clipboard"/></tooltip>
+                                                        </Button>
+                                                        <Button fx:id="responseHelpButton" text="?" onAction="#handleResponseHelpClick" prefWidth="30.0" maxWidth="30.0" minWidth="30.0">
+                                                            <tooltip><Tooltip text="Show help for response checks"/></tooltip>
                                                         </Button>
                                                     </children>
                                                 </VBox>

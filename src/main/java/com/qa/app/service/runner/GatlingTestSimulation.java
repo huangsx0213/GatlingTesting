@@ -7,7 +7,6 @@ import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.GatlingTest;
 import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
-import com.qa.app.model.Operator;
 import com.qa.app.model.reports.*;
 import com.qa.app.model.threadgroups.*;
 import io.gatling.javaapi.core.*;
@@ -363,8 +362,6 @@ public class GatlingTestSimulation extends Simulation {
         boolean statusCheckExists = false;
         // Collect DIFF checks for special processing (before/after reference)
         List<ResponseCheck> diffChecks = new ArrayList<>();
-        // Cache to avoid duplicate DB lookups per TCID
-        java.util.Map<String, Endpoint> refEndpointCache = new java.util.HashMap<>();
 
         String checksJson = test.getResponseChecks();
         if (checksJson != null && !checksJson.isEmpty()) {
@@ -1120,8 +1117,6 @@ public class GatlingTestSimulation extends Simulation {
                 }
                 cr.setPassed(passed);
 
-                // Console logging similar to other check types
-                String logPrefix = passed ? "CHECK_PASS" : "CHECK_FAIL";
                 System.out.println(String.format("%s|%s|%s|expected:%s|actual:%s",
                         test.getTcid(), expr, dc.getOperator().toString(), expectValue, actualValue));
 

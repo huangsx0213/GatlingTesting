@@ -28,6 +28,7 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
 import com.qa.app.model.Operator;
+import javafx.util.Duration;
 import javafx.util.converter.DefaultStringConverter;
 import javafx.beans.property.SimpleStringProperty;
 import com.qa.app.model.GatlingLoadParameters;
@@ -36,6 +37,8 @@ import com.qa.app.model.threadgroups.ThreadGroupType;
 import javafx.beans.binding.Bindings;
 import com.qa.app.service.ProjectContext;
 import javafx.application.Platform;
+import javafx.geometry.Point2D;
+import javafx.scene.Node;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -141,6 +144,18 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     @FXML
     private TitledPane apiConfigPane;
 
+    @FXML
+    private Label headersHelpIcon;
+
+    @FXML
+    private Label bodyHelpIcon;
+
+    @FXML
+    private Label responseHelpIcon;
+
+    @FXML
+    private Button responseHelpButton;
+
     // Response Checks UI Elements
     @FXML
     private TableView<ResponseCheck> responseChecksTable;
@@ -212,6 +227,10 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     private final CheckBox selectAllCheckBox = new CheckBox();
 
     private boolean isUpdatingSelection = false;
+    
+    private Tooltip variableTooltip;
+
+    private Tooltip responseCheckTooltip;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -282,6 +301,9 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         // This label seems to be missing from the FXML, but the code references it.
         // If variableHelpLabel is a valid FXML field, this will work. Otherwise, that's a separate bug.
         // variableHelpLabel.setText(helpText.toString());
+
+        setupVariableHelpTooltips();
+        setupResponseCheckHelpTooltip();
     }
 
     @Override
@@ -1529,5 +1551,91 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
                 .filter(e -> e.getName().equals(endpointName))
                 .findFirst()
                 .orElse(null);
+    }
+
+    private void setupVariableHelpTooltips() {
+        // Get built-in documentation
+        String builtInDocs = VariableGenerator.getBuiltInVariablesDocumentation();
+
+        // Get custom variables
+        List<Map<String, String>> allVars = VariableGenerator.getInstance().getVariableDefinitions();
+        String customDocs = allVars.stream()
+                .filter(v -> !v.get("format").startsWith("__")) // Filter out built-ins
+                .map(v -> v.get("format") + "\n  " + v.get("description"))
+                .collect(Collectors.joining("\n\n"));
+
+        StringBuilder tooltipTextBuilder = new StringBuilder();
+        tooltipTextBuilder.append(builtInDocs);
+
+        if (!customDocs.isEmpty()) {
+            tooltipTextBuilder.append("\n\n------------------------------\n\n");
+            tooltipTextBuilder.append("Custom Variables:\n\n");
+            tooltipTextBuilder.append(customDocs);
+        }
+
+        variableTooltip = new Tooltip(tooltipTextBuilder.toString());
+        variableTooltip.setStyle("-fx-font-size: 14px;");
+        variableTooltip.setAutoHide(true);
+
+        headersHelpIcon.setOnMouseClicked(event -> toggleTooltip(variableTooltip, headersHelpIcon));
+        bodyHelpIcon.setOnMouseClicked(event -> toggleTooltip(variableTooltip, bodyHelpIcon));
+    }
+
+    private void setupResponseCheckHelpTooltip() {
+        String tooltipText = "How to configure response checks:\n\n" +
+                "1. STATUS\n" +
+                "  - Expression: (Not used)\n" +
+                "  - Operator: IS\n" +
+                "  - Expect: Expected HTTP status code (e.g., 200, 404).\n\n" +
+                "2. JSON_PATH\n" +
+                "  - Expression: JSONPath to extract value (e.g., $.data.id).\n" +
+                "  - Operator: IS, CONTAINS.\n" +
+                "  - Expect: The expected value.\n" +
+                "  - Save As: (Optional) Variable name to save the value for later use (e.g., myToken).\n\n" +
+                "3. XPATH\n" +
+                "  - Expression: XPath for XML responses (e.g., //user/id).\n" +
+                "  - Operator: IS, CONTAINS.\n" +
+                "  - Expect: The expected value.\n" +
+                "  - Save As: (Optional) Variable name.\n\n" +
+                "4. REGEX\n" +
+                "  - Expression: Regex with a capturing group (e.g., token=(.*?);).\n" +
+                "  - Operator: IS, CONTAINS.\n" +
+                "  - Expect: The expected value.\n" +
+                "  - Save As: (Optional) Variable name.\n\n" +
+                "5. DIFF\n" +
+                "  - Expression: Reference key `TCID.JSONPath` (e.g., GET_BALANCE.data.balance).\n" +
+                "  - Operator: IS\n" +
+                "  - Expect: Expected numerical difference (after - before).\n" +
+                "  - Save As: (Not used).";
+
+        responseCheckTooltip = new Tooltip(tooltipText);
+        responseCheckTooltip.setStyle("-fx-font-size: 14px;");
+        responseCheckTooltip.setAutoHide(true);
+
+        responseHelpIcon.setOnMouseClicked(event -> toggleTooltip(responseCheckTooltip, responseHelpIcon));
+    }
+
+    private void toggleTooltip(Tooltip tooltip, Node ownerNode) {
+        if (tooltip.isShowing()) {
+            tooltip.hide();
+        } else {
+            Point2D p = ownerNode.localToScreen(ownerNode.getBoundsInLocal().getMaxX(), ownerNode.getBoundsInLocal().getMaxY());
+            tooltip.show(ownerNode, p.getX(), p.getY());
+        }
+    }
+
+    @FXML
+    private void handleResponseHelpClick() {
+        if (responseCheckTooltip != null) {
+            if (responseCheckTooltip.isShowing()) {
+                responseCheckTooltip.hide();
+            } else {
+                Point2D p = responseHelpButton.localToScreen(
+                    responseHelpButton.getBoundsInLocal().getMaxX(),
+                    responseHelpButton.getBoundsInLocal().getMinY()
+                );
+                responseCheckTooltip.show(responseHelpButton, p.getX(), p.getY());
+            }
+        }
     }
 }
