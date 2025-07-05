@@ -209,7 +209,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     private MainViewModel mainViewModel;
     private final ObservableList<String> allTcids = FXCollections.observableArrayList();
     private final ObservableList<String> prefixOptions = FXCollections.observableArrayList("Setup", "Teardown",
-            "SuiteSetup", "SuiteTeardown", "CheckWith");
+            "SuiteSetup", "SuiteTeardown");
 
     // Used to store all TCID dropdown references
     private final List<CheckComboBox<String>> conditionTcidComboBoxes = new ArrayList<>();
