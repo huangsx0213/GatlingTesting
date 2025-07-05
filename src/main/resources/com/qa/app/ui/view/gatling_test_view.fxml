@@ -241,14 +241,7 @@
                                 <!-- Response Configuration Pane -->
                                 <TitledPane fx:id="responsePane" expanded="false">
                                     <graphic>
-                                        <HBox spacing="5" alignment="CENTER_LEFT">
-                                            <Label text="Response Configuration" style="-fx-font-weight: bold;" />
-                                            <Label fx:id="responseHelpIcon" text="?" style="-fx-font-weight: bold; -fx-text-fill: blue; -fx-cursor: hand;">
-                                                <font>
-                                                    <Font name="System Bold" size="14.0" />
-                                                </font>
-                                            </Label>
-                                        </HBox>
+                                        <Label text="Response Configuration" style="-fx-font-weight: bold;" />
                                     </graphic>
                                     <content>
                                         <HBox spacing="5.0" alignment="TOP_LEFT">

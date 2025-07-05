@@ -1611,8 +1611,9 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         responseCheckTooltip = new Tooltip(tooltipText);
         responseCheckTooltip.setStyle("-fx-font-size: 14px;");
         responseCheckTooltip.setAutoHide(true);
-
-        responseHelpIcon.setOnMouseClicked(event -> toggleTooltip(responseCheckTooltip, responseHelpIcon));
+        
+        // 不再使用标题栏中的问号图标
+        // responseHelpIcon.setOnMouseClicked(event -> toggleTooltip(responseCheckTooltip, responseHelpIcon));
     }
 
     private void toggleTooltip(Tooltip tooltip, Node ownerNode) {
