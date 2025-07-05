@@ -1797,7 +1797,17 @@ public class GatlingTestSimulation extends Simulation {
             System.out.println(VARIABLES_PREFIX + new ObjectMapper().writeValueAsString(TestRunContext.getAllVariables()));
 
             ObjectMapper mapper = new ObjectMapper();
-            List<Map<String, Object>> summaryList = new ArrayList<>();
+
+            // Prepare writer for NDJSON streaming if file path is provided
+            String reportFilePath = System.getProperty("gatling.report.file");
+            java.io.BufferedWriter ndjsonWriter = null;
+            if (reportFilePath != null && !reportFilePath.isBlank()) {
+                try {
+                    ndjsonWriter = new java.io.BufferedWriter(new java.io.FileWriter(reportFilePath, true));
+                } catch (Exception e) {
+                    System.err.println("[WARN] Unable to open report file for writing: " + e.getMessage());
+                }
+            }
 
             for (Map.Entry<String, CaseReport> entry : caseReports.entrySet()) {
                 String reportKey = entry.getKey();
@@ -1841,14 +1851,23 @@ public class GatlingTestSimulation extends Simulation {
                 summaryEntry.put("tcid", reportTcid);
                 summaryEntry.put("mode", mode);
                     summaryEntry.put("report", report);
-                    summaryList.add(summaryEntry);
+
+                    // Stream this entry immediately to file if possible
+                    if (ndjsonWriter != null) {
+                        try {
+                            ndjsonWriter.write(mapper.writeValueAsString(summaryEntry));
+                            ndjsonWriter.newLine();
+                            ndjsonWriter.flush();
+                        } catch (Exception we) {
+                            System.err.println("[WARN] Failed to write report entry: " + we.getMessage());
+                        }
+                    }
             }
 
-            // Serialize to compact JSON (single line)
-            String json = mapper.writeValueAsString(summaryList);
-
-            // Use the new prefix for the report
-            System.out.println(REPORT_PREFIX + json);
+            // Close writer if opened
+            if (ndjsonWriter != null) {
+                try { ndjsonWriter.close(); } catch (Exception ignored) {}
+            }
 
         } catch (Exception ex) {
             System.err.println("Failed to output response check results: " + ex.getMessage());
