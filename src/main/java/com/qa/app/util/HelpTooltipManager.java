@@ -1,0 +1,129 @@
+package com.qa.app.util;
+
+import com.qa.app.service.script.VariableGenerator;
+import javafx.scene.control.Tooltip;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * Centralized factory for reusable help tooltips across the UI.
+ * This class builds and caches Tooltip instances so that every ViewModel
+ * can obtain consistent help messages without duplicating code.
+ */
+public final class HelpTooltipManager {
+
+    private static Tooltip responseCheckTooltip;
+
+    private static final String BUILT_IN_VARIABLE_DOC = "Built-in variables usage examples:\n\n" +
+            "1. UUID: __UUID\n" +
+            "   Example: \"__UUID\" → \"f47ac10b-58cc-4372-a567-0e02b2c3d479\"\n\n" +
+            "2. Timestamp (ms): __TIMESTAMP\n" +
+            "   Example: \"__TIMESTAMP\" → \"1684932156123\"\n\n" +
+            "3. Date/Time: __DATETIME(format[, timezone])\n" +
+            "   Examples:\n" +
+            "   - \"__DATETIME(yyyy-MM-dd HH:mm:ss)\" → \"2025-07-05 12:30:45\"\n" +
+            "   - \"__DATETIME(yyyyMMddHHmmss)\" → \"20250705123045\"\n" +
+            "   - \"__DATETIME(yyyy-MM-dd'T'HH:mm:ssXXX, Asia/Shanghai)\" → \"2025-07-05T12:30:45+08:00\"\n\n" +
+            "4. Prefix + Timestamp (ms): __PREFIX_TIMESTAMP(prefix)\n" +
+            "   Example: \"__PREFIX_TIMESTAMP(ORDER_)\" → \"ORDER_1684932156123\"\n\n" +
+            "5. Prefix + DateTime: __PREFIX_DATETIME(prefix,format[, timezone])\n" +
+            "   Example: \"__PREFIX_DATETIME(BATCH_,yyyyMMdd,America/New_York)\" → \"BATCH_20230524\"\n\n" +
+            "6. Random String: __RANDOM_STRING(length,mode)\n" +
+            "   Modes available:\n" +
+            "   - a: Alphanumeric (default)\n" +
+            "   - u: Uppercase only\n" +
+            "   - l: Lowercase only\n" +
+            "   - m: Mixed case (no numbers)\n" +
+            "   - n: Numeric only\n" +
+            "   Example: \"__RANDOM_STRING(8,a)\" → \"A3bX71pQ\"";
+
+    private HelpTooltipManager() {
+        // Utility class – no instance.
+    }
+
+    /**
+     * Returns a singleton tooltip describing how to configure response checks.
+     * The content is static; therefore we cache the Tooltip instance.
+     *
+     * @return a Tooltip with response-check help text
+     */
+    public static Tooltip getResponseCheckTooltip() {
+        if (responseCheckTooltip == null) {
+            responseCheckTooltip = buildResponseCheckTooltip();
+        }
+        return responseCheckTooltip;
+    }
+
+    /**
+     * Builds a fresh tooltip describing available dynamic variables.
+     * This tooltip is rebuilt on every call so that it always reflects
+     * the latest custom variable definitions.
+     *
+     * @return a newly constructed Tooltip for dynamic variables
+     */
+    public static Tooltip buildVariableTooltip() {
+        String builtInDocs = BUILT_IN_VARIABLE_DOC;
+        List<Map<String, String>> allVars = VariableGenerator.getInstance().getVariableDefinitions();
+        String customDocs = allVars.stream()
+                .filter(v -> !v.get("format").startsWith("__")) // exclude built-ins
+                .map(v -> v.get("format") + "\n  " + v.get("description"))
+                .collect(Collectors.joining("\n\n"));
+
+        StringBuilder tooltipText = new StringBuilder();
+        tooltipText.append(builtInDocs);
+
+        if (!customDocs.isEmpty()) {
+            tooltipText.append("\n\n------------------------------\n\n");
+            tooltipText.append("Custom Variables:\n\n");
+            tooltipText.append(customDocs);
+        }
+
+        Tooltip tooltip = new Tooltip(tooltipText.toString());
+        tooltip.setStyle("-fx-font-size: 14px;");
+        tooltip.setAutoHide(true);
+        return tooltip;
+    }
+
+    public static String getBuiltInVariableDoc() {
+        return BUILT_IN_VARIABLE_DOC;
+    }
+
+    // ---------------------------------------------------------------------
+    // Private helper methods
+    // ---------------------------------------------------------------------
+
+    private static Tooltip buildResponseCheckTooltip() {
+        String text = "How to configure response checks:\n\n" +
+                "1. STATUS\n" +
+                "  - Expression: (Not used)\n" +
+                "  - Operator: IS\n" +
+                "  - Expect: Expected HTTP status code (e.g., 200, 404).\n\n" +
+                "2. JSON_PATH\n" +
+                "  - Expression: JSONPath to extract value (e.g., $.data.id).\n" +
+                "  - Operator: IS, CONTAINS.\n" +
+                "  - Expect: The expected value.\n" +
+                "  - Save As: (Optional) Variable name to save the value for later use (e.g., myToken).\n\n" +
+                "3. XPATH\n" +
+                "  - Expression: XPath for XML responses (e.g., //user/id).\n" +
+                "  - Operator: IS, CONTAINS.\n" +
+                "  - Expect: The expected value.\n" +
+                "  - Save As: (Optional) Variable name.\n\n" +
+                "4. REGEX\n" +
+                "  - Expression: Regex with a capturing group (e.g., token=(.*?);).\n" +
+                "  - Operator: IS, CONTAINS.\n" +
+                "  - Expect: The expected value.\n" +
+                "  - Save As: (Optional) Variable name.\n\n" +
+                "5. DIFF\n" +
+                "  - Expression: Reference key `TCID.JSONPath` (e.g., Position.$.balance).\n" +
+                "  - Operator: IS\n" +
+                "  - Expect: Expected numerical difference (after - before).\n" +
+                "  - Save As: (Not used).";
+
+        Tooltip tooltip = new Tooltip(text);
+        tooltip.setStyle("-fx-font-size: 14px;");
+        tooltip.setAutoHide(true);
+        return tooltip;
+    }
+} 

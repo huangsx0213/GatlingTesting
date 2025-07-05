@@ -7,8 +7,8 @@ import com.qa.app.service.impl.*;
 import com.qa.app.ui.vm.gatling.TagHandler;
 import com.qa.app.ui.vm.gatling.TemplateHandler;
 import com.qa.app.ui.vm.gatling.TestCondictionHandler;
-import com.qa.app.ui.vm.gatling.TooltipManager;
 import com.qa.app.util.AppConfig;
+import com.qa.app.util.HelpTooltipManager;
 import com.qa.app.common.listeners.AppConfigChangeListener;
 import com.qa.app.service.script.VariableGenerator;
 import javafx.collections.FXCollections;
@@ -29,7 +29,6 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
 import com.qa.app.model.Operator;
-import javafx.util.Duration;
 import javafx.util.converter.DefaultStringConverter;
 import javafx.beans.property.SimpleStringProperty;
 import com.qa.app.model.GatlingLoadParameters;
@@ -229,6 +228,10 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
     private boolean isUpdatingSelection = false;
     
+    private Tooltip variableTooltip;
+
+    private Tooltip responseCheckTooltip;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     // Clipboard for response checks
@@ -1259,9 +1262,6 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         if (headersTemplateVarsTable != null) headersTemplateVarsTable.refresh();
         if (bodyTemplateComboBox != null) bodyTemplateComboBox.setItems(FXCollections.observableArrayList(bodyTemplateIdNameMap.values()));
         if (headersTemplateComboBox != null) headersTemplateComboBox.setItems(FXCollections.observableArrayList(headersTemplateIdNameMap.values()));
-        
-        // 刷新tooltip内容
-        TooltipManager.getInstance().refreshTooltips();
     }
 
     // =====================
@@ -1554,28 +1554,37 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     }
 
     private void setupVariableHelpTooltips() {
-        // 使用TooltipManager替代原来的实现
-        TooltipManager tooltipManager = TooltipManager.getInstance();
-        
-        headersHelpIcon.setOnMouseClicked(event -> 
-            tooltipManager.toggleTooltip(tooltipManager.getVariableTooltip(), headersHelpIcon));
-        
-        bodyHelpIcon.setOnMouseClicked(event -> 
-            tooltipManager.toggleTooltip(tooltipManager.getVariableTooltip(), bodyHelpIcon));
+        variableTooltip = HelpTooltipManager.buildVariableTooltip();
+        headersHelpIcon.setOnMouseClicked(event -> toggleTooltip(variableTooltip, headersHelpIcon));
+        bodyHelpIcon.setOnMouseClicked(event -> toggleTooltip(variableTooltip, bodyHelpIcon));
     }
 
     private void setupResponseCheckHelpTooltip() {
-        // 使用TooltipManager替代原来的实现
-        // 不再需要创建tooltip文本和设置样式
-        
-        // 不再使用标题栏中的问号图标
-        // responseHelpIcon.setOnMouseClicked(event -> toggleTooltip(responseCheckTooltip, responseHelpIcon));
+        responseCheckTooltip = HelpTooltipManager.getResponseCheckTooltip();
+        // responseHelpIcon has been removed; use button instead.
+    }
+
+    private void toggleTooltip(Tooltip tooltip, Node ownerNode) {
+        if (tooltip.isShowing()) {
+            tooltip.hide();
+        } else {
+            Point2D p = ownerNode.localToScreen(ownerNode.getBoundsInLocal().getMaxX(), ownerNode.getBoundsInLocal().getMaxY());
+            tooltip.show(ownerNode, p.getX(), p.getY());
+        }
     }
 
     @FXML
     private void handleResponseHelpClick() {
-        // 使用TooltipManager替代原来的实现
-        TooltipManager tooltipManager = TooltipManager.getInstance();
-        tooltipManager.toggleTooltip(tooltipManager.getResponseCheckTooltip(), responseHelpButton);
+        if (responseCheckTooltip != null) {
+            if (responseCheckTooltip.isShowing()) {
+                responseCheckTooltip.hide();
+            } else {
+                Point2D p = responseHelpButton.localToScreen(
+                    responseHelpButton.getBoundsInLocal().getMaxX(),
+                    responseHelpButton.getBoundsInLocal().getMinY()
+                );
+                responseCheckTooltip.show(responseHelpButton, p.getX(), p.getY());
+            }
+        }
     }
 }

@@ -3,6 +3,7 @@ package com.qa.app.service.script;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IVariableService;
 import com.qa.app.service.impl.VariableServiceImpl;
+import com.qa.app.util.HelpTooltipManager;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -29,32 +30,7 @@ public class VariableGenerator {
     }
 
     public static String getBuiltInVariablesDocumentation() {
-        return "Built-in variables usage examples:\n\n" +
-                "1. UUID: __UUID\n" +
-                "   Example: \"id\": \"__UUID\" → \"id\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\"\n\n" +
-                "2. Timestamp (ms): __TIMESTAMP\n" +
-                "   Example: \"time\": \"__TIMESTAMP\" → \"time\": \"1684932156123\"\n\n" +
-                "3. Date/Time: __DATETIME(format[, timezone])\n" +
-                "   Examples:\n" +
-                "   - `__DATETIME(yyyy-MM-dd HH:mm:ss)` → `2025-07-05 12:30:45` (带分隔符的完整时间)\n" +
-                "   - `__DATETIME(yyyyMMddHHmmss)` → `20250705123045` (年月日时分秒)\n" +
-                "   - `__DATETIME(yyyy-MM-dd'T'HH:mm:ssXXX, Asia/Shanghai)` → `2025-07-05T12:30:45+08:00` (ISO 8601 格式)\n\n" +
-                "4. Prefix + Timestamp (ms): __PREFIX_TIMESTAMP(prefix)\n" +
-                "   Example: \"orderId\": \"__PREFIX_TIMESTAMP(ORDER_)\" → \"orderId\": \"ORDER_1684932156123\"\n\n" +
-                "5. Prefix + DateTime: __PREFIX_DATETIME(prefix,format[, timezone])\n" +
-                "   Example: \"batchId\": \"__PREFIX_DATETIME(BATCH_,yyyyMMdd,America/New_York)\" → \"batchId\": \"BATCH_20230524\"\n\n" +
-                "6. Random String: __RANDOM_STRING(length,mode)\n" +
-                "   Modes available:\n" +
-                "   - a: Alphanumeric (default) - uppercase + lowercase + numbers\n" +
-                "     Example: \"key\": \"__RANDOM_STRING(8,a)\" → \"key\": \"A3bX71pQ\"\n" +
-                "   - u: Uppercase only - only uppercase letters\n" +
-                "     Example: \"code\": \"__RANDOM_STRING(5,u)\" → \"code\": \"AXFGH\"\n" +
-                "   - l: Lowercase only - only lowercase letters\n" +
-                "     Example: \"username\": \"__RANDOM_STRING(6,l)\" → \"username\": \"abcdef\"\n" +
-                "   - m: Mixed case - uppercase + lowercase (no numbers)\n" +
-                "     Example: \"name\": \"__RANDOM_STRING(7,m)\" → \"name\": \"AbCdEfG\"\n" +
-                "   - n: Numeric only - only digits 0-9\n" +
-                "     Example: \"pin\": \"__RANDOM_STRING(4,n)\" → \"pin\": \"1234\"";
+        return HelpTooltipManager.getBuiltInVariableDoc();
     }
 
     public static VariableGenerator getInstance() {
