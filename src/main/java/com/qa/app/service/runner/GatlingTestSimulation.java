@@ -65,7 +65,7 @@ public class GatlingTestSimulation extends Simulation {
             try {
                 return TestMode.valueOf(mode.toUpperCase());
             } catch (IllegalArgumentException e) {
-                return TestMode.CONDITION; // Fallback for unknown modes
+                return TestMode.MAIN; // Fallback to MAIN for unknown
             }
         }
     }
@@ -1812,8 +1812,8 @@ public class GatlingTestSimulation extends Simulation {
                     reportTcid = keyParts[0];
                     mode = keyParts[1];
 
-                    // For setup / teardown / condition, use BatchItem.origin when available
-                    if (mode.equals("SETUP") || mode.equals("TEARDOWN") || mode.equals("CONDITION")) {
+                    // For SETUP and TEARDOWN, use BatchItem.origin when available
+                    if (mode.equals("SETUP") || mode.equals("TEARDOWN")) {
                         String mappedOrigin = batchItems.stream()
                                 .filter(bi -> bi.test != null && reportTcid.equals(bi.test.getTcid()))
                                 .map(bi -> (bi.origin != null && !bi.origin.isBlank()) ? bi.origin : bi.test.getTcid())

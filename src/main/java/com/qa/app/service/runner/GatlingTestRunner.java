@@ -269,7 +269,13 @@ public class GatlingTestRunner {
                 Map<TestMode, List<CaseReport>> casesByMode = new java.util.EnumMap<>(TestMode.class);
                 for (Map<String, Object> itemMap : itemsForOrigin) {
                     String modeStr = (String) itemMap.getOrDefault("mode", "MAIN");
-                    TestMode mode = TestMode.valueOf(modeStr);
+                    TestMode mode;
+                    try {
+                        mode = TestMode.valueOf(modeStr);
+                    } catch (IllegalArgumentException ex) {
+                        // Treat unknown modes as MAIN
+                        mode = TestMode.MAIN;
+                    }
                     CaseReport cr = mapper.convertValue(itemMap.get("report"), CaseReport.class);
                     casesByMode.computeIfAbsent(mode, k -> new java.util.ArrayList<>()).add(cr);
                 }
@@ -283,8 +289,7 @@ public class GatlingTestRunner {
                         TestMode.MAIN,
                         TestMode.PST_CHECK,
                         TestMode.DIFF_PST,
-                        TestMode.TEARDOWN,
-                        TestMode.CONDITION
+                        TestMode.TEARDOWN
                 );
                 displayOrder.forEach(mode -> {
                     if (casesByMode.containsKey(mode)) {

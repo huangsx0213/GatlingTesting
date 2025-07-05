@@ -309,6 +309,9 @@
                         <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearFields" text="Clear" />
                         <Separator orientation="VERTICAL" />
                         <Button fx:id="runTestButton" mnemonicParsing="false" onAction="#handleRunTest" text="Run Selected Test(s)" />
+                        <Label fx:id="runHelpIcon" text="?" style="-fx-font-weight: bold; -fx-text-fill: blue; -fx-cursor: hand;">
+                            <font><Font name="System Bold" size="14.0" /></font>
+                        </Label>
                             </children>
                             <padding>
                                 <Insets bottom="10.0" top="10.0" />

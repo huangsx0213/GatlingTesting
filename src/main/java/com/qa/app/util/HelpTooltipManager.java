@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 public final class HelpTooltipManager {
 
     private static Tooltip responseCheckTooltip;
+    private static Tooltip executionFlowTooltip;
 
     private static final String BUILT_IN_VARIABLE_DOC = "Built-in variables usage examples:\n\n" +
             "1. UUID: __UUID\n" +
@@ -54,6 +55,17 @@ public final class HelpTooltipManager {
             responseCheckTooltip = buildResponseCheckTooltip();
         }
         return responseCheckTooltip;
+    }
+
+    /**
+     * Returns a singleton tooltip that explains the runtime execution order
+     * (Setup → DIFF_PRE → PRE_CHECK → Main → DIFF_PST → PST_CHECK → Teardown).
+     */
+    public static Tooltip getExecutionFlowTooltip() {
+        if (executionFlowTooltip == null) {
+            executionFlowTooltip = buildExecutionFlowTooltip();
+        }
+        return executionFlowTooltip;
     }
 
     /**
@@ -127,5 +139,25 @@ public final class HelpTooltipManager {
         tooltip.setStyle("-fx-font-size: 14px;");
         tooltip.setAutoHide(true);
         return tooltip;
+    }
+
+    private static Tooltip buildExecutionFlowTooltip() {
+        String text = "Execution sequence when running tests:\n\n" +
+                "1. Setup script(s) – executed in listed order.\n" +
+                "2. DIFF_PRE – reference API call(s) to capture \"before\" value for DIFF checks.\n" +
+                "3. PRE_CHECK – reference API call(s) to validate pre-condition fields.\n" +
+                "4. Main request – the test case itself, performs STATUS / JSON_PATH etc.\n" +
+                "5. DIFF_PST – reference API call(s) to capture \"after\" value for DIFF checks.\n" +
+                "6. PST_CHECK – reference API call(s) to validate result fields.\n" +
+                "7. Teardown script(s).\n\n" +
+                "Evaluation logic:\n" +
+                "• DIFF = (after – before) compared with Expect.\n" +
+                "• PRE_CHECK / PST_CHECK: compare field value with Expect using IS / CONTAINS / MATCHES.\n" +
+                "• All checks recorded in final report under their respective groups.";
+
+        Tooltip t = new Tooltip(text);
+        t.setStyle("-fx-font-size: 14px;");
+        t.setAutoHide(true);
+        return t;
     }
 } 

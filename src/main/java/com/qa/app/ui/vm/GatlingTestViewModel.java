@@ -231,6 +231,10 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     private Tooltip variableTooltip;
 
     private Tooltip responseCheckTooltip;
+    private Tooltip executionFlowTooltip;
+
+    @FXML
+    private Label runHelpIcon;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -304,6 +308,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
         setupVariableHelpTooltips();
         setupResponseCheckHelpTooltip();
+        setupRunHelpTooltip();
     }
 
     @Override
@@ -1562,6 +1567,13 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     private void setupResponseCheckHelpTooltip() {
         responseCheckTooltip = HelpTooltipManager.getResponseCheckTooltip();
         // responseHelpIcon has been removed; use button instead.
+    }
+
+    private void setupRunHelpTooltip() {
+        executionFlowTooltip = HelpTooltipManager.getExecutionFlowTooltip();
+        if (runHelpIcon != null) {
+            runHelpIcon.setOnMouseClicked(e -> toggleTooltip(executionFlowTooltip, runHelpIcon));
+        }
     }
 
     private void toggleTooltip(Tooltip tooltip, Node ownerNode) {
