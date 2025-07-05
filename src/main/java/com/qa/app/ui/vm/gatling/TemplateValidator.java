@@ -127,70 +127,55 @@ public class TemplateValidator {
             }
         }
 
-        // 3. Formatting Logic
+        // 3. Formatting Logic with a stateful machine
         StringBuilder result = new StringBuilder();
         int indent = 0;
         final String indentString = "  ";
-        boolean lineIsEmpty = true;
+        boolean onNewLine = true;
 
         for (int i = 0; i < tokens.size(); i++) {
             String token = tokens.get(i);
 
-            // A. Look ahead for `value [#if ...], [/#if]` pattern
-            boolean isValueToken = !"{}[],:".contains(token) && !token.startsWith("[#") && !token.startsWith("[/@");
-            if (isValueToken && i + 3 < tokens.size() &&
-                tokens.get(i + 1).startsWith("[#if") &&
-                tokens.get(i + 2).equals(",") &&
-                tokens.get(i + 3).startsWith("[/#if")) {
-
-                if (lineIsEmpty) {
-                    result.append(indentString.repeat(indent));
-                    lineIsEmpty = false;
-                }
-                
-                result.append(token)
-                      .append(" ")
-                      .append(tokens.get(i + 1))
-                      .append(tokens.get(i + 2))
-                      .append(tokens.get(i + 3));
-
-                i += 3; // Consume the 3 lookahead tokens
-                continue;
-            }
-
-            // B. Handle tokens that decrease indentation
-            if (token.equals("}") || token.equals("]") || token.startsWith("[/#")) {
+            // Pre-token logic: Handle indentation reduction
+            if (token.equals("}") || token.equals("]") || token.startsWith("[/#") || token.startsWith("[#else")) {
                 indent = Math.max(0, indent - 1);
-                if (!lineIsEmpty) {
+                if (!onNewLine) {
                     result.append(System.lineSeparator());
+                    onNewLine = true;
                 }
             }
-
-            // C. Append indentation if on a new line
-            if (lineIsEmpty) {
-                result.append(indentString.repeat(indent));
-                lineIsEmpty = false;
+            
+            // Handle special `value [#if], [/#if]` pattern
+            boolean isValueToken = !"{}[],:".contains(token) && !token.startsWith("[#") && !token.startsWith("[/@");
+            if (isValueToken && i + 3 < tokens.size() && tokens.get(i+1).startsWith("[#if") && tokens.get(i+2).equals(",") && tokens.get(i+3).startsWith("[/#if")) {
+                if (onNewLine) {
+                    result.append(indentString.repeat(indent));
+                }
+                result.append(token).append(" ").append(tokens.get(i+1)).append(tokens.get(i+2)).append(tokens.get(i+3));
+                onNewLine = false; // We just printed content
+                i += 3; // Consume the pattern
+            } else {
+                 // Regular token processing
+                if (onNewLine) {
+                    result.append(indentString.repeat(indent));
+                }
+                result.append(token);
+                onNewLine = false;
             }
 
-            // D. Append the actual token
-            result.append(token);
-
-            // E. Handle tokens that increase indentation
-            if (token.equals("{") || token.equals("[") || token.startsWith("[#list") || token.startsWith("[#if")) {
-                indent++;
-            }
-
-            // F. Handle tokens that cause a line break AFTER them
-            if (token.equals("{") || token.equals("[") || token.equals(",") ||
-                token.startsWith("[#--") || token.startsWith("[#list") ||
-                token.startsWith("[#if") || token.startsWith("[#else") || token.startsWith("[/#")) {
-                result.append(System.lineSeparator());
-                lineIsEmpty = true;
-            }
-
-            // G. Handle space after colon
+            // Post-token logic: Handle spacing and line breaks
             if (token.equals(":")) {
                 result.append(" ");
+            }
+
+            if (token.equals("{") || token.equals("[") || token.equals(",") || token.startsWith("[#--") || token.startsWith("[#list") || token.startsWith("[#if") || token.startsWith("[/#") || token.startsWith("[#else")) {
+                result.append(System.lineSeparator());
+                onNewLine = true;
+            }
+            
+            // Post-token logic: Handle indentation increase
+            if (token.equals("{") || token.equals("[") || token.startsWith("[#list") || token.startsWith("[#if") || token.startsWith("[#else")) {
+                indent++;
             }
         }
 
