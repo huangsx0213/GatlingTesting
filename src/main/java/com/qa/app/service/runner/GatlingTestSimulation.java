@@ -1808,16 +1808,27 @@ public class GatlingTestSimulation extends Simulation {
                 String reportTcid;
                 String mode;
 
-                if (keyParts.length == 2) { // Original format: tcid|mode
-                    originTcid = keyParts[0];
+                if (keyParts.length == 2) { // Format: tcid|mode
                     reportTcid = keyParts[0];
                     mode = keyParts[1];
-                } else if (keyParts.length == 3) { // New format for ref requests: originTcid|reportTcid|mode
+
+                    // For setup / teardown / condition, use BatchItem.origin when available
+                    if (mode.equals("SETUP") || mode.equals("TEARDOWN") || mode.equals("CONDITION")) {
+                        String mappedOrigin = batchItems.stream()
+                                .filter(bi -> bi.test != null && reportTcid.equals(bi.test.getTcid()))
+                                .map(bi -> (bi.origin != null && !bi.origin.isBlank()) ? bi.origin : bi.test.getTcid())
+                                .findFirst().orElse(reportTcid);
+                        originTcid = mappedOrigin;
+                    } else {
+                        // MAIN keeps itself as origin
+                        originTcid = reportTcid;
+                    }
+                } else if (keyParts.length == 3) { // originTcid|reportTcid|mode
                     originTcid = keyParts[0];
                     reportTcid = keyParts[1];
                     mode = keyParts[2];
                 } else {
-                    continue; // Skip malformed keys
+                    continue; // malformed key
                 }
 
                 // Finalize the case report's overall status
