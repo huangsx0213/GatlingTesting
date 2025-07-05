@@ -7,6 +7,7 @@ import com.qa.app.service.impl.*;
 import com.qa.app.ui.vm.gatling.TagHandler;
 import com.qa.app.ui.vm.gatling.TemplateHandler;
 import com.qa.app.ui.vm.gatling.TestCondictionHandler;
+import com.qa.app.ui.vm.gatling.TooltipManager;
 import com.qa.app.util.AppConfig;
 import com.qa.app.common.listeners.AppConfigChangeListener;
 import com.qa.app.service.script.VariableGenerator;
@@ -228,10 +229,6 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
     private boolean isUpdatingSelection = false;
     
-    private Tooltip variableTooltip;
-
-    private Tooltip responseCheckTooltip;
-
     private final ObjectMapper mapper = new ObjectMapper();
 
     // Clipboard for response checks
@@ -1262,6 +1259,9 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         if (headersTemplateVarsTable != null) headersTemplateVarsTable.refresh();
         if (bodyTemplateComboBox != null) bodyTemplateComboBox.setItems(FXCollections.observableArrayList(bodyTemplateIdNameMap.values()));
         if (headersTemplateComboBox != null) headersTemplateComboBox.setItems(FXCollections.observableArrayList(headersTemplateIdNameMap.values()));
+        
+        // 刷新tooltip内容
+        TooltipManager.getInstance().refreshTooltips();
     }
 
     // =====================
@@ -1554,89 +1554,28 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     }
 
     private void setupVariableHelpTooltips() {
-        // Get built-in documentation
-        String builtInDocs = VariableGenerator.getBuiltInVariablesDocumentation();
-
-        // Get custom variables
-        List<Map<String, String>> allVars = VariableGenerator.getInstance().getVariableDefinitions();
-        String customDocs = allVars.stream()
-                .filter(v -> !v.get("format").startsWith("__")) // Filter out built-ins
-                .map(v -> v.get("format") + "\n  " + v.get("description"))
-                .collect(Collectors.joining("\n\n"));
-
-        StringBuilder tooltipTextBuilder = new StringBuilder();
-        tooltipTextBuilder.append(builtInDocs);
-
-        if (!customDocs.isEmpty()) {
-            tooltipTextBuilder.append("\n\n------------------------------\n\n");
-            tooltipTextBuilder.append("Custom Variables:\n\n");
-            tooltipTextBuilder.append(customDocs);
-        }
-
-        variableTooltip = new Tooltip(tooltipTextBuilder.toString());
-        variableTooltip.setStyle("-fx-font-size: 14px;");
-        variableTooltip.setAutoHide(true);
-
-        headersHelpIcon.setOnMouseClicked(event -> toggleTooltip(variableTooltip, headersHelpIcon));
-        bodyHelpIcon.setOnMouseClicked(event -> toggleTooltip(variableTooltip, bodyHelpIcon));
+        // 使用TooltipManager替代原来的实现
+        TooltipManager tooltipManager = TooltipManager.getInstance();
+        
+        headersHelpIcon.setOnMouseClicked(event -> 
+            tooltipManager.toggleTooltip(tooltipManager.getVariableTooltip(), headersHelpIcon));
+        
+        bodyHelpIcon.setOnMouseClicked(event -> 
+            tooltipManager.toggleTooltip(tooltipManager.getVariableTooltip(), bodyHelpIcon));
     }
 
     private void setupResponseCheckHelpTooltip() {
-        String tooltipText = "How to configure response checks:\n\n" +
-                "1. STATUS\n" +
-                "  - Expression: (Not used)\n" +
-                "  - Operator: IS\n" +
-                "  - Expect: Expected HTTP status code (e.g., 200, 404).\n\n" +
-                "2. JSON_PATH\n" +
-                "  - Expression: JSONPath to extract value (e.g., $.data.id).\n" +
-                "  - Operator: IS, CONTAINS.\n" +
-                "  - Expect: The expected value.\n" +
-                "  - Save As: (Optional) Variable name to save the value for later use (e.g., myToken).\n\n" +
-                "3. XPATH\n" +
-                "  - Expression: XPath for XML responses (e.g., //user/id).\n" +
-                "  - Operator: IS, CONTAINS.\n" +
-                "  - Expect: The expected value.\n" +
-                "  - Save As: (Optional) Variable name.\n\n" +
-                "4. REGEX\n" +
-                "  - Expression: Regex with a capturing group (e.g., token=(.*?);).\n" +
-                "  - Operator: IS, CONTAINS.\n" +
-                "  - Expect: The expected value.\n" +
-                "  - Save As: (Optional) Variable name.\n\n" +
-                "5. DIFF\n" +
-                "  - Expression: Reference key `TCID.JSONPath` (e.g., GET_BALANCE.data.balance).\n" +
-                "  - Operator: IS\n" +
-                "  - Expect: Expected numerical difference (after - before).\n" +
-                "  - Save As: (Not used).";
-
-        responseCheckTooltip = new Tooltip(tooltipText);
-        responseCheckTooltip.setStyle("-fx-font-size: 14px;");
-        responseCheckTooltip.setAutoHide(true);
+        // 使用TooltipManager替代原来的实现
+        // 不再需要创建tooltip文本和设置样式
         
         // 不再使用标题栏中的问号图标
         // responseHelpIcon.setOnMouseClicked(event -> toggleTooltip(responseCheckTooltip, responseHelpIcon));
     }
 
-    private void toggleTooltip(Tooltip tooltip, Node ownerNode) {
-        if (tooltip.isShowing()) {
-            tooltip.hide();
-        } else {
-            Point2D p = ownerNode.localToScreen(ownerNode.getBoundsInLocal().getMaxX(), ownerNode.getBoundsInLocal().getMaxY());
-            tooltip.show(ownerNode, p.getX(), p.getY());
-        }
-    }
-
     @FXML
     private void handleResponseHelpClick() {
-        if (responseCheckTooltip != null) {
-            if (responseCheckTooltip.isShowing()) {
-                responseCheckTooltip.hide();
-            } else {
-                Point2D p = responseHelpButton.localToScreen(
-                    responseHelpButton.getBoundsInLocal().getMaxX(),
-                    responseHelpButton.getBoundsInLocal().getMinY()
-                );
-                responseCheckTooltip.show(responseHelpButton, p.getX(), p.getY());
-            }
-        }
+        // 使用TooltipManager替代原来的实现
+        TooltipManager tooltipManager = TooltipManager.getInstance();
+        tooltipManager.toggleTooltip(tooltipManager.getResponseCheckTooltip(), responseHelpButton);
     }
 }
