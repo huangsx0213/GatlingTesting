@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 Code Development Guidelines:
 Language Requirement: All code and comments must be written in English only.
