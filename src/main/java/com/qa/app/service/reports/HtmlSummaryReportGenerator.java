@@ -11,6 +11,9 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.io.InputStream;
+import java.nio.file.StandardCopyOption;
+
 
 /**
  * Utility class responsible for generating a lightweight HTML summary page for {@link FunctionalTestReport} data.
@@ -39,6 +42,13 @@ public final class HtmlSummaryReportGenerator {
         if (reports == null || reports.isEmpty()) {
             throw new IllegalArgumentException("Report list must not be null/empty");
         }
+
+        if (targetPath.getParent() != null) {
+            Files.createDirectories(targetPath.getParent());
+        }
+
+        copyResourceTo(targetPath.getParent(), "static/js/chart.js");
+        copyResourceTo(targetPath.getParent(), "static/js/chartjs-plugin-datalabels.js");
 
         // Group by suite name
         Map<String, java.util.List<FunctionalTestReport>> suiteMap = new HashMap<>();
@@ -83,8 +93,8 @@ public final class HtmlSummaryReportGenerator {
                 <head>
                     <meta charset="UTF-8"/>
                     <title>Gatling Functional Test Summary</title>
-                    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+                    <script src="chart.js"></script>
+                    <script src="chartjs-plugin-datalabels.js"></script>
                     <style>
                         :root {
                             --pass-color: #4caf50;
@@ -198,5 +208,16 @@ public final class HtmlSummaryReportGenerator {
      */
     public static void generateHtml(FunctionalTestReport report, Path targetPath) throws IOException {
         generateHtml(java.util.List.of(report), targetPath);
+    }
+
+
+    private static void copyResourceTo(Path targetDirectory, String resourceName) throws IOException {
+        try (InputStream stream = HtmlSummaryReportGenerator.class.getClassLoader().getResourceAsStream(resourceName)) {
+            if (stream == null) {
+                throw new IOException("Resource not found: " + resourceName);
+            }
+            Path destination = targetDirectory.resolve(Path.of(resourceName).getFileName());
+            Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 } 

@@ -11,15 +11,16 @@ import com.qa.app.dao.util.DBUtil;
 public class BodyTemplateDaoImpl implements IBodyTemplateDao {
     @Override
     public void addBodyTemplate(BodyTemplate template) throws SQLException {
-        String sql = "INSERT INTO body_templates (name, content, project_id) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO body_templates (name, content, description, project_id) VALUES (?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, template.getName());
             pstmt.setString(2, template.getContent());
+            pstmt.setString(3, template.getDescription());
             if (template.getProjectId() != null) {
-                pstmt.setInt(3, template.getProjectId());
+                pstmt.setInt(4, template.getProjectId());
             } else {
-                pstmt.setNull(3, java.sql.Types.INTEGER);
+                pstmt.setNull(4, java.sql.Types.INTEGER);
             }
             pstmt.executeUpdate();
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
@@ -32,17 +33,18 @@ public class BodyTemplateDaoImpl implements IBodyTemplateDao {
 
     @Override
     public void updateBodyTemplate(BodyTemplate template) throws SQLException {
-        String sql = "UPDATE body_templates SET name = ?, content = ?, project_id = ? WHERE id = ?";
+        String sql = "UPDATE body_templates SET name = ?, content = ?, description = ?, project_id = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, template.getName());
             pstmt.setString(2, template.getContent());
+            pstmt.setString(3, template.getDescription());
             if (template.getProjectId() != null) {
-                pstmt.setInt(3, template.getProjectId());
+                pstmt.setInt(4, template.getProjectId());
             } else {
-                pstmt.setNull(3, java.sql.Types.INTEGER);
+                pstmt.setNull(4, java.sql.Types.INTEGER);
             }
-            pstmt.setInt(4, template.getId());
+            pstmt.setInt(5, template.getId());
             pstmt.executeUpdate();
         }
     }
@@ -112,12 +114,7 @@ public class BodyTemplateDaoImpl implements IBodyTemplateDao {
             ps.setInt(1, projectId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    list.add(new BodyTemplate(
-                        rs.getInt("id"),
-                        rs.getString("name"),
-                        rs.getString("content"),
-                        rs.getObject("project_id") == null ? null : rs.getInt("project_id")
-                    ));
+                    list.add(createTemplateFromResultSet(rs));
                 }
             }
         }
@@ -125,14 +122,12 @@ public class BodyTemplateDaoImpl implements IBodyTemplateDao {
     }
 
     private BodyTemplate createTemplateFromResultSet(ResultSet rs) throws SQLException {
-        BodyTemplate template = new BodyTemplate();
-        template.setId(rs.getInt("id"));
-        template.setName(rs.getString("name"));
-        template.setContent(rs.getString("content"));
-        Object pid = rs.getObject("project_id");
-        if (pid != null) {
-            template.setProjectId((Integer)pid);
-        }
-        return template;
+        return new BodyTemplate(
+                rs.getInt("id"),
+                rs.getString("name"),
+                rs.getString("content"),
+                rs.getString("description"),
+                rs.getObject("project_id") == null ? null : rs.getInt("project_id")
+        );
     }
 } 

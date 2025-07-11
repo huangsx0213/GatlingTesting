@@ -306,8 +306,20 @@ public class GatlingTestSimulation extends Simulation {
         GatlingTest test = item.test;
         Endpoint endpoint = item.endpoint;
 
-        // Build composite key: tcid|mode to separate reports for different execution contexts
-        String reportKey = test.getTcid() + "|" + item.getTestMode().name();
+        // Build composite key to ensure uniqueness across different origins.
+        // For SETUP and TEARDOWN steps that may be shared by multiple main TCIDs,
+        // include the origin TCID in the key: origin|tcid|mode. This prevents collisions
+        // where the same setup/teardown test is executed for multiple parents and
+        // guarantees the reports are attributed to the correct origin.
+        String reportKey;
+        if (item.getTestMode() == com.qa.app.model.reports.TestMode.SETUP ||
+            item.getTestMode() == com.qa.app.model.reports.TestMode.TEARDOWN) {
+            String origin = (item.origin != null && !item.origin.isBlank()) ? item.origin : test.getTcid();
+            reportKey = origin + "|" + test.getTcid() + "|" + item.getTestMode().name();
+        } else {
+            // Original behaviour for MAIN and other modes
+            reportKey = test.getTcid() + "|" + item.getTestMode().name();
+        }
 
         // Ensure a CaseReport container exists for this key
         caseReports.computeIfAbsent(reportKey, k -> {
@@ -1772,8 +1784,11 @@ public class GatlingTestSimulation extends Simulation {
             return Collections.emptyMap();
         }
         try {
-            // Attempt to parse as JSON first
-            return new ObjectMapper().readValue(headersString, new TypeReference<Map<String, String>>() {});
+            // Primary strategy: attempt to parse the entire string as JSON first
+            Map<String, String> headers = new ObjectMapper().readValue(headersString, new TypeReference<Map<String, String>>() {});
+            // Remove any leading/trailing single or double quotes around each value
+            headers.replaceAll((k, v) -> v==null ? null: v.replaceAll("^([\"'])(.*)\\1$", "$2"));
+            return headers;
         } catch (IOException e) {
             // Fallback to key: value line-by-line parsing
             Map<String, String> headers = new java.util.HashMap<>();
@@ -1782,7 +1797,10 @@ public class GatlingTestSimulation extends Simulation {
                 if (line.contains(":")) {
                     String[] parts = line.split(":", 2);
                     if (parts.length == 2) {
-                        headers.put(parts[0].trim(), parts[1].trim());
+                        String key = parts[0].trim();
+                        String value = parts[1].trim();
+                        // Strip surrounding quotes if present
+                        headers.put(key, value.replaceAll("^([\"'])(.*)\\1$", "$2"));   
                     }
                 }
             }

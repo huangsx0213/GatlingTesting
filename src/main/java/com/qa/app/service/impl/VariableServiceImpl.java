@@ -80,31 +80,46 @@ public class VariableServiceImpl implements IVariableService {
     }
 
     private GroovyScriptEngine convertModelToEngine(com.qa.app.model.GroovyVariable modelVar) {
+        String format = "";
+        String script = "";
+        String description = modelVar.getDescription();
+
+        if (modelVar.getValue() != null && !modelVar.getValue().isEmpty()) {
         try {
             Map<String, String> valueMap = objectMapper.readValue(modelVar.getValue(), new TypeReference<>() {});
-            return new GroovyScriptEngine(
-                    modelVar.getId(),
-                    modelVar.getName(),
-                    valueMap.get("format"),
-                    valueMap.get("description"),
-                    valueMap.get("groovyScript")
-            );
+                format = valueMap.getOrDefault("format", "");
+                script = valueMap.getOrDefault("groovyScript", "");
+                if (description == null || description.isEmpty()) {
+                    description = valueMap.getOrDefault("description", "");
+                }
         } catch (IOException e) {
+                System.err.println("Could not parse value JSON for variable " + modelVar.getName() + ", value: " + modelVar.getValue() + " Error: " + e.getMessage());
+                // Fallback for corrupted data
             return new GroovyScriptEngine(modelVar.getId(), modelVar.getName(), "ERROR", "Could not parse data", e.getMessage());
         }
+        }
+        
+        return new GroovyScriptEngine(
+                modelVar.getId(),
+                modelVar.getName(),
+                format,
+                description,
+                script
+        );
     }
 
     private com.qa.app.model.GroovyVariable convertEngineToModel(GroovyScriptEngine engineVar) throws JsonProcessingException {
+        // Description is now stored in its own column, so we only need to store format and script in the JSON value.
         Map<String, String> valueMap = Map.of(
-                "format", engineVar.getFormat(),
-                "description", engineVar.getDescription(),
-                "groovyScript", engineVar.getGroovyScript()
+                "format", engineVar.getFormat() != null ? engineVar.getFormat() : "",
+                "groovyScript", engineVar.getGroovyScript() != null ? engineVar.getGroovyScript() : ""
         );
         String valueJson = objectMapper.writeValueAsString(valueMap);
 
         com.qa.app.model.GroovyVariable modelVar = new com.qa.app.model.GroovyVariable();
         modelVar.setName(engineVar.getName());
         modelVar.setValue(valueJson);
+        modelVar.setDescription(engineVar.getDescription());
         modelVar.setId(engineVar.getId());
         return modelVar;
     }

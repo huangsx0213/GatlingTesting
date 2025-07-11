@@ -11,6 +11,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.control.TableView;
 import java.net.URL;
 import java.util.ResourceBundle;
 import com.qa.app.service.ProjectContext;
@@ -40,6 +41,7 @@ public class EnvironmentViewModel implements Initializable, AppConfigChangeListe
         environmentNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
         environmentDescriptionColumn.setCellValueFactory(cellData -> cellData.getValue().descriptionProperty());
         environmentTable.setItems(environmentList);
+        environmentTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         loadEnvironments();
         environmentTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> onTableSelectionChanged(newSel));
         AppConfig.addChangeListener(this);

@@ -21,12 +21,15 @@ import com.qa.app.ui.vm.gatling.TemplateValidator;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Alert.AlertType;
 import com.qa.app.service.ProjectContext;
+import javafx.scene.control.TableView;
 
 public class BodyTemplateViewModel implements Initializable, AppConfigChangeListener {
     @FXML
     private TextField bodyTemplateNameField;
     @FXML
     private TextArea bodyTemplateContentArea;
+    @FXML
+    private TextArea bodyTemplateDescriptionArea;
     @FXML
     private Button addButton;
     @FXML
@@ -39,6 +42,8 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
     private TableView<BodyTemplateItem> bodyTemplateTable;
     @FXML
     private TableColumn<BodyTemplateItem, String> bodyTemplateNameColumn;
+    @FXML
+    private TableColumn<BodyTemplateItem, String> bodyTemplateDescriptionColumn;
     @FXML
     private TableColumn<BodyTemplateItem, String> bodyTemplateContentColumn;
     @FXML
@@ -56,11 +61,14 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         bodyTemplateNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
+        bodyTemplateDescriptionColumn.setCellValueFactory(cellData -> cellData.getValue().descriptionProperty());
         bodyTemplateContentColumn.setCellValueFactory(cellData -> cellData.getValue().contentProperty());
         bodyTemplateTable.setItems(bodyTemplateList);
+        bodyTemplateTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         bodyTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
                 bodyTemplateContentArea.setText(newSelection.getContent());
+                bodyTemplateDescriptionArea.setText(newSelection.getDescription());
                 bodyTemplateNameField.setText(newSelection.getName());
             }
         });
@@ -97,7 +105,7 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
         if (projectId != null) {
             try {
                 for (BodyTemplate t : bodyTemplateService.findBodyTemplatesByProjectId(projectId)) {
-                    bodyTemplateList.add(new BodyTemplateItem(t.getId(), t.getName(), t.getContent(), t.getProjectId()));
+                    bodyTemplateList.add(new BodyTemplateItem(t.getId(), t.getName(), t.getContent(), t.getDescription(), t.getProjectId()));
                 }
             } catch (ServiceException e) {
                 showError("Failed to load templates: " + e.getMessage());
@@ -109,6 +117,7 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
     private void handleAddBodyTemplate() {
         String name = bodyTemplateNameField.getText().trim();
         String content = bodyTemplateContentArea.getText().trim();
+        String description = bodyTemplateDescriptionArea.getText().trim();
         if (name.isEmpty() || content.isEmpty()) {
             showError("Name and Content are required.");
             return;
@@ -122,7 +131,7 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
         }
 
         try {
-            BodyTemplate t = new BodyTemplate(name, content, ProjectContext.getCurrentProjectId());
+            BodyTemplate t = new BodyTemplate(name, content, description, ProjectContext.getCurrentProjectId());
             bodyTemplateService.createBodyTemplate(t);
             loadBodyTemplates();
             clearFields();
@@ -150,7 +159,7 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
         }
 
         try {
-            BodyTemplate t = new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), content, ProjectContext.getCurrentProjectId());
+            BodyTemplate t = new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), content, bodyTemplateDescriptionArea.getText().trim(), ProjectContext.getCurrentProjectId());
             bodyTemplateService.updateBodyTemplate(t);
             loadBodyTemplates();
             clearFields();
@@ -225,6 +234,7 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
     private void clearFields() {
         bodyTemplateNameField.clear();
         bodyTemplateContentArea.clear();
+        bodyTemplateDescriptionArea.clear();
         bodyFormatComboBox.getSelectionModel().selectFirst();
         bodyTemplateTable.getSelectionModel().clearSelection();
     }
@@ -318,12 +328,14 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
         private final int id;
         private final javafx.beans.property.SimpleStringProperty name;
         private final javafx.beans.property.SimpleStringProperty content;
+        private final javafx.beans.property.SimpleStringProperty description;
         private final Integer projectId;
 
-        public BodyTemplateItem(int id, String name, String content, Integer projectId) {
+        public BodyTemplateItem(int id, String name, String content, String description, Integer projectId) {
             this.id = id;
             this.name = new javafx.beans.property.SimpleStringProperty(name);
             this.content = new javafx.beans.property.SimpleStringProperty(content);
+            this.description = new javafx.beans.property.SimpleStringProperty(description);
             this.projectId = projectId;
         }
 
@@ -332,6 +344,8 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
         public javafx.beans.property.StringProperty nameProperty() { return name; }
         public String getContent() { return content.get(); }
         public javafx.beans.property.StringProperty contentProperty() { return content; }
+        public String getDescription() { return description.get(); }
+        public javafx.beans.property.StringProperty descriptionProperty() { return description; }
         public Integer getProjectId() { return projectId; }
     }
 } 

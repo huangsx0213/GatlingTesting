@@ -16,7 +16,9 @@ import java.util.ResourceBundle;
 
 public class GroovyVariableViewModel implements Initializable {
 
-    @FXML private ListView<GroovyScriptEngine> variablesListView;
+    @FXML private TableView<GroovyScriptEngine> variablesTableView;
+    @FXML private TableColumn<GroovyScriptEngine, String> nameColumn;
+    @FXML private TableColumn<GroovyScriptEngine, String> descriptionColumn;
     @FXML private TextField nameField;
     @FXML private TextField formatField;
     @FXML private TextField descriptionField;
@@ -37,6 +39,9 @@ public class GroovyVariableViewModel implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        variablesTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        nameColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getName()));
+        descriptionColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getDescription()));
         loadVariables();
     }
 
@@ -47,17 +52,9 @@ public class GroovyVariableViewModel implements Initializable {
     public void loadVariables() {
         try {
             variables.setAll(variableService.loadVariables());
-            variablesListView.setItems(variables);
+            variablesTableView.setItems(variables);
 
-            variablesListView.setCellFactory(lv -> new ListCell<>() {
-                @Override
-                protected void updateItem(GroovyScriptEngine item, boolean empty) {
-                    super.updateItem(item, empty);
-                    setText(empty ? null : item.getName());
-                }
-            });
-
-            variablesListView.getSelectionModel().selectedItemProperty().addListener(
+            variablesTableView.getSelectionModel().selectedItemProperty().addListener(
                 (obs, oldVal, newVal) -> {
                     if (newVal != null) {
                         selectVariable(newVal);
@@ -66,7 +63,7 @@ public class GroovyVariableViewModel implements Initializable {
             );
 
             if (!variables.isEmpty()) {
-                variablesListView.getSelectionModel().selectFirst();
+                variablesTableView.getSelectionModel().selectFirst();
             } else {
                 setDetailPaneDisabled(false);
             }
@@ -114,10 +111,10 @@ public class GroovyVariableViewModel implements Initializable {
             VariableGenerator.getInstance().reloadCustomVariables();
             loadVariables();
             // Select the newly added variable
-            variablesListView.getItems().stream()
+            variablesTableView.getItems().stream()
                 .filter(v -> v.getName().equals(name))
                 .findFirst()
-                .ifPresent(v -> variablesListView.getSelectionModel().select(v));
+                .ifPresent(v -> variablesTableView.getSelectionModel().select(v));
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Variable '" + name + "' added successfully.", MainViewModel.StatusType.SUCCESS);
             }
@@ -162,10 +159,10 @@ public class GroovyVariableViewModel implements Initializable {
             VariableGenerator.getInstance().reloadCustomVariables();
             loadVariables();
             // Select the updated variable
-            variablesListView.getItems().stream()
+            variablesTableView.getItems().stream()
                 .filter(v -> v.getName().equals(name))
                 .findFirst()
-                .ifPresent(v -> variablesListView.getSelectionModel().select(v));
+                .ifPresent(v -> variablesTableView.getSelectionModel().select(v));
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Variable '" + name + "' saved successfully.", MainViewModel.StatusType.SUCCESS);
             }
@@ -210,7 +207,7 @@ public class GroovyVariableViewModel implements Initializable {
         formatField.clear();
         descriptionField.clear();
         scriptArea.clear();
-        variablesListView.getSelectionModel().clearSelection();
+        variablesTableView.getSelectionModel().clearSelection();
         setDetailPaneDisabled(false);
         currentlyEditing = null;
         if (mainViewModel != null) {
@@ -246,7 +243,7 @@ public class GroovyVariableViewModel implements Initializable {
         try {
             variables.setAll(variableService.loadVariables());
             if (!variables.isEmpty()) {
-                variablesListView.getSelectionModel().selectFirst();
+                variablesTableView.getSelectionModel().selectFirst();
             } else {
                 clearAndEnableDetailPane();
             }

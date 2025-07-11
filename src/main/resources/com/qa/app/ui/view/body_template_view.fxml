@@ -8,30 +8,35 @@
     <children>
         <VBox spacing="15.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" VBox.vgrow="ALWAYS">
             <padding>
-                <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
+                <Insets top="5.0" right="5.0" bottom="5.0" left="5.0"/>
             </padding>
+            <!-- Header -->
             <Label text="Body Template Management" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
             <Separator />
-            <GridPane hgap="15.0" vgap="10.0" VBox.vgrow="NEVER" maxWidth="Infinity">
-                <columnConstraints>
-                    <ColumnConstraints prefWidth="120.0"/>
-                    <ColumnConstraints prefWidth="500.0" hgrow="ALWAYS"/>
-                </columnConstraints>
-                <rowConstraints>
-                    <RowConstraints minHeight="40.0"/>
-                    <RowConstraints minHeight="40.0"/>
-                    <RowConstraints minHeight="120.0"/>
-                </rowConstraints>
+
+            <!-- Main Content -->
+            <SplitPane orientation="HORIZONTAL" dividerPositions="0.25" VBox.vgrow="ALWAYS">
+                <items>
+                <!-- Template List Section -->
+                <VBox spacing="15.0" minWidth="0.0">
+                    <padding><Insets top="5.0" right="5.0" bottom="5.0" left="5.0"/></padding>
+                    <Label text="Template List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+                    <TableView fx:id="bodyTemplateTable" VBox.vgrow="ALWAYS" styleClass="table-view">
+                        <columns>
+                            <TableColumn fx:id="bodyTemplateNameColumn" text="Name"/>
+                            <TableColumn fx:id="bodyTemplateDescriptionColumn" text="Description"/>
+                            <TableColumn fx:id="bodyTemplateContentColumn" visible="false" prefWidth="0" text="Body Content"/>
+                        </columns>
+                    </TableView>
+                </VBox>
+
+                <!-- Template Details Section -->
+                <VBox spacing="15.0" VBox.vgrow="ALWAYS">
+                    <padding><Insets top="5.0" bottom="5.0" left="5.0" right="5.0"/></padding>
+                    <Label text="Template Details" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+                    <Separator />
+                    <HBox alignment="CENTER_LEFT" spacing="15.0">
                 <children>
-                    <Label text="Template Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                    <TextField fx:id="bodyTemplateNameField" promptText="Template Name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
-                    <Label text="Body Format:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                    <ComboBox fx:id="bodyFormatComboBox" promptText="Select Format" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
-                    <Label text="Body Content:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                    <TextArea fx:id="bodyTemplateContentArea" promptText="Body Template Content" prefRowCount="3" GridPane.rowIndex="2" GridPane.columnIndex="1" VBox.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"/>
-                </children>
-            </GridPane>
-            <HBox alignment="CENTER_LEFT" spacing="10.0">
                 <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddBodyTemplate" text="Add Template" />
                 <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateBodyTemplate" text="Update Template" />
                 <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteBodyTemplate" text="Delete Template" />
@@ -39,14 +44,27 @@
                 <Separator orientation="VERTICAL"/>
                 <Button fx:id="formatButton" text="Format" onAction="#handleFormatTemplate"/>
                 <Button fx:id="validateButton" text="Validate" onAction="#handleValidateTemplate"/>
+                        </children>
             </HBox>
-            <Label text="Template List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
-            <TableView fx:id="bodyTemplateTable" prefHeight="0" VBox.vgrow="ALWAYS" styleClass="table-view">
-                <columns>
-                    <TableColumn fx:id="bodyTemplateNameColumn" prefWidth="200.0" text="Template Name"/>
-                    <TableColumn fx:id="bodyTemplateContentColumn" prefWidth="800.0" text="Body Content"/>
-                </columns>
-            </TableView>
+                    <GridPane hgap="15.0" vgap="10.0" maxWidth="Infinity">
+                        <columnConstraints>
+                            <ColumnConstraints prefWidth="120.0"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+                        <children>
+                            <Label text="Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <TextField fx:id="bodyTemplateNameField" promptText="Template Name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                            <Label text="Description:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                            <TextArea fx:id="bodyTemplateDescriptionArea" promptText="Template Description" prefRowCount="3" GridPane.rowIndex="1" GridPane.columnIndex="1" VBox.vgrow="NEVER" GridPane.hgrow="ALWAYS"/>
+                            <Label text="Body Format:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                            <ComboBox fx:id="bodyFormatComboBox" promptText="Select Format" GridPane.rowIndex="2" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                        </children>
+                    </GridPane>
+                    <Label text="Body Content:"/>
+                    <TextArea fx:id="bodyTemplateContentArea" promptText="Body Template Content" prefRowCount="3" VBox.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"/>
+                </VBox>
+                </items>
+            </SplitPane>
         </VBox>
     </children>
 </AnchorPane> 

@@ -5,6 +5,7 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.control.TableView;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -69,6 +70,7 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
             return new javafx.beans.property.SimpleStringProperty(envName);
         });
         endpointTable.setItems(endpointList);
+        endpointTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         endpointTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
                 populateFields(newSelection);

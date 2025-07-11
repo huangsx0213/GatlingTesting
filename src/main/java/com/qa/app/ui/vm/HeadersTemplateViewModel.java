@@ -8,6 +8,7 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.TableView;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -31,6 +32,8 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
     @FXML
     private TextArea headersTemplateContentArea;
     @FXML
+    private TextArea headersTemplateDescriptionArea;
+    @FXML
     private Button addButton;
     @FXML
     private Button updateButton;
@@ -47,6 +50,8 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
     @FXML
     private TableColumn<HeadersTemplateItem, String> headersTemplateNameColumn;
     @FXML
+    private TableColumn<HeadersTemplateItem, String> headersTemplateDescriptionColumn;
+    @FXML
     private TableColumn<HeadersTemplateItem, String> headersTemplateContentColumn;
 
     private final ObservableList<HeadersTemplateItem> headersTemplateList = FXCollections.observableArrayList();
@@ -56,12 +61,15 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         headersTemplateNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
+        headersTemplateDescriptionColumn.setCellValueFactory(cellData -> cellData.getValue().descriptionProperty());
         headersTemplateContentColumn.setCellValueFactory(cellData -> cellData.getValue().contentProperty());
         headersTemplateTable.setItems(headersTemplateList);
+        headersTemplateTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         headersTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
                 headersTemplateContentArea.setText(newSelection.getContent());
                 headersTemplateNameField.setText(newSelection.getName());
+                headersTemplateDescriptionArea.setText(newSelection.getDescription());
             }
         });
         loadTemplates();
@@ -133,7 +141,7 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
         if (projectId != null) {
             try {
                 for (HeadersTemplate t : headersTemplateService.getHeadersTemplatesByProjectId(projectId)) {
-                    headersTemplateList.add(new HeadersTemplateItem(t.getId(), t.getName(), t.getContent()));
+                    headersTemplateList.add(new HeadersTemplateItem(t.getId(), t.getName(), t.getContent(), t.getDescription()));
                 }
             } catch (ServiceException e) {
                 // add error hint
@@ -145,6 +153,7 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
     private void handleAddHeadersTemplate() {
         String name = headersTemplateNameField.getText().trim();
         String content = headersTemplateContentArea.getText().trim();
+        String description = headersTemplateDescriptionArea.getText().trim();
         if (name.isEmpty() || content.isEmpty()) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: Name and Content are required.", MainViewModel.StatusType.ERROR);
@@ -164,8 +173,7 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
         }
 
         try {
-            HeadersTemplate t = new HeadersTemplate(name, content);
-            t.setProjectId(ProjectContext.getCurrentProjectId());
+            HeadersTemplate t = new HeadersTemplate(name, content, description, ProjectContext.getCurrentProjectId());
             headersTemplateService.addHeadersTemplate(t);
             loadTemplates();
             clearFields();
@@ -202,7 +210,7 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
         }
 
         try {
-            HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), updatedContent, ProjectContext.getCurrentProjectId());
+            HeadersTemplate t = new HeadersTemplate(selected.getId(), headersTemplateNameField.getText().trim(), updatedContent, headersTemplateDescriptionArea.getText().trim(), ProjectContext.getCurrentProjectId());
             headersTemplateService.updateHeadersTemplate(t);
             loadTemplates();
             clearFields();
@@ -316,6 +324,7 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
     private void clearFields() {
         headersTemplateNameField.clear();
         headersTemplateContentArea.clear();
+        headersTemplateDescriptionArea.clear();
         headersTemplateTable.getSelectionModel().clearSelection();
     }
 
@@ -331,17 +340,20 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
         private final int id;
         private final javafx.beans.property.SimpleStringProperty name;
         private final javafx.beans.property.SimpleStringProperty content;
+        private final javafx.beans.property.SimpleStringProperty description;
 
-        public HeadersTemplateItem(int id, String name, String content) {
+        public HeadersTemplateItem(int id, String name, String content, String description) {
             this.id = id;
             this.name = new javafx.beans.property.SimpleStringProperty(name);
             this.content = new javafx.beans.property.SimpleStringProperty(content);
+            this.description = new javafx.beans.property.SimpleStringProperty(description);
         }
 
-        public HeadersTemplateItem(String name, String content) {
-            this.id = 0; // Or handle as needed
+        public HeadersTemplateItem(String name, String content, String description) {
+            this.id = 0;
             this.name = new javafx.beans.property.SimpleStringProperty(name);
             this.content = new javafx.beans.property.SimpleStringProperty(content);
+            this.description = new javafx.beans.property.SimpleStringProperty(description);
         }
 
         public int getId() { return id; }
@@ -351,5 +363,8 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
         public String getContent() { return content.get(); }
         public void setContent(String c) { content.set(c); }
         public javafx.beans.property.StringProperty contentProperty() { return content; }
+        public String getDescription() { return description.get(); }
+        public void setDescription(String d) { description.set(d); }
+        public javafx.beans.property.StringProperty descriptionProperty() { return description; }
     }
 } 

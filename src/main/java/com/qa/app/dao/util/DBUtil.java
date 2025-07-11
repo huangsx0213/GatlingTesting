@@ -2,6 +2,8 @@ package com.qa.app.dao.util;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -70,6 +72,7 @@ public class DBUtil {
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + " name TEXT NOT NULL UNIQUE,"
                     + " content TEXT NOT NULL,"
+                    + " description TEXT,"
                     + " project_id INTEGER,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
@@ -114,6 +117,7 @@ public class DBUtil {
                     + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
                     + "name TEXT NOT NULL, "
                     + "value TEXT, "
+                    + "description TEXT, "
                     + "environment_id INTEGER, "
                     + "project_id INTEGER, "
                     + "FOREIGN KEY (environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
@@ -164,6 +168,11 @@ public class DBUtil {
                     " FOREIGN KEY(scenario_id) REFERENCES scenario(id) ON DELETE CASCADE ON UPDATE CASCADE" +
                     ");";
             stmt.execute(schedSql);
+
+            // Add description columns if they don't exist (for migration)
+            addColumnIfNotExists(conn, "body_templates", "description", "TEXT");
+            addColumnIfNotExists(conn, "headers_templates", "description", "TEXT");
+            addColumnIfNotExists(conn, "groovy_variables", "description", "TEXT");
             
             System.out.println("Database schema initialized. All tables are up to date.");
         } catch (SQLException e) {
@@ -171,6 +180,18 @@ public class DBUtil {
         }
     }
 
+
+    private static void addColumnIfNotExists(Connection conn, String tableName, String columnName, String columnDefinition) throws SQLException {
+        DatabaseMetaData md = conn.getMetaData();
+        try (ResultSet rs = md.getColumns(null, null, tableName, columnName)) {
+            if (!rs.next()) {
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.execute("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDefinition);
+                    System.out.println("Added missing column '" + columnName + "' to table '" + tableName + "'.");
+                }
+            }
+        }
+    }
 
     // Main method to initialize the database when the application starts or for testing
     public static void main(String[] args) {

@@ -9,6 +9,7 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.control.TableView;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -34,6 +35,7 @@ public class ProjectViewModel implements Initializable {
         projectNameColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getName()));
         projectDescriptionColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getDescription()));
         projectTable.setItems(projectList);
+        projectTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         loadProjects();
         projectTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> onTableSelectionChanged(newSel));
         addButton.setOnAction(e -> handleAddProject());

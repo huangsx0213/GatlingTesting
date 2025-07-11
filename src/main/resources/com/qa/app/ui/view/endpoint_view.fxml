@@ -8,10 +8,42 @@
     <children>
         <VBox spacing="15.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" VBox.vgrow="ALWAYS">
             <padding>
-                <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
+                <Insets top="5.0" right="5.0" bottom="5.0" left="5.0"/>
             </padding>
+            <!-- Header -->
             <Label text="Endpoint Management" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
             <Separator />
+
+            <!-- Main Content -->
+            <SplitPane orientation="HORIZONTAL" dividerPositions="0.25" VBox.vgrow="ALWAYS">
+                <items>
+                <!-- Endpoint List Section -->
+                <VBox spacing="10.0" minWidth="0.0">
+                    <padding><Insets top="5.0" bottom="5.0" left="5.0" right="5.0"/></padding>
+                    <Label text="Endpoint List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+                    <TableView fx:id="endpointTable" VBox.vgrow="ALWAYS" styleClass="table-view">
+                        <columns>
+                            <TableColumn fx:id="environmentColumn" prefWidth="180.0" text="Environment"/>
+                            <TableColumn fx:id="endpointNameColumn" prefWidth="200.0" text="Endpoint"/>
+                   <TableColumn fx:id="methodColumn" prefWidth="120.0" text="Method"/>
+                            <TableColumn fx:id="urlColumn" visible="false" prefWidth="0" text="URL"/>
+                        </columns>
+                    </TableView>
+                </VBox>
+
+                <!-- Endpoint Details Section -->
+                <VBox spacing="15.0" VBox.vgrow="ALWAYS">
+                    <padding><Insets top="5.0" bottom="5.0" left="5.0" right="5.0"/></padding>
+                    <Label text="Endpoint Details" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+                    <Separator />
+                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <children>
+                            <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddEndpoint" text="Add Endpoint" />
+                            <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateEndpoint" text="Update Endpoint" />
+                            <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteEndpoint" text="Delete Endpoint" />
+                            <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearEndpointForm" text="Clear Form" />
+                        </children>
+                    </HBox>
             <GridPane hgap="15.0" vgap="10.0" VBox.vgrow="NEVER" maxWidth="Infinity">
                 <columnConstraints>
                     <ColumnConstraints prefWidth="120.0"/>
@@ -24,31 +56,19 @@
                     <RowConstraints minHeight="40.0"/>
                 </rowConstraints>
                 <children>
-                    <Label text="Endpoint Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                    <TextField fx:id="endpointNameField" promptText="Endpoint Name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
-                    <Label text="Environment:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                    <ComboBox fx:id="environmentComboBox" promptText="Select Environment" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                            <Label text="Environment:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <ComboBox fx:id="environmentComboBox" promptText="Select Environment" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                            <Label text="Endpoint:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                            <TextField fx:id="endpointNameField" promptText="Endpoint Name" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
                     <Label text="HTTP Method:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
                     <ComboBox fx:id="methodComboBox" promptText="Select Method" GridPane.rowIndex="2" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
                     <Label text="URL:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
                     <TextField fx:id="urlField" promptText="Endpoint URL" GridPane.rowIndex="3" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
                 </children>
             </GridPane>
-            <HBox alignment="CENTER_LEFT" spacing="10.0">
-                <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddEndpoint" text="Add Endpoint" />
-                <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateEndpoint" text="Update Endpoint" />
-                <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteEndpoint" text="Delete Endpoint" />
-                <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearEndpointForm" text="Clear Form" />
-            </HBox>
-            <Label text="Endpoint List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
-            <TableView fx:id="endpointTable" prefHeight="0" VBox.vgrow="ALWAYS" styleClass="table-view">
-                <columns>
-                    <TableColumn fx:id="environmentColumn" prefWidth="180.0" text="Environment"/>
-                    <TableColumn fx:id="endpointNameColumn" prefWidth="200.0" text="Endpoint Name"/>
-                    <TableColumn fx:id="methodColumn" prefWidth="120.0" text="Method"/>
-                    <TableColumn fx:id="urlColumn" prefWidth="600.0" text="URL"/>
-                </columns>
-            </TableView>
+                </VBox>
+                </items>
+            </SplitPane>
         </VBox>
     </children>
 </AnchorPane> 

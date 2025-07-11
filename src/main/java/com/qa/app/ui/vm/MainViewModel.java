@@ -12,6 +12,8 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 
 import java.io.IOException;
 import java.net.URL;
@@ -191,10 +193,8 @@ public class MainViewModel implements Initializable {
                 // Gatling tab is not closable and always in the first position
                 if (tabName.equals("Gatling Test Management")) {
                     tab.setClosable(false);
-                    if (contentTabPane.getTabs().indexOf(tab) != 0) {
-                        contentTabPane.getTabs().remove(tab);
-                        contentTabPane.getTabs().add(0, tab);
-                    }
+                    // Keep current position; no forced move to first
+                    attachContextMenu(tab);
                 }
                 return;
             }
@@ -238,14 +238,13 @@ public class MainViewModel implements Initializable {
 
                 Tab newTab = new Tab(tabName);
                 newTab.setContent(contentNode);
-                // Gatling tab is not closable and always in the first position
                 if (tabName.equals("Gatling Test Management")) {
                     newTab.setClosable(false);
-                    contentTabPane.getTabs().add(0, newTab);
                 } else {
                     newTab.setClosable(true);
-                    contentTabPane.getTabs().add(newTab);
                 }
+                contentTabPane.getTabs().add(newTab);
+                attachContextMenu(newTab);
                 newTab.setOnClosed(event -> loadedTabs.remove(tabName)); // Remove from cache on close
 
                 contentTabPane.getSelectionModel().select(newTab);
@@ -369,5 +368,32 @@ public class MainViewModel implements Initializable {
         if (instance != null) {
             instance.updateStatus(message, type);
         }
+    }
+
+    // Adds context menu to a tab with Close and Close Left Tabs actions
+    private void attachContextMenu(Tab tab) {
+        ContextMenu contextMenu = new ContextMenu();
+
+        // Close Right Tabs
+        MenuItem closeRightItem = new MenuItem("Close Right Tabs");
+        closeRightItem.setOnAction(e -> {
+            int idx = contentTabPane.getTabs().indexOf(tab);
+            // iterate from rightmost to one after current
+            for (int i = contentTabPane.getTabs().size() - 1; i > idx; i--) {
+                Tab t = contentTabPane.getTabs().get(i);
+                if (t.isClosable()) {
+                    contentTabPane.getTabs().remove(t);
+                }
+            }
+        });
+
+        // Close All Tabs (except non-closable)
+        MenuItem closeAllItem = new MenuItem("Close All Tabs");
+        closeAllItem.setOnAction(e -> {
+            contentTabPane.getTabs().removeIf(t -> t.isClosable());
+        });
+
+        contextMenu.getItems().addAll(closeRightItem, closeAllItem);
+        tab.setContextMenu(contextMenu);
     }
 }

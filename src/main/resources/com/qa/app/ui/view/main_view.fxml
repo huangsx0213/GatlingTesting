@@ -47,9 +47,6 @@
                     <children>
                         <ListView fx:id="navigationList" prefWidth="150.0" VBox.vgrow="ALWAYS" styleClass="navigation-list" />
                     </children>
-                    <padding>
-                        <Insets left="5.0" right="5.0" />
-                    </padding>
                 </VBox>
                 <AnchorPane prefHeight="200.0" prefWidth="800.0">
                     <children>

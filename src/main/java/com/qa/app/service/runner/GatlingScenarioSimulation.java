@@ -274,13 +274,33 @@ public class GatlingScenarioSimulation extends Simulation {
     }
 
     private Map<String,String> parseHeaders(String str){
-        if(str==null||str.isBlank()) return Collections.emptyMap();
-        try { return new ObjectMapper().readValue(str, new TypeReference<Map<String,String>>(){});}catch(Exception e){/*ignore*/}
-        Map<String,String> map=new HashMap<>();
-        for(String line:str.split("\\r?\\n")){
-            if(line.contains(":")){
-                String[] p=line.split(":",2);
-                map.put(p[0].trim(),p[1].trim());
+        // Return empty map when input is null or blank
+        if (str == null || str.isBlank()) {
+            return Collections.emptyMap();
+        }
+
+        // Primary strategy: attempt to parse the entire string as JSON first
+        try {
+            Map<String, String> headers = new ObjectMapper().readValue(str, new TypeReference<Map<String, String>>() {});
+            // Remove any leading/trailing single or double quotes around each value
+            headers.replaceAll((k, v) -> v == null ? null : v.replaceAll("^([\"'])(.*)\\1$", "$2"));
+            return headers;
+        } catch (Exception ignore) {
+            // Ignore and fall back to line-by-line parsing
+        }
+
+        // Fallback: parse "Key: Value" pairs line-by-line
+        Map<String, String> map = new HashMap<>();
+        for (String line : str.split("\\r?\\n")) {
+            if (line.contains(":")) {
+                String[] p = line.split(":", 2);
+                if (p.length == 2) {
+                    String key = p[0].trim();
+                    String value = p[1].trim();
+                    // Strip surrounding quotes if present
+                    value = value.replaceAll("^([\"'])(.*)\\1$", "$2");
+                    map.put(key, value);
+                }
             }
         }
         return map;
