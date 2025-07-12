@@ -333,12 +333,16 @@ public class GatlingTestReportViewModel implements Initializable {
 
         // Custom cell to embed expand/collapse buttons on ROOT row
         nameColumn.setCellFactory(col -> new TreeTableCell<Object, String>() {
-            private final Button expandButton = new Button("Expand All");
-            private final Button collapseButton = new Button("Collapse All");
+            private final Button expandButton = new Button("+");
+            private final Button collapseButton = new Button("-");
             private final Label rootLabel = new Label("Aggregated Results");
             private final HBox graphic = new HBox(10, rootLabel, expandButton, collapseButton);
 
             {
+                expandButton.setPrefWidth(30);
+                expandButton.setPrefHeight(20);
+                collapseButton.setPrefWidth(30);
+                collapseButton.setPrefHeight(20);
                 graphic.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
                 expandButton.setOnAction(e -> handleExpandAll());
                 collapseButton.setOnAction(e -> handleCollapseAll());
