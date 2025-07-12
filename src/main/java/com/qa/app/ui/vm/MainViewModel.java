@@ -178,6 +178,7 @@ public class MainViewModel implements Initializable {
                     ((EndpointViewModel) controller).refresh();
                 } else if (controller instanceof ProjectViewModel) {
                     ((ProjectViewModel) controller).setMainViewModel(this);
+                    ((ProjectViewModel) controller).refresh();
                 } else if (controller instanceof ApplicationPropertiesViewModel) {
                     ((ApplicationPropertiesViewModel) controller).setMainViewModel(this);
                     ((ApplicationPropertiesViewModel) controller).loadProperties();

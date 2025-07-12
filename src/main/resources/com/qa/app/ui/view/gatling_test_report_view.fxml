@@ -21,6 +21,7 @@
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.web.WebView?>
+<?import javafx.scene.layout.BorderPane?>
 
 <AnchorPane prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.qa.app.ui.vm.GatlingTestReportViewModel">
    <children>
@@ -75,9 +76,9 @@
                                                 <tabs>
                                                    <Tab text="Request">
                                                       <content>
-                                                         <AnchorPane>
-                                                            <children>
-                                                               <VBox AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                                         <BorderPane>
+                                                            <top>
+                                                               <VBox>
                                                                   <children>
                                                                      <TitledPane animated="false" text="URL &amp; Method">
                                                                         <content>
@@ -104,22 +105,27 @@
                                                                            <TextArea fx:id="requestHeadersTextArea" editable="false" prefHeight="150.0" />
                                                                         </content>
                                                                      </TitledPane>
-                                                                     <TitledPane animated="false" text="Body" VBox.vgrow="ALWAYS">
-                                                                        <content>
-                                                                           <TextArea fx:id="requestBodyTextArea" editable="false" prefHeight="330.0" />
-                                                                        </content>
-                                                                     </TitledPane>
                                                                   </children>
                                                                </VBox>
-                                                            </children>
-                                                         </AnchorPane>
+                                                            </top>
+                                                            <center>
+                                                                <BorderPane>
+                                                                   <top>
+                                                                      <Label text="Request Body" style="-fx-font-weight: bold; -fx-padding: 5 5 5 5;" />
+                                                                   </top>
+                                                                   <center>
+                                                                      <TextArea fx:id="requestBodyTextArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" />
+                                                                   </center>
+                                                                </BorderPane>
+                                                            </center>
+                                                         </BorderPane>
                                                       </content>
                                                    </Tab>
                                                    <Tab text="Response">
                                                       <content>
-                                                         <AnchorPane>
-                                                            <children>
-                                                               <VBox AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" >
+                                                         <BorderPane>
+                                                            <top>
+                                                               <VBox>
                                                                   <children>
                                                                      <TitledPane animated="false" text="Status &amp; Timings">
                                                                         <content>
@@ -149,15 +155,20 @@
                                                                            <TextArea fx:id="responseHeadersTextArea" editable="false" prefHeight="150.0" />
                                                                         </content>
                                                                      </TitledPane>
-                                                                     <TitledPane animated="false" text="Body Sample" VBox.vgrow="ALWAYS">
-                                                                        <content>
-                                                                           <TextArea fx:id="responseBodyTextArea" editable="false" prefHeight="300.0" />
-                                                                        </content>
-                                                                     </TitledPane>
                                                                   </children>
                                                                </VBox>
-                                                            </children>
-                                                         </AnchorPane>
+                                                            </top>
+                                                            <center>
+                                                                <BorderPane>
+                                                                   <top>
+                                                                      <Label text="Response Body" style="-fx-font-weight: bold; -fx-padding: 5 5 5 5;" />
+                                                                   </top>
+                                                                   <center>
+                                                                      <TextArea fx:id="responseBodyTextArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" />
+                                                                   </center>
+                                                                </BorderPane>
+                                                            </center>
+                                                         </BorderPane>
                                                       </content>
                                                    </Tab>
                                                    <Tab fx:id="checksTab" text="Checks">

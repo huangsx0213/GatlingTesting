@@ -18,6 +18,8 @@ public class ProjectViewModel implements Initializable {
     @FXML private TextField projectNameField;
     @FXML private TextArea projectDescriptionField;
     @FXML private Button addButton;
+    @FXML
+    private Button duplicateButton;
     @FXML private Button updateButton;
     @FXML private Button deleteButton;
     @FXML private Button clearButton;
@@ -39,6 +41,7 @@ public class ProjectViewModel implements Initializable {
         loadProjects();
         projectTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> onTableSelectionChanged(newSel));
         addButton.setOnAction(e -> handleAddProject());
+        duplicateButton.setOnAction(e -> handleDuplicateProject());
         updateButton.setOnAction(e -> handleUpdateProject());
         deleteButton.setOnAction(e -> handleDeleteProject());
         clearButton.setOnAction(e -> handleClearForm());
@@ -48,6 +51,9 @@ public class ProjectViewModel implements Initializable {
         try {
             projectList.clear();
             projectList.addAll(projectService.getAllProjects());
+            if (!projectList.isEmpty()) {
+                projectTable.getSelectionModel().selectFirst();
+            }
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to load projects: " + e.getMessage(), MainViewModel.StatusType.ERROR);
@@ -62,6 +68,29 @@ public class ProjectViewModel implements Initializable {
             projectDescriptionField.setText(project.getDescription());
         } else {
             clearForm();
+        }
+    }
+
+    private void handleDuplicateProject() {
+        if (selectedProject == null) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Please select a project to duplicate.", MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
+        String newName = selectedProject.getName() + " (copy)";
+        // A check for project name uniqueness should be added if necessary.
+
+        try {
+            projectService.addProject(new Project(newName, selectedProject.getDescription()));
+            loadProjects();
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Project duplicated and added successfully.", MainViewModel.StatusType.SUCCESS);
+            }
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to duplicate project: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
         }
     }
 
@@ -149,6 +178,8 @@ public class ProjectViewModel implements Initializable {
 
     public void refresh() {
         loadProjects();
-        clearForm();
+        if (!projectList.isEmpty()) {
+            projectTable.getSelectionModel().selectFirst();
+        }
     }
 } 

@@ -25,6 +25,7 @@ public class GroovyVariableViewModel implements Initializable {
     @FXML private TextArea scriptArea;
     @FXML private Button saveButton;
     @FXML private Button deleteButton;
+    @FXML private Button duplicateButton;
     @FXML private Button addButton;
 
     private final IVariableService variableService;
@@ -65,7 +66,7 @@ public class GroovyVariableViewModel implements Initializable {
             if (!variables.isEmpty()) {
                 variablesTableView.getSelectionModel().selectFirst();
             } else {
-                setDetailPaneDisabled(false);
+                setDetailPaneDisabled(true); // No items, so disable details
             }
         } catch (ServiceException e) {
             variables.clear();
@@ -82,6 +83,45 @@ public class GroovyVariableViewModel implements Initializable {
         descriptionField.setText(variable.getDescription());
         scriptArea.setText(variable.getGroovyScript());
         setDetailPaneDisabled(false);
+    }
+
+    @FXML
+    private void handleDuplicate() {
+        if (currentlyEditing == null) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("No variable selected to duplicate.", MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
+
+        String newName = currentlyEditing.getName() + " (copy)";
+        boolean nameExists = true;
+        while (nameExists) {
+            nameExists = false;
+            for (GroovyScriptEngine v : variables) {
+                if (v.getName().equals(newName)) {
+                    nameExists = true;
+                    break;
+                }
+            }
+            if (nameExists) {
+                newName += " (copy)";
+            }
+        }
+
+        GroovyScriptEngine newVar = new GroovyScriptEngine(newName, currentlyEditing.getFormat(), currentlyEditing.getDescription(), currentlyEditing.getGroovyScript());
+        try {
+            variableService.addVariable(newVar);
+            VariableGenerator.getInstance().reloadCustomVariables();
+            loadVariables();
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Variable '" + newName + "' duplicated and added successfully.", MainViewModel.StatusType.SUCCESS);
+            }
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Error duplicating variable: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+        }
     }
 
     @FXML
@@ -240,17 +280,6 @@ public class GroovyVariableViewModel implements Initializable {
     }
     
     public void refresh() {
-        try {
-            variables.setAll(variableService.loadVariables());
-            if (!variables.isEmpty()) {
-                variablesTableView.getSelectionModel().selectFirst();
-            } else {
-                clearAndEnableDetailPane();
-            }
-        } catch (ServiceException e) {
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus("Error loading variables: " + e.getMessage(), MainViewModel.StatusType.ERROR);
-            }
-        }
+        loadVariables();
     }
 }

@@ -36,10 +36,11 @@
                     <Separator />
                     <HBox alignment="CENTER_LEFT" spacing="10.0">
                         <children>
-                            <Button fx:id="addButton" mnemonicParsing="false" text="Add Project" />
-                            <Button fx:id="updateButton" mnemonicParsing="false" text="Update Project" />
-                            <Button fx:id="deleteButton" mnemonicParsing="false" text="Delete Project" />
-                            <Button fx:id="clearButton" mnemonicParsing="false" text="Clear Form" />
+                            <Button fx:id="addButton" mnemonicParsing="false" text="Add" />
+                            <Button fx:id="updateButton" mnemonicParsing="false" text="Update" />
+                            <Button fx:id="duplicateButton" mnemonicParsing="false" text="Duplicate" />
+                            <Button fx:id="deleteButton" mnemonicParsing="false" text="Delete" />
+                            <Button fx:id="clearButton" mnemonicParsing="false" text="Clear" />
                         </children>
                     </HBox>
             <GridPane hgap="15.0" vgap="10.0" VBox.vgrow="NEVER" maxWidth="Infinity">

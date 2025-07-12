@@ -24,7 +24,7 @@
                     <Label text="Variables List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
                     <TableView fx:id="variablesTableView" VBox.vgrow="ALWAYS" styleClass="table-view">
                         <columns>
-                            <TableColumn fx:id="nameColumn" text="Name" prefWidth="150.0" minWidth="100.0"/>
+                            <TableColumn fx:id="nameColumn" text="Name" prefWidth="100.0" minWidth="100.0"/>
                             <TableColumn fx:id="descriptionColumn" text="Description" />
                         </columns>
                     </TableView>
@@ -38,10 +38,11 @@
                     
                     <!-- Action Buttons -->
                     <HBox spacing="10.0" alignment="CENTER_LEFT">
-                        <Button fx:id="addButton" text="Add Variable" onAction="#handleAdd" mnemonicParsing="false" />
-                        <Button fx:id="saveButton" text="Save Variable" onAction="#handleSave" mnemonicParsing="false" />
-                        <Button fx:id="deleteButton" text="Delete Variable" onAction="#handleDelete" mnemonicParsing="false" />
-                        <Button fx:id="clearButton" text="Clear Form" onAction="#handleClear" mnemonicParsing="false" />
+                        <Button fx:id="addButton" text="Add" onAction="#handleAdd"/>
+                        <Button fx:id="saveButton" text="Update" onAction="#handleSave"/>
+                        <Button fx:id="duplicateButton" text="Duplicate" onAction="#handleDuplicate" />
+                        <Button fx:id="deleteButton" text="Delete" onAction="#handleDelete"/>
+                        <Button fx:id="clearButton" text="Clear" onAction="#handleClear"/>
                     </HBox>
                     
                     <!-- Form Fields -->

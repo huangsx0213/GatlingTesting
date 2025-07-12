@@ -36,10 +36,11 @@
                     <Separator />
                     <HBox alignment="CENTER_LEFT" spacing="10.0">
                         <children>
-                            <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddEnvironment" text="Add Environment" />
-                            <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateEnvironment" text="Update Environment" />
-                            <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteEnvironment" text="Delete Environment" />
-                            <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearEnvironmentForm" text="Clear Form" />
+                            <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddEnvironment" text="Add" />
+                            <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateEnvironment" text="Update" />
+                            <Button fx:id="duplicateButton" mnemonicParsing="false" onAction="#handleDuplicateEnvironment" text="Duplicate" />
+                            <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteEnvironment" text="Delete" />
+                            <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearEnvironmentForm" text="Clear" />
                         </children>
                     </HBox>
             <GridPane hgap="15.0" vgap="10.0" VBox.vgrow="NEVER" maxWidth="Infinity">

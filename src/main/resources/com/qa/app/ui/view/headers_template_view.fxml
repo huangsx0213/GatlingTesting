@@ -35,12 +35,13 @@
                     <padding><Insets top="5.0" bottom="5.0" left="5.0" right="5.0"/></padding>
                     <Label text="Template Details" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
                     <Separator />
-                    <HBox alignment="CENTER_LEFT" spacing="15.0">
+                    <HBox alignment="CENTER_LEFT" spacing="10.0">
                 <children>
-                <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddHeadersTemplate" text="Add Template" />
-                <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateHeadersTemplate" text="Update Template" />
-                <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteHeadersTemplate" text="Delete Template" />
-                <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearHeadersTemplateForm" text="Clear Form" />
+                <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddHeadersTemplate" text="Add" />
+                <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateHeadersTemplate" text="Update" />
+                <Button fx:id="duplicateButton" mnemonicParsing="false" onAction="#handleDuplicateTemplate" text="Duplicate" />
+                <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteHeadersTemplate" text="Delete" />
+                <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearHeadersTemplateForm" text="Clear" />
                 <Separator orientation="VERTICAL"/>
                 <Button fx:id="formatButton" text="Format" onAction="#handleFormatTemplate"/>
                 <Button fx:id="validateButton" text="Validate" onAction="#handleValidateTemplate"/>

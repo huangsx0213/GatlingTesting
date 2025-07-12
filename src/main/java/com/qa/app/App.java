@@ -29,6 +29,7 @@ public class App extends Application {
         primaryStage.setTitle("Gatling Testing System");
         primaryStage.setScene(new Scene(root, 1440, 900));
         primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
+        primaryStage.setMaximized(true);
         primaryStage.show();
     }
 

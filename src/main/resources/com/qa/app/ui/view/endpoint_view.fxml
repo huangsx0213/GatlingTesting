@@ -38,10 +38,11 @@
                     <Separator />
                     <HBox alignment="CENTER_LEFT" spacing="10.0">
                         <children>
-                            <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddEndpoint" text="Add Endpoint" />
-                            <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateEndpoint" text="Update Endpoint" />
-                            <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteEndpoint" text="Delete Endpoint" />
-                            <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearEndpointForm" text="Clear Form" />
+                            <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddEndpoint" text="Add" />
+                            <Button fx:id="updateButton" mnemonicParsing="false" onAction="#handleUpdateEndpoint" text="Update" />
+                            <Button fx:id="duplicateButton" mnemonicParsing="false" onAction="#handleDuplicateEndpoint" text="Duplicate" />
+                            <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteEndpoint" text="Delete" />
+                            <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearEndpointForm" text="Clear" />
                         </children>
                     </HBox>
             <GridPane hgap="15.0" vgap="10.0" VBox.vgrow="NEVER" maxWidth="Infinity">

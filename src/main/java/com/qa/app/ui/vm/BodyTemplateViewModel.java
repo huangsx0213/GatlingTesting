@@ -33,6 +33,8 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
     @FXML
     private Button addButton;
     @FXML
+    private Button duplicateButton;
+    @FXML
     private Button updateButton;
     @FXML
     private Button deleteButton;
@@ -110,6 +112,29 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
             } catch (ServiceException e) {
                 showError("Failed to load templates: " + e.getMessage());
             }
+        }
+        if (!bodyTemplateList.isEmpty()) {
+            bodyTemplateTable.getSelectionModel().selectFirst();
+        }
+    }
+
+    @FXML
+    private void handleDuplicateTemplate() {
+        BodyTemplateItem selected = bodyTemplateTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showError("Please select a template to duplicate."); // Assuming showError handles mainViewModel status
+            return;
+        }
+        String newName = selected.getName() + " (copy)";
+        // We should add a check for name uniqueness if required by business logic.
+
+        try {
+            BodyTemplate newTemplate = new BodyTemplate(newName, selected.getContent(), selected.getDescription(), ProjectContext.getCurrentProjectId());
+            bodyTemplateService.createBodyTemplate(newTemplate);
+            loadBodyTemplates();
+            showSuccess("Template duplicated and added successfully.");
+        } catch (ServiceException e) {
+            showError("Failed to duplicate template: " + e.getMessage());
         }
     }
 

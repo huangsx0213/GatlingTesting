@@ -20,6 +20,8 @@ public class EnvironmentViewModel implements Initializable, AppConfigChangeListe
     @FXML private TextField environmentNameField;
     @FXML private TextArea environmentDescriptionArea;
     @FXML private Button addButton;
+    @FXML
+    private Button duplicateButton;
     @FXML private Button updateButton;
     @FXML private Button deleteButton;
     @FXML private Button clearButton;
@@ -68,6 +70,9 @@ public class EnvironmentViewModel implements Initializable, AppConfigChangeListe
                 mainViewModel.updateStatus("Failed to load environments: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
         }
+        if (!environmentList.isEmpty()) {
+            environmentTable.getSelectionModel().selectFirst();
+        }
     }
 
     private void onTableSelectionChanged(Environment environment) {
@@ -77,6 +82,31 @@ public class EnvironmentViewModel implements Initializable, AppConfigChangeListe
             environmentDescriptionArea.setText(environment.getDescription());
         } else {
             clearForm();
+        }
+    }
+
+    @FXML
+    private void handleDuplicateEnvironment(ActionEvent event) {
+        if (selectedEnvironment == null) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Please select an environment to duplicate.", MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
+        String newName = selectedEnvironment.getName() + " (copy)";
+        // We should add a check for name uniqueness if required.
+
+        try {
+            Environment newEnvironment = new Environment(newName, selectedEnvironment.getDescription(), ProjectContext.getCurrentProjectId());
+            environmentService.createEnvironment(newEnvironment);
+            loadEnvironments();
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Environment duplicated and added successfully.", MainViewModel.StatusType.SUCCESS);
+            }
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to duplicate environment: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
         }
     }
 
@@ -169,6 +199,5 @@ public class EnvironmentViewModel implements Initializable, AppConfigChangeListe
 
     public void refresh() {
         loadEnvironments();
-        clearForm();
     }
 } 

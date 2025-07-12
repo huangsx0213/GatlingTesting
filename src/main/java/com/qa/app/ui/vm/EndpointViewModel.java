@@ -33,6 +33,8 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
     @FXML
     private Button addButton;
     @FXML
+    private Button duplicateButton;
+    @FXML
     private Button updateButton;
     @FXML
     private Button deleteButton;
@@ -89,20 +91,21 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
                 }
             }
         });
-        loadEndpoints();
         loadEnvironments();
+        loadEndpoints();
+
         AppConfig.addChangeListener(this);
     }
 
     @Override
     public void onConfigChanged() {
-        loadEndpoints();
         loadEnvironments();
+        loadEndpoints();
     }
 
     public void refresh() {
-        loadEndpoints();
         loadEnvironments();
+        loadEndpoints();
     }
 
     private void loadEndpoints() {
@@ -116,6 +119,9 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
             } catch (ServiceException e) {
                 // 可加错误提示
             }
+        }
+        if (!endpointList.isEmpty()) {
+            endpointTable.getSelectionModel().selectFirst();
         }
     }
 
@@ -141,6 +147,35 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
             environmentComboBox.setValue(env);
         } else {
             clearFields();
+        }
+    }
+
+    @FXML
+    private void handleDuplicateEndpoint() {
+        EndpointItem selected = endpointTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Please select an endpoint to duplicate.", MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
+
+        String newName = selected.getName() + " (copy)";
+        while (isNameEnvDuplicate(newName, selected.getEnvironmentId(), null)) {
+            newName += " (copy)";
+        }
+
+        try {
+            Endpoint newEndpoint = new Endpoint(newName, selected.getMethod(), selected.getUrl(), selected.getEnvironmentId(), ProjectContext.getCurrentProjectId());
+            endpointService.addEndpoint(newEndpoint);
+            loadEndpoints();
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Endpoint duplicated and added successfully.", MainViewModel.StatusType.SUCCESS);
+            }
+        } catch (ServiceException ex) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to duplicate endpoint: " + ex.getMessage(), MainViewModel.StatusType.ERROR);
+            }
         }
     }
 

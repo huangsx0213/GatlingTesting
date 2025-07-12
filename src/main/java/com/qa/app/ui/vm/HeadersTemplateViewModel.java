@@ -36,6 +36,8 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
     @FXML
     private Button addButton;
     @FXML
+    private Button duplicateButton;
+    @FXML
     private Button updateButton;
     @FXML
     private Button deleteButton;
@@ -145,6 +147,36 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
                 }
             } catch (ServiceException e) {
                 // add error hint
+            }
+        }
+        if (!headersTemplateList.isEmpty()) {
+            headersTemplateTable.getSelectionModel().selectFirst();
+        }
+    }
+
+    @FXML
+    private void handleDuplicateTemplate() {
+        HeadersTemplateItem selected = headersTemplateTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Please select a template to duplicate.", MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
+
+        String newName = selected.getName() + " (copy)";
+        // Note: We might need a better way to ensure uniqueness if needed.
+
+        try {
+            HeadersTemplate newTemplate = new HeadersTemplate(newName, selected.getContent(), selected.getDescription(), ProjectContext.getCurrentProjectId());
+            headersTemplateService.addHeadersTemplate(newTemplate);
+            loadTemplates();
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Template duplicated and added successfully.", MainViewModel.StatusType.SUCCESS);
+            }
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to duplicate template: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
         }
     }
