@@ -40,7 +40,7 @@ public class GroovyVariableViewModel implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        variablesTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        variablesTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         nameColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getName()));
         descriptionColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getDescription()));
         loadVariables();
@@ -255,14 +255,6 @@ public class GroovyVariableViewModel implements Initializable {
         }
     }
 
-    
-    private void clearAndEnableDetailPane() {
-        nameField.clear();
-        formatField.clear();
-        descriptionField.clear();
-        scriptArea.clear();
-        setDetailPaneDisabled(false);
-    }
 
     private void setDetailPaneDisabled(boolean disabled) {
         nameField.setDisable(disabled);

@@ -72,7 +72,7 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
             return new javafx.beans.property.SimpleStringProperty(envName);
         });
         endpointTable.setItems(endpointList);
-        endpointTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        endpointTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         endpointTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
                 populateFields(newSelection);

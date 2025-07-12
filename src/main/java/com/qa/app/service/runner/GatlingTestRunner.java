@@ -24,19 +24,12 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.LinkedHashMap;
 
 public class GatlingTestRunner {
-
-    /**
-     * Prefix used by GatlingTestSimulation to output the new report format to stdout.
-     */
-    private static final String REPORT_PREFIX = "REPORT_JSON:";
-
     /**
      * Prefix used by GatlingTestSimulation to output test variables.
      */

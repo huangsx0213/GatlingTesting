@@ -66,7 +66,7 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
         bodyTemplateDescriptionColumn.setCellValueFactory(cellData -> cellData.getValue().descriptionProperty());
         bodyTemplateContentColumn.setCellValueFactory(cellData -> cellData.getValue().contentProperty());
         bodyTemplateTable.setItems(bodyTemplateList);
-        bodyTemplateTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        bodyTemplateTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         bodyTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
                 bodyTemplateContentArea.setText(newSelection.getContent());

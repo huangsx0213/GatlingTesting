@@ -66,7 +66,7 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
         headersTemplateDescriptionColumn.setCellValueFactory(cellData -> cellData.getValue().descriptionProperty());
         headersTemplateContentColumn.setCellValueFactory(cellData -> cellData.getValue().contentProperty());
         headersTemplateTable.setItems(headersTemplateList);
-        headersTemplateTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        headersTemplateTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         headersTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
                 headersTemplateContentArea.setText(newSelection.getContent());

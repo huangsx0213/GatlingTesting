@@ -43,7 +43,7 @@ public class EnvironmentViewModel implements Initializable, AppConfigChangeListe
         environmentNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
         environmentDescriptionColumn.setCellValueFactory(cellData -> cellData.getValue().descriptionProperty());
         environmentTable.setItems(environmentList);
-        environmentTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        environmentTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         loadEnvironments();
         environmentTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> onTableSelectionChanged(newSel));
         AppConfig.addChangeListener(this);

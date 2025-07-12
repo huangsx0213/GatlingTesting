@@ -39,7 +39,6 @@ public class GatlingTestSimulation extends Simulation {
     private final List<BatchItem> batchItems;
     private final boolean isBatchMode;
     private final Map<String, CaseReport> caseReports = new ConcurrentHashMap<>();
-    private static final String REPORT_PREFIX = "REPORT_JSON:";
     private static final String VARIABLES_PREFIX = "TEST_VARIABLES:";
     private static final String CHECK_REPORTS_KEY = "checkReports";
     private static final List<String> RESPONSE_HEADERS_TO_CAPTURE = java.util.Arrays.asList(

@@ -70,7 +70,7 @@
                     
                     <!-- Groovy Script Section -->
                     <VBox spacing="5.0" VBox.vgrow="ALWAYS">
-                        <Label text="Groovy Script:" style="-fx-font-weight: bold;" />
+                        <Label text="Groovy Script:"/>
                         <TextArea fx:id="scriptArea" promptText="Enter your Groovy script here..." VBox.vgrow="ALWAYS" wrapText="true" />
                     </VBox>
                 </VBox>

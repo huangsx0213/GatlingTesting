@@ -37,7 +37,7 @@ public class ProjectViewModel implements Initializable {
         projectNameColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getName()));
         projectDescriptionColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getDescription()));
         projectTable.setItems(projectList);
-        projectTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        projectTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         loadProjects();
         projectTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> onTableSelectionChanged(newSel));
         addButton.setOnAction(e -> handleAddProject());
