@@ -177,12 +177,12 @@
                                                             <children>
                                                                <TableView fx:id="checksTableView" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                                                   <columns>
-                                                                     <TableColumn fx:id="checkTypeColumn" prefWidth="75.0" text="Type" />
-                                                                     <TableColumn fx:id="checkExpressionColumn" prefWidth="75.0" text="Expression" />
-                                                                     <TableColumn fx:id="checkOperatorColumn" prefWidth="75.0" text="Operator" />
+                                                                     <TableColumn fx:id="checkTypeColumn" prefWidth="50.0" text="Type" />
+                                                                     <TableColumn fx:id="checkExpressionColumn" prefWidth="100.0" text="Expression" />
+                                                                     <TableColumn fx:id="checkOperatorColumn" prefWidth="50.0" text="Operator" />
                                                                      <TableColumn fx:id="checkExpectedColumn" prefWidth="75.0" text="Expected" />
                                                                      <TableColumn fx:id="checkActualColumn" prefWidth="75.0" text="Actual" />
-                                                                     <TableColumn fx:id="checkResultColumn" prefWidth="75.0" text="Result" />
+                                                                     <TableColumn fx:id="checkResultColumn" prefWidth="50.0" text="Result" />
                                                                   </columns>
                                                                   <columnResizePolicy>
                                                                      <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
