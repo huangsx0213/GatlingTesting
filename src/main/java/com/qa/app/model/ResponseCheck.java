@@ -18,6 +18,11 @@ public class ResponseCheck {
     private String saveAs;
     // If true, this check becomes optional (non-fatal) in Gatling
     private boolean optional;
+    
+    // --- DB Check Specific Fields ---
+    private String dbAlias;     // Database connection alias
+    private String dbSql;       // SQL query or statement
+    private String dbColumn;    // Column to extract value from (for SELECT)
 
     public ResponseCheck() {
         this.optional = false;
@@ -47,6 +52,9 @@ public class ResponseCheck {
             this.expect = other.expect;
             this.saveAs = other.saveAs;
             this.optional = other.optional;
+            this.dbAlias = other.dbAlias;
+            this.dbSql = other.dbSql;
+            this.dbColumn = other.dbColumn;
         }
     }
 
@@ -97,4 +105,14 @@ public class ResponseCheck {
     public void setOptional(boolean optional) {
         this.optional = optional;
     }
+    
+    // --- Getters and Setters for new fields ---
+    public String getDbAlias() { return dbAlias; }
+    public void setDbAlias(String dbAlias) { this.dbAlias = dbAlias; }
+
+    public String getDbSql() { return dbSql; }
+    public void setDbSql(String dbSql) { this.dbSql = dbSql; }
+
+    public String getDbColumn() { return dbColumn; }
+    public void setDbColumn(String dbColumn) { this.dbColumn = dbColumn; }
 } 

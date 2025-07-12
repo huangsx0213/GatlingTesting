@@ -5,9 +5,11 @@ import com.qa.app.model.DbConnection;
 import java.util.List;
 
 public interface IDbConnectionService {
-    DbConnection get(Long id);
-    List<DbConnection> getConnectionsByProject(Integer projectId);
+    List<DbConnection> getAll();
+    List<String> getAllAliases();
+    DbConnection findById(Long id);
     DbConnection findByAlias(String alias);
+    void save(DbConnection dbConnection);
     void addConnection(DbConnection connection);
     void updateConnection(DbConnection connection);
     void deleteConnection(DbConnection connection);

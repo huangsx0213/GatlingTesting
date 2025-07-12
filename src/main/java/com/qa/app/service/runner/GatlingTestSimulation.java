@@ -7,6 +7,7 @@ import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.GatlingTest;
 import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
+import com.qa.app.model.DbConnection;
 import com.qa.app.model.reports.*;
 import com.qa.app.model.threadgroups.*;
 import io.gatling.javaapi.core.*;
@@ -18,9 +19,16 @@ import com.qa.app.service.impl.BodyTemplateServiceImpl;
 import com.qa.app.service.impl.HeadersTemplateServiceImpl;
 import com.qa.app.model.BodyTemplate;
 import com.qa.app.model.HeadersTemplate;
+import com.qa.app.service.api.IDbConnectionService;
+import com.qa.app.service.impl.DbConnectionServiceImpl;
+import com.qa.app.util.OperatorUtil;
 
+import javax.sql.DataSource;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,6 +47,7 @@ public class GatlingTestSimulation extends Simulation {
     private final List<BatchItem> batchItems;
     private final boolean isBatchMode;
     private final Map<String, CaseReport> caseReports = new ConcurrentHashMap<>();
+    private final IDbConnectionService dbConnectionService = new DbConnectionServiceImpl();
     private static final String VARIABLES_PREFIX = "TEST_VARIABLES:";
     private static final String CHECK_REPORTS_KEY = "checkReports";
     private static final List<String> RESPONSE_HEADERS_TO_CAPTURE = java.util.Arrays.asList(
@@ -538,51 +547,85 @@ public class GatlingTestSimulation extends Simulation {
                         }
                         case DB: {
                             // Handle database check
-                            String connectionAlias = currentCheck.getExpression();
-                            String query = currentCheck.getExpect();
-                            
-                            // Execute DB check in a subsequent action since it can't be part of Gatling's check DSL
                             loggingActions.add(exec(session -> {
                                 CheckReport checkReport = new CheckReport();
                                 checkReport.setType(currentCheck.getType());
-                                checkReport.setExpression(connectionAlias);
                                 checkReport.setOperator(currentCheck.getOperator());
-                                checkReport.setExpect(query);
+                                checkReport.setExpect(currentCheck.getExpect());
+                                
+                                String actualValue = null;
+                                boolean checkPassed = false;
                                 
                                 try {
-                                    // Execute query using DataSourceRegistry
-                                    String result = DataSourceRegistry.executeQuery(connectionAlias, query);
-                                    checkReport.setActual(result);
-                                    
-                                    boolean checkPassed;
-                                    switch (currentCheck.getOperator()) {
-                                        case CONTAINS:
-                                            checkPassed = result.contains(currentCheck.getExpect());
-                                            break;
-                                        case IS:
-                                        default:
-                                            checkPassed = result.equals(currentCheck.getExpect());
-                                            break;
+                                    String alias, sql, column;
+
+                                    // Prioritize new dedicated fields, but fall back to parsing the old expression field
+                                    if (currentCheck.getDbAlias() != null && !currentCheck.getDbAlias().isBlank()) {
+                                        alias = currentCheck.getDbAlias();
+                                        sql = currentCheck.getDbSql();
+                                        column = currentCheck.getDbColumn();
+                                    } else {
+                                        // Backward compatibility for old format stored in the expression field
+                                        GatlingScenarioSimulation.DbCheckInfo checkInfo = new ObjectMapper().readValue(currentCheck.getExpression(), GatlingScenarioSimulation.DbCheckInfo.class);
+                                        alias = checkInfo.getAlias();
+                                        sql = checkInfo.getSql();
+                                        column = checkInfo.getColumn();
                                     }
-                                    checkReport.setPassed(checkPassed);
+
+                                    // For reporting purposes, create a unified JSON expression from the DB details.
+                                    Map<String, String> dbInfoForReport = new HashMap<>();
+                                    dbInfoForReport.put("alias", alias);
+                                    dbInfoForReport.put("sql", sql);
+                                    dbInfoForReport.put("column", column);
+                                    checkReport.setExpression(new ObjectMapper().writeValueAsString(dbInfoForReport));
+
+                                    DbConnection connConfig = dbConnectionService.findByAlias(alias);
+                                    if (connConfig == null) {
+                                        throw new RuntimeException("DB Connection alias not found: " + alias);
+                                    }
+
+                                    // Process variables in SQL
+                                    String processedSql = TestRunContext.processVariableReferences(sql);
+                                    Map<String, String> allDynamicVars = new HashMap<>();
+                                    if (test.getEndpointDynamicVariables() != null) allDynamicVars.putAll(test.getEndpointDynamicVariables());
+                                    if (test.getHeadersDynamicVariables() != null) allDynamicVars.putAll(test.getHeadersDynamicVariables());
+                                    if (test.getBodyDynamicVariables() != null) allDynamicVars.putAll(test.getBodyDynamicVariables());
+                                    String finalSql = RuntimeTemplateProcessor.render(processedSql, allDynamicVars);
+
+                                    DataSource ds = DataSourceRegistry.get(connConfig);
+
+                                    try (Connection conn = ds.getConnection();
+                                         PreparedStatement ps = conn.prepareStatement(finalSql)) {
+                                        ResultSet rs = ps.executeQuery();
+                                        if (rs.next()) {
+                                            actualValue = rs.getString(column);
+                                        }
+                                    }
+
+                                    checkPassed = OperatorUtil.compare(actualValue, currentCheck.getOperator(), currentCheck.getExpect());
                                     
                                     if (!checkPassed) {
-                                        System.out.println(String.format("CHECK_FAIL|%s|DB|%s|expected:%s|actual:%s",
-                                                test.getTcid(), currentCheck.getOperator().toString(), query, result));
+                                        if (!currentCheck.isOptional()) {
+                                             System.out.println(String.format("CHECK_FAIL|%s|DB|%s|expected:%s|actual:%s",
+                                                test.getTcid(), finalSql, currentCheck.getExpect(), actualValue));
+                                        }
                                     } else {
                                         System.out.println(String.format("CHECK_PASS|%s|DB|%s|expected:%s|actual:%s",
-                                                test.getTcid(), currentCheck.getOperator().toString(), query, result));
+                                                test.getTcid(), finalSql, currentCheck.getExpect(), actualValue));
                                     }
                                     
                                     // Save result if specified
                                     if (currentCheck.getSaveAs() != null && !currentCheck.getSaveAs().isBlank()) {
-                                        TestRunContext.saveVariable(test.getTcid(), currentCheck.getSaveAs(), result);
+                                        TestRunContext.saveVariable(test.getTcid(), currentCheck.getSaveAs(), actualValue);
                                     }
                                 } catch (Exception e) {
                                     System.err.println("[ERROR] Exception in DB check: " + e.getMessage());
-                                    checkReport.setActual("ERROR: " + e.getMessage());
-                                    checkReport.setPassed(false);
+                                    actualValue = "ERROR: " + e.getMessage();
+                                    checkPassed = false;
                                 }
+
+                                checkReport.setActual(actualValue);
+                                checkReport.setPassed(checkPassed);
                                 
                                 // Add to session for reporting
                                 session.getList(CHECK_REPORTS_KEY).add(checkReport);

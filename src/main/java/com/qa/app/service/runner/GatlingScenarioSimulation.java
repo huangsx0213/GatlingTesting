@@ -39,7 +39,7 @@ public class GatlingScenarioSimulation extends Simulation {
         public List<Map<String, Object>> items; // each map contains "test" and "endpoint"
     }
 
-    private static class DbCheckInfo {
+    public static class DbCheckInfo {
         private String alias;
         private String sql;
         private String column;
@@ -220,14 +220,25 @@ public class GatlingScenarioSimulation extends Simulation {
         return exec(session -> {
             for (ResponseCheck check : dbChecks) {
                 try {
-                    DbCheckInfo checkInfo = mapper.readValue(check.getExpression(), DbCheckInfo.class);
-                    DbConnection connConfig = dbConnectionService.findByAlias(checkInfo.getAlias());
+                    String alias = check.getDbAlias();
+                    String sql = check.getDbSql();
+                    String column = check.getDbColumn();
+
+                    // For backward compatibility, parse from expression if new fields are empty
+                    if (alias == null || alias.isBlank()) {
+                        DbCheckInfo checkInfo = mapper.readValue(check.getExpression(), DbCheckInfo.class);
+                        alias = checkInfo.getAlias();
+                        sql = checkInfo.getSql();
+                        column = checkInfo.getColumn();
+                    }
+
+                    DbConnection connConfig = dbConnectionService.findByAlias(alias);
                     if (connConfig == null) {
-                        throw new RuntimeException("DB Connection alias not found: " + checkInfo.getAlias());
+                        throw new RuntimeException("DB Connection alias not found: " + alias);
                     }
 
                     // Process variables in SQL
-                    String processedSql = TestRunContext.processVariableReferences(checkInfo.getSql());
+                    String processedSql = TestRunContext.processVariableReferences(sql);
                     Map<String, String> allDynamicVars = new HashMap<>();
                     if (test.getEndpointDynamicVariables() != null) allDynamicVars.putAll(test.getEndpointDynamicVariables());
                     if (test.getHeadersDynamicVariables() != null) allDynamicVars.putAll(test.getHeadersDynamicVariables());
@@ -241,7 +252,7 @@ public class GatlingScenarioSimulation extends Simulation {
                          PreparedStatement ps = conn.prepareStatement(finalSql)) {
                         ResultSet rs = ps.executeQuery();
                         if (rs.next()) {
-                            actualValue = rs.getString(checkInfo.getColumn());
+                            actualValue = rs.getString(column);
                         }
                     }
 

@@ -1,7 +1,6 @@
 package com.qa.app.service.runner;
 
 import com.qa.app.model.DbConnection;
-import com.qa.app.model.DbType;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -34,15 +33,15 @@ public class DataSourceRegistry {
 
     public static String buildJdbcUrl(DbConnection cfg) {
         if (cfg.getDbType() == null) {
-            return cfg.getJdbcUrl();
+            return "";
         }
         return switch (cfg.getDbType()) {
-            case MYSQL -> String.format("jdbc:mysql://%s:%d/%s", cfg.getHost(), cfg.getPort(), cfg.getDatabase());
+            case MYSQL -> String.format("jdbc:mysql://%s:%d/%s", cfg.getHost(), cfg.getPort(), cfg.getDbName());
             case POSTGRESQL -> {
-                String base = String.format("jdbc:postgresql://%s:%d/%s", cfg.getHost(), cfg.getPort(), cfg.getDatabase());
-                yield (cfg.getSchema() == null || cfg.getSchema().isBlank()) ? base : base + "?currentSchema=" + cfg.getSchema();
+                String base = String.format("jdbc:postgresql://%s:%d/%s", cfg.getHost(), cfg.getPort(), cfg.getDbName());
+                yield (cfg.getSchemaName() == null || cfg.getSchemaName().isBlank()) ? base : base + "?currentSchema=" + cfg.getSchemaName();
             }
-            case SQLSERVER -> String.format("jdbc:sqlserver://%s:%d;databaseName=%s", cfg.getHost(), cfg.getPort(), cfg.getDatabase());
+            case SQLSERVER -> String.format("jdbc:sqlserver://%s:%d;databaseName=%s", cfg.getHost(), cfg.getPort(), cfg.getDbName());
             case ORACLE -> String.format("jdbc:oracle:thin:@//%s:%d/%s", cfg.getHost(), cfg.getPort(), cfg.getServiceName());
         };
     }

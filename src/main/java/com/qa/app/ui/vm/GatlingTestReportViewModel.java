@@ -15,12 +15,14 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import com.qa.app.model.reports.FunctionalTestReport;
 import com.qa.app.service.reports.HtmlSummaryReportGenerator;
+import com.qa.app.model.CheckType;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Map;
 import java.util.ResourceBundle;
+import javafx.scene.layout.HBox;
 
 public class GatlingTestReportViewModel implements Initializable {
 
@@ -288,34 +290,60 @@ public class GatlingTestReportViewModel implements Initializable {
             }
         });
 
+        // Custom cell factory for the expression column to format DB checks
+        checkExpressionColumn.setCellFactory(column -> new TableCell<>() {
+            private final ObjectMapper mapper = new ObjectMapper();
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null || getTableRow() == null || getTableRow().getItem() == null) {
+                    setText(null);
+                    setTooltip(null);
+                    return;
+                }
+
+                CheckReport checkReport = (CheckReport) getTableRow().getItem();
+                if (checkReport.getType() == CheckType.DB) {
+                    try {
+                        Map<String, String> dbInfo = mapper.readValue(item, new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                        String alias = dbInfo.getOrDefault("alias", "N/A");
+                        String column = dbInfo.getOrDefault("column", "N/A");
+                        String sql = dbInfo.getOrDefault("sql", "");
+                        
+                        String summary = String.format("Alias: %s, Col: %s", alias, column);
+                        setText(summary);
+                        
+                        if (!sql.isEmpty()) {
+                            Tooltip tooltip = new Tooltip(sql);
+                            setTooltip(tooltip);
+                        } else {
+                            setTooltip(null);
+                        }
+                    } catch (IOException e) {
+                        setText(item); // Fallback to raw JSON on parsing error
+                        setTooltip(null);
+                    }
+                } else {
+                    setText(item);
+                    setTooltip(null);
+                }
+            }
+        });
+
         // Custom cell to embed expand/collapse buttons on ROOT row
-        nameColumn.setCellFactory(col -> new javafx.scene.control.TreeTableCell<>() {
-            private final javafx.scene.control.Button expandBtn = new javafx.scene.control.Button("+");
-            private final javafx.scene.control.Button collapseBtn = new javafx.scene.control.Button("-");
-            private final javafx.scene.control.Label rootLabel = new Label("ROOT");
-            private final javafx.scene.layout.HBox graphic = new javafx.scene.layout.HBox(6, rootLabel, expandBtn, collapseBtn);
+        nameColumn.setCellFactory(col -> new TreeTableCell<Object, String>() {
+            private final Button expandButton = new Button("Expand All");
+            private final Button collapseButton = new Button("Collapse All");
+            private final Label rootLabel = new Label("Aggregated Results");
+            private final HBox graphic = new HBox(10, rootLabel, expandButton, collapseButton);
 
             {
                 graphic.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-                expandBtn.getStyleClass().add("icon-button");
-                collapseBtn.getStyleClass().add("icon-button");
-                
-                // Make buttons background transparent and small for alignment
-                String buttonStyle = "-fx-background-color: transparent; -fx-border-color: transparent; -fx-font-size: 12px; -fx-padding: 0;";
-                expandBtn.setStyle(buttonStyle);
-                collapseBtn.setStyle(buttonStyle);
-
-                // Set fixed small size so row height remains normal and arrow/label align
-                expandBtn.setPrefSize(18, 18);
-                expandBtn.setMinSize(18, 18);
-                expandBtn.setMaxSize(18, 18);
-
-                collapseBtn.setPrefSize(18, 18);
-                collapseBtn.setMinSize(18, 18);
-                collapseBtn.setMaxSize(18, 18);
-
-                expandBtn.setOnAction(e -> handleExpandAll());
-                collapseBtn.setOnAction(e -> handleCollapseAll());
+                expandButton.setOnAction(e -> handleExpandAll());
+                collapseButton.setOnAction(e -> handleCollapseAll());
+                expandButton.disableProperty().bind(allExpanded);
+                collapseButton.disableProperty().bind(allExpanded.not());
             }
 
             @Override

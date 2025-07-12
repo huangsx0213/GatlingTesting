@@ -27,7 +27,6 @@ import javafx.scene.control.Label;
 import javax.sql.DataSource;
 import java.net.URL;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.ResourceBundle;
 
 public class DbConnectionViewModel implements Initializable {
@@ -158,7 +157,9 @@ public class DbConnectionViewModel implements Initializable {
     private void loadConnections() {
         Integer projectId = ProjectContext.getCurrentProjectId();
         if (projectId != null) {
-            dbConnections.setAll(dbConnectionService.getConnectionsByProject(projectId));
+            dbConnections.setAll(dbConnectionService.getAll().stream()
+                    .filter(c -> projectId.equals(c.getProjectId()))
+                    .collect(java.util.stream.Collectors.toList()));
         } else {
             dbConnections.clear();
         }
@@ -183,8 +184,8 @@ public class DbConnectionViewModel implements Initializable {
         dbTypeCombo.getSelectionModel().select(connection.getDbType());
         hostField.setText(connection.getHost());
         portField.setText(String.valueOf(connection.getPort()));
-        dbNameField.setText(connection.getDatabase());
-        schemaField.setText(connection.getSchema());
+        dbNameField.setText(connection.getDbName());
+        schemaField.setText(connection.getSchemaName());
         serviceNameField.setText(connection.getServiceName());
         usernameField.setText(connection.getUsername());
         passwordField.setText(connection.getPassword());
@@ -236,12 +237,9 @@ public class DbConnectionViewModel implements Initializable {
         try { connection.setPort(Integer.parseInt(portField.getText())); } catch (NumberFormatException ignored) {
             connection.setPort(0);
         }
-        connection.setDatabase(dbNameField.getText());
-        connection.setSchema(schemaField.getText());
+        connection.setDbName(dbNameField.getText());
+        connection.setSchemaName(schemaField.getText());
         connection.setServiceName(serviceNameField.getText());
-        // Assemble URL is now done via listener, but we ensure it's set on the object
-        String url = DataSourceRegistry.buildJdbcUrl(connection);
-        connection.setJdbcUrl(url);
         
         connection.setUsername(usernameField.getText());
         connection.setPassword(passwordField.getText());
@@ -305,10 +303,9 @@ public class DbConnectionViewModel implements Initializable {
             duplicate.setDbType(selected.getDbType());
             duplicate.setHost(selected.getHost());
             duplicate.setPort(selected.getPort());
-            duplicate.setDatabase(selected.getDatabase());
-            duplicate.setSchema(selected.getSchema());
+            duplicate.setDbName(selected.getDbName());
+            duplicate.setSchemaName(selected.getSchemaName());
             duplicate.setServiceName(selected.getServiceName());
-            duplicate.setJdbcUrl(selected.getJdbcUrl());
             duplicate.setUsername(selected.getUsername());
             duplicate.setPassword(selected.getPassword());
             duplicate.setPoolSize(selected.getPoolSize());
@@ -331,8 +328,8 @@ public class DbConnectionViewModel implements Initializable {
             urlField.setText("");
             return;
         }
-        tempConn.setDatabase(dbNameField.getText());
-        tempConn.setSchema(schemaField.getText());
+        tempConn.setDbName(dbNameField.getText());
+        tempConn.setSchemaName(schemaField.getText());
         tempConn.setServiceName(serviceNameField.getText());
 
         if (tempConn.getDbType() != null && tempConn.getHost() != null && !tempConn.getHost().isBlank() && tempConn.getPort() > 0) {

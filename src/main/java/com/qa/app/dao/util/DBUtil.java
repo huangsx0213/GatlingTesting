@@ -2,8 +2,6 @@ package com.qa.app.dao.util;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -194,19 +192,6 @@ public class DBUtil {
             System.out.println("Database schema initialized. All tables are up to date.");
         } catch (SQLException e) {
             System.err.println("Error initializing database: " + e.getMessage());
-        }
-    }
-
-
-    private static void addColumnIfNotExists(Connection conn, String tableName, String columnName, String columnDefinition) throws SQLException {
-        DatabaseMetaData md = conn.getMetaData();
-        try (ResultSet rs = md.getColumns(null, null, tableName, columnName)) {
-            if (!rs.next()) {
-                try (Statement stmt = conn.createStatement()) {
-                    stmt.execute("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDefinition);
-                    System.out.println("Added missing column '" + columnName + "' to table '" + tableName + "'.");
-                }
-            }
         }
     }
 

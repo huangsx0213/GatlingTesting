@@ -1,35 +1,39 @@
 package com.qa.app.model;
 
 /**
- * Supported database types. The enum name is used as canonical key for driver resolution
- * and JDBC URL building.
+ * Supported database types. Each enum value has an associated string key used for
+ * driver resolution and database operations.
  */
 public enum DbType {
-    MYSQL,
-    POSTGRESQL,
-    ORACLE,
-    SQLSERVER;
-
+    MYSQL("mysql"),
+    POSTGRESQL("postgresql"),
+    ORACLE("oracle"),
+    SQLSERVER("sqlserver");
+    
+    private final String key;
+    
+    DbType(String key) {
+        this.key = key;
+    }
+    
     /**
-     * Convert from lowercase key (e.g. "postgres") to enum constant.
+     * Convert from lowercase key to enum constant.
      */
     public static DbType fromKey(String key) {
         if (key == null) return null;
         return switch (key.toLowerCase()) {
             case "mysql" -> MYSQL;
-            case "postgres", "postgresql" -> POSTGRESQL;
+            case "postgresql" -> POSTGRESQL;
             case "oracle" -> ORACLE;
-            case "sqlserver", "mssql" -> SQLSERVER;
+            case "sqlserver" -> SQLSERVER;
             default -> throw new IllegalArgumentException("Unsupported DB type: " + key);
         };
     }
 
+    /**
+     * Returns the canonical string key for this database type.
+     */
     public String key() {
-        return switch (this) {
-            case MYSQL -> "mysql";
-            case POSTGRESQL -> "postgresql";
-            case ORACLE -> "oracle";
-            case SQLSERVER -> "sqlserver";
-        };
+        return key;
     }
 } 
