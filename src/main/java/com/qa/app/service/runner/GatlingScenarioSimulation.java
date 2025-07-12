@@ -2,21 +2,24 @@ package com.qa.app.service.runner;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.qa.app.model.Endpoint;
-import com.qa.app.model.GatlingLoadParameters;
-import com.qa.app.model.GatlingTest;
-import com.qa.app.model.ResponseCheck;
-import com.qa.app.model.CheckType;
-import com.qa.app.model.Scenario;
+import com.qa.app.model.*;
 import com.qa.app.model.threadgroups.*;
+import com.qa.app.service.api.IDbConnectionService;
+import com.qa.app.service.impl.DbConnectionServiceImpl;
+import com.qa.app.util.OperatorUtil;
 import io.gatling.javaapi.core.*;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
 
+import javax.sql.DataSource;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static io.gatling.javaapi.core.CoreDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.*;
@@ -36,7 +39,27 @@ public class GatlingScenarioSimulation extends Simulation {
         public List<Map<String, Object>> items; // each map contains "test" and "endpoint"
     }
 
+    private static class DbCheckInfo {
+        private String alias;
+        private String sql;
+        private String column;
+
+        public String getAlias() {
+            return alias;
+        }
+
+        public String getSql() {
+            return sql;
+        }
+
+        public String getColumn() {
+            return column;
+        }
+    }
+
     private final List<ScenarioRunItem> runItems;
+    private final ObjectMapper mapper = new ObjectMapper();
+    private final IDbConnectionService dbConnectionService = new DbConnectionServiceImpl();
 
     public GatlingScenarioSimulation() {
         // Clear test run context at the beginning of a simulation run
@@ -116,28 +139,17 @@ public class GatlingScenarioSimulation extends Simulation {
             // Create a chain that executes the request and then processes any saved variables
             final String tcid = test.getTcid();
             ChainBuilder requestChain = exec(req).exec(session -> {
-                // Check for variables that need to be saved to TestRunContext
+                // Check for variables that need to be saved to TestRunContext from HTTP response
                 try {
                     String json = test.getResponseChecks();
                     if (json != null && !json.isBlank()) {
-                        List<ResponseCheck> checks = new ObjectMapper().readValue(json, new TypeReference<List<ResponseCheck>>() {});
+                        List<ResponseCheck> checks = mapper.readValue(json, new TypeReference<List<ResponseCheck>>() {});
                         for (ResponseCheck rc : checks) {
-                            if (rc.getSaveAs() != null && !rc.getSaveAs().isBlank()) {
+                            if (rc.getType() != CheckType.DB && rc.getSaveAs() != null && !rc.getSaveAs().isBlank()) {
                                 String saveAsKey = rc.getSaveAs();
                                 if (session.contains(saveAsKey)) {
                                     Object rawValue = session.get(saveAsKey);
-                                    String actualValue;
-                                    if (rawValue instanceof String) {
-                                        actualValue = (String) rawValue;
-                                    } else if (rawValue instanceof char[]) {
-                                        actualValue = new String((char[]) rawValue);
-                                    } else if (rawValue instanceof String[] arr) {
-                                        actualValue = arr.length > 0 ? arr[0] : "";
-                                    } else {
-                                        actualValue = String.valueOf(rawValue);
-                                    }
-                                    
-                                    // Save to TestRunContext
+                                    String actualValue = convertToString(rawValue);
                                     TestRunContext.saveVariable(tcid, saveAsKey, actualValue);
                                 }
                             }
@@ -148,13 +160,17 @@ public class GatlingScenarioSimulation extends Simulation {
                 }
                 return session;
             });
-            
+
+            // Append DB checks execution
+            ChainBuilder dbCheckChain = buildDbCheckChain(test);
+            ChainBuilder fullChain = requestChain.exec(dbCheckChain);
+
             if (chain == null) {
-                chain = requestChain;
+                chain = fullChain;
             } else {
-                chain = chain.exec(requestChain);
+                chain = chain.exec(fullChain);
             }
-            
+
             if (test.getWaitTime() > 0) {
                 chain = chain.pause(Duration.ofSeconds(test.getWaitTime()));
             }
@@ -183,6 +199,85 @@ public class GatlingScenarioSimulation extends Simulation {
 
         // default: each virtual user only executes once
         return base.exec(chain);
+    }
+
+    private ChainBuilder buildDbCheckChain(GatlingTest test) {
+        final String tcid = test.getTcid();
+        List<ResponseCheck> dbChecks;
+        try {
+            String json = test.getResponseChecks();
+            if (json == null || json.isBlank()) return exec(session -> session); // No checks
+
+            List<ResponseCheck> allChecks = mapper.readValue(json, new TypeReference<>() {});
+            dbChecks = allChecks.stream().filter(c -> c.getType() == CheckType.DB).collect(Collectors.toList());
+
+            if (dbChecks.isEmpty()) return exec(session -> session); // No DB checks
+        } catch (Exception e) {
+            e.printStackTrace();
+            return exec(session -> session); // Error parsing checks
+        }
+
+        return exec(session -> {
+            for (ResponseCheck check : dbChecks) {
+                try {
+                    DbCheckInfo checkInfo = mapper.readValue(check.getExpression(), DbCheckInfo.class);
+                    DbConnection connConfig = dbConnectionService.findByAlias(checkInfo.getAlias());
+                    if (connConfig == null) {
+                        throw new RuntimeException("DB Connection alias not found: " + checkInfo.getAlias());
+                    }
+
+                    // Process variables in SQL
+                    String processedSql = TestRunContext.processVariableReferences(checkInfo.getSql());
+                    Map<String, String> allDynamicVars = new HashMap<>();
+                    if (test.getEndpointDynamicVariables() != null) allDynamicVars.putAll(test.getEndpointDynamicVariables());
+                    if (test.getHeadersDynamicVariables() != null) allDynamicVars.putAll(test.getHeadersDynamicVariables());
+                    if (test.getBodyDynamicVariables() != null) allDynamicVars.putAll(test.getBodyDynamicVariables());
+                    String finalSql = RuntimeTemplateProcessor.render(processedSql, allDynamicVars);
+
+                    DataSource ds = DataSourceRegistry.get(connConfig);
+                    String actualValue = null;
+
+                    try (Connection conn = ds.getConnection();
+                         PreparedStatement ps = conn.prepareStatement(finalSql)) {
+                        ResultSet rs = ps.executeQuery();
+                        if (rs.next()) {
+                            actualValue = rs.getString(checkInfo.getColumn());
+                        }
+                    }
+
+                    if (!OperatorUtil.compare(actualValue, check.getOperator(), check.getExpect())) {
+                        if (!check.isOptional()) {
+                            throw new AssertionError(String.format("DB check failed for TCID %s. SQL: %s. Expected '%s' but got '%s'.", tcid, finalSql, check.getExpect(), actualValue));
+                        }
+                    }
+
+                    if (check.getSaveAs() != null && !check.getSaveAs().isBlank()) {
+                        TestRunContext.saveVariable(tcid, check.getSaveAs(), actualValue);
+                        return session.set(check.getSaveAs(), actualValue);
+                    }
+
+                } catch (Exception e) {
+                    if (!check.isOptional()) {
+                        throw new RuntimeException("DB Check execution failed for TCID " + tcid, e);
+                    }
+                }
+            }
+            return session;
+        });
+    }
+
+    private String convertToString(Object rawValue) {
+        String actualValue;
+        if (rawValue instanceof String) {
+            actualValue = (String) rawValue;
+        } else if (rawValue instanceof char[]) {
+            actualValue = new String((char[]) rawValue);
+        } else if (rawValue instanceof String[] arr) {
+            actualValue = arr.length > 0 ? arr[0] : "";
+        } else {
+            actualValue = String.valueOf(rawValue);
+        }
+        return actualValue;
     }
 
     private HttpRequestActionBuilder buildRequest(GatlingTest test, Endpoint ep) {
@@ -387,5 +482,6 @@ public class GatlingScenarioSimulation extends Simulation {
             System.err.println("Failed to output test variables: " + ex.getMessage());
             ex.printStackTrace();
         }
+        DataSourceRegistry.shutdown();
     }
 } 

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.qa.app.ui.vm.DbConnectionViewModel">
+    <children>
+        <VBox spacing="15.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" VBox.vgrow="ALWAYS">
+            <padding>
+                <Insets top="5.0" right="5.0" bottom="5.0" left="5.0"/>
+            </padding>
+            <!-- Header -->
+            <Label text="Database Connection Management" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
+            <Separator />
+
+            <!-- Main Content -->
+            <SplitPane orientation="HORIZONTAL" dividerPositions="0.25" VBox.vgrow="ALWAYS">
+                <items>
+                <!-- Connection List Section -->
+                <VBox spacing="15.0" minWidth="0.0">
+                    <padding><Insets top="5.0" right="5.0" bottom="5.0" left="5.0"/></padding>
+                    <Label text="Connection List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+                    <TableView fx:id="dbConnectionTable" VBox.vgrow="ALWAYS" styleClass="table-view">
+                        <columns>
+                            <TableColumn fx:id="aliasColumn" text="Alias" prefWidth="120"/>
+                            <TableColumn fx:id="descriptionColumn" text="Description" prefWidth="250"/>
+                        </columns>
+                    </TableView>
+                </VBox>
+
+                <!-- Connection Details Section -->
+                <VBox spacing="15.0" VBox.vgrow="ALWAYS">
+                    <padding><Insets top="5.0" bottom="5.0" left="5.0" right="5.0"/></padding>
+                    <Label text="Connection Details" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+                    <Separator />
+                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <children>
+                            <Button fx:id="addButton" mnemonicParsing="false" text="Add" />
+                            <Button fx:id="updateButton" mnemonicParsing="false" text="Update" />
+                            <Button fx:id="duplicateButton" mnemonicParsing="false" text="Duplicate" />
+                            <Button fx:id="deleteButton" mnemonicParsing="false" text="Delete" />
+                            <Button fx:id="clearButton" mnemonicParsing="false" text="Clear" />
+                            <Separator orientation="VERTICAL"/>
+                            <Button fx:id="testConnectionButton" text="Test Connection"/>
+                        </children>
+                    </HBox>
+                    <GridPane hgap="15.0" vgap="10.0" maxWidth="Infinity">
+                        <columnConstraints>
+                            <ColumnConstraints prefWidth="120.0"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+                        <children>
+                            <Label text="Alias:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <TextField fx:id="aliasField" promptText="Connection Alias" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                            
+                            <Label text="Environment:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                            <ComboBox fx:id="environmentCombo" promptText="Select Environment" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+
+                            <Label text="Description:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                            <TextArea fx:id="descriptionArea" promptText="Connection Description" prefRowCount="3" GridPane.rowIndex="2" GridPane.columnIndex="1" VBox.vgrow="NEVER" GridPane.hgrow="ALWAYS"/>
+
+                            <!-- Update DB Type row label -->
+                            <Label text="DB Type:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                            <ComboBox fx:id="dbTypeCombo" promptText="Select Type" GridPane.rowIndex="3" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+
+                            <Label text="Host:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                            <TextField fx:id="hostField" promptText="localhost" GridPane.rowIndex="4" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+
+                            <Label text="Port:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                            <TextField fx:id="portField" promptText="5432" GridPane.rowIndex="5" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+
+                            <Label text="Database:" fx:id="dbNameLabel" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+                            <TextField fx:id="dbNameField" promptText="mydb" GridPane.rowIndex="6" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+
+                            <Label text="Schema:" fx:id="schemaLabel" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
+                            <TextField fx:id="schemaField" promptText="public" GridPane.rowIndex="7" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+
+                            <Label text="ServiceName:" fx:id="serviceNameLabel" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
+                            <TextField fx:id="serviceNameField" promptText="orcl" GridPane.rowIndex="8" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+
+                            <Label text="JDBC URL:" GridPane.rowIndex="9" GridPane.columnIndex="0"/>
+                            <TextField fx:id="urlField" editable="false" GridPane.rowIndex="9" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+
+                            <Label text="Username:" GridPane.rowIndex="10" GridPane.columnIndex="0"/>
+                            <TextField fx:id="usernameField" promptText="Database Username" GridPane.rowIndex="10" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+
+                            <Label text="Password:" GridPane.rowIndex="11" GridPane.columnIndex="0"/>
+                            <PasswordField fx:id="passwordField" promptText="Database Password" GridPane.rowIndex="11" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+
+                            <Label text="Pool Size:" GridPane.rowIndex="12" GridPane.columnIndex="0"/>
+                            <Spinner fx:id="poolSizeSpinner" editable="true" GridPane.rowIndex="12" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                        </children>
+                    </GridPane>
+                </VBox>
+                </items>
+            </SplitPane>
+        </VBox>
+    </children>
+</AnchorPane> 

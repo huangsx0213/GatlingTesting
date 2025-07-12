@@ -169,10 +169,27 @@ public class DBUtil {
                     ");";
             stmt.execute(schedSql);
 
-            // Add description columns if they don't exist (for migration)
-            addColumnIfNotExists(conn, "body_templates", "description", "TEXT");
-            addColumnIfNotExists(conn, "headers_templates", "description", "TEXT");
-            addColumnIfNotExists(conn, "groovy_variables", "description", "TEXT");
+            // Create db_connections table if it doesn't exist
+            String dbConnectionsSql = "CREATE TABLE IF NOT EXISTS db_connections("
+                    + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + " alias TEXT UNIQUE NOT NULL,"
+                    + " description TEXT,"
+                    + " db_type TEXT,"
+                    + " host TEXT,"
+                    + " port INTEGER,"
+                    + " db_name TEXT,"
+                    + " schema_name TEXT,"
+                    + " service_name TEXT,"
+                    + " username TEXT,"
+                    + " password TEXT,"
+                    + " pool_size INTEGER DEFAULT 5,"
+                    + " project_id INTEGER,"
+                    + " environment_id INTEGER,"
+                    + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
+                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE"
+                    + ");";
+            stmt.execute(dbConnectionsSql);
+
             
             System.out.println("Database schema initialized. All tables are up to date.");
         } catch (SQLException e) {

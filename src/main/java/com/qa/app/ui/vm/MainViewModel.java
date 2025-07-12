@@ -56,6 +56,7 @@ public class MainViewModel implements Initializable {
         "Headers Template Management",
         "Body Template Management",
         "Environment Management",
+        "DB Connections Mgmt",
         "Project Management",
         "Variables Management",
         "Application Properties"
@@ -77,6 +78,7 @@ public class MainViewModel implements Initializable {
             "Environment Management",
             "Project Management",
             "Variables Management",
+            "DB Connections Mgmt",
             "Application Properties"
     ));
 
@@ -131,6 +133,7 @@ public class MainViewModel implements Initializable {
         fxmlMapping.put("Headers Template Management", "/com/qa/app/ui/view/headers_template_view.fxml");
         fxmlMapping.put("Body Template Management", "/com/qa/app/ui/view/body_template_view.fxml");
         fxmlMapping.put("Environment Management", "/com/qa/app/ui/view/environment_view.fxml");
+        fxmlMapping.put("DB Connections Mgmt", "/com/qa/app/ui/view/db_connection_view.fxml");
         fxmlMapping.put("Project Management", "/com/qa/app/ui/view/project_view.fxml");
         fxmlMapping.put("Variables Management", "/com/qa/app/ui/view/groovy_variable_view.fxml");
         fxmlMapping.put("Gatling Scenario Management", "/com/qa/app/ui/view/gatling_scenario_view.fxml");
@@ -288,6 +291,8 @@ public class MainViewModel implements Initializable {
                         ((GatlingScenarioViewModel) controller).setMainViewModel(this);
                     } else if (controller instanceof GatlingInternalReportViewModel) {
                         // currently no setMainViewModel method needed, placeholder for future
+                    } else if (controller instanceof DbConnectionViewModel) {
+                        ((DbConnectionViewModel) controller).setMainViewModel(this);
                     }
                     // let Node find controller
                     contentNode.getProperties().put("controller", controller);
@@ -346,6 +351,8 @@ public class MainViewModel implements Initializable {
             ((GroovyVariableViewModel) controller).setMainViewModel(this);
         } else if (controller instanceof GatlingScenarioViewModel) {
             ((GatlingScenarioViewModel) controller).setMainViewModel(this);
+        } else if (controller instanceof DbConnectionViewModel) {
+            ((DbConnectionViewModel) controller).setMainViewModel(this);
         }
     }
 
@@ -385,6 +392,8 @@ public class MainViewModel implements Initializable {
             // currently no refresh method needed
         } else if (controller instanceof GatlingInternalReportViewModel) {
             ((GatlingInternalReportViewModel) controller).refresh();
+        } else if (controller instanceof DbConnectionViewModel) {
+            ((DbConnectionViewModel) controller).refresh();
         }
     }
 

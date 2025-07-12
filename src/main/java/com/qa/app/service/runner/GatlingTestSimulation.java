@@ -536,6 +536,60 @@ public class GatlingTestSimulation extends Simulation {
                             pstChecks.add(currentCheck);
                             break;
                         }
+                        case DB: {
+                            // Handle database check
+                            String connectionAlias = currentCheck.getExpression();
+                            String query = currentCheck.getExpect();
+                            
+                            // Execute DB check in a subsequent action since it can't be part of Gatling's check DSL
+                            loggingActions.add(exec(session -> {
+                                CheckReport checkReport = new CheckReport();
+                                checkReport.setType(currentCheck.getType());
+                                checkReport.setExpression(connectionAlias);
+                                checkReport.setOperator(currentCheck.getOperator());
+                                checkReport.setExpect(query);
+                                
+                                try {
+                                    // Execute query using DataSourceRegistry
+                                    String result = DataSourceRegistry.executeQuery(connectionAlias, query);
+                                    checkReport.setActual(result);
+                                    
+                                    boolean checkPassed;
+                                    switch (currentCheck.getOperator()) {
+                                        case CONTAINS:
+                                            checkPassed = result.contains(currentCheck.getExpect());
+                                            break;
+                                        case IS:
+                                        default:
+                                            checkPassed = result.equals(currentCheck.getExpect());
+                                            break;
+                                    }
+                                    checkReport.setPassed(checkPassed);
+                                    
+                                    if (!checkPassed) {
+                                        System.out.println(String.format("CHECK_FAIL|%s|DB|%s|expected:%s|actual:%s",
+                                                test.getTcid(), currentCheck.getOperator().toString(), query, result));
+                                    } else {
+                                        System.out.println(String.format("CHECK_PASS|%s|DB|%s|expected:%s|actual:%s",
+                                                test.getTcid(), currentCheck.getOperator().toString(), query, result));
+                                    }
+                                    
+                                    // Save result if specified
+                                    if (currentCheck.getSaveAs() != null && !currentCheck.getSaveAs().isBlank()) {
+                                        TestRunContext.saveVariable(test.getTcid(), currentCheck.getSaveAs(), result);
+                                    }
+                                } catch (Exception e) {
+                                    System.err.println("[ERROR] Exception in DB check: " + e.getMessage());
+                                    checkReport.setActual("ERROR: " + e.getMessage());
+                                    checkReport.setPassed(false);
+                                }
+                                
+                                // Add to session for reporting
+                                session.getList(CHECK_REPORTS_KEY).add(checkReport);
+                                return session;
+                            }));
+                            break;
+                        }
                     }
                 }
             } catch (Exception e) {
