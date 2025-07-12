@@ -96,6 +96,23 @@
             <artifactId>freemarker</artifactId>
             <version>2.3.32</version>
         </dependency>
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.33</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.3</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- Jackson Mr. Bean Module to help with deserialization -->
         <dependency>
@@ -126,12 +143,29 @@
                 <artifactId>gatling-maven-plugin</artifactId>
                 <version>${gatling.version}</version>
                 <configuration>
-                    <simulationClass>com.qa.app.util.DynamicJavaSimulation</simulationClass>
+                    <simulationClass>com.qa.app.util.GatlingTestSimulation</simulationClass>
                     <jvmArgs>
                         <jvmArg>--add-opens=java.base/java.lang=ALL-UNNAMED</jvmArg>
                         <jvmArg>--add-opens=java.base/java.util=ALL-UNNAMED</jvmArg>
                     </jvmArgs>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>set-classpath-property</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>build-classpath</goal>
+                        </goals>
+                        <configuration>
+                            <outputFile>${project.build.directory}/gatling.classpath</outputFile>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
@@ -158,6 +192,7 @@
                     <options>
                         <option>--add-opens=java.base/java.lang=ALL-UNNAMED</option>
                         <option>--add-opens=java.base/java.util=ALL-UNNAMED</option>
+                        <option>-Dgatling.classpath.file=${project.build.directory}/gatling.classpath</option>
                     </options>
                 </configuration>
             </plugin>

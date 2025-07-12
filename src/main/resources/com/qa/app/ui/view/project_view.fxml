@@ -8,10 +8,41 @@
     <children>
         <VBox spacing="15.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" VBox.vgrow="ALWAYS">
             <padding>
-                <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
+                <Insets top="5.0" right="5.0" bottom="5.0" left="5.0"/>
             </padding>
+            <!-- Header -->
             <Label text="Project Management" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
             <Separator />
+
+            <!-- Main Content -->
+            <SplitPane orientation="HORIZONTAL" dividerPositions="0.25" VBox.vgrow="ALWAYS">
+                <items>
+                <!-- Project List Section -->
+                <VBox spacing="10.0" minWidth="0.0">
+                    <padding><Insets top="5.0" right="5.0" bottom="5.0" left="5.0"/></padding>
+                    <Label text="Project List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+                    <TableView fx:id="projectTable" VBox.vgrow="ALWAYS" styleClass="table-view">
+                        <columns>
+                            <TableColumn fx:id="projectNameColumn" prefWidth="200.0" text="Name"/>
+                            <TableColumn fx:id="projectDescriptionColumn" prefWidth="600.0" text="Description"/>
+                        </columns>
+                    </TableView>
+                </VBox>
+
+                <!-- Project Details Section -->
+                <VBox spacing="15.0" VBox.vgrow="ALWAYS">
+                    <padding><Insets top="5.0" bottom="5.0" left="5.0" right="5.0"/></padding>
+                    <Label text="Project Details" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+                    <Separator />
+                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <children>
+                            <Button fx:id="addButton" mnemonicParsing="false" text="Add" />
+                            <Button fx:id="updateButton" mnemonicParsing="false" text="Update" />
+                            <Button fx:id="duplicateButton" mnemonicParsing="false" text="Duplicate" />
+                            <Button fx:id="deleteButton" mnemonicParsing="false" text="Delete" />
+                            <Button fx:id="clearButton" mnemonicParsing="false" text="Clear" />
+                        </children>
+                    </HBox>
             <GridPane hgap="15.0" vgap="10.0" VBox.vgrow="NEVER" maxWidth="Infinity">
                 <columnConstraints>
                     <ColumnConstraints prefWidth="120.0"/>
@@ -22,25 +53,15 @@
                     <RowConstraints minHeight="120.0"/>
                 </rowConstraints>
                 <children>
-                    <Label text="Project Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <Label text="Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
                     <TextField fx:id="projectNameField" promptText="Project Name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
                     <Label text="Description:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
                     <TextArea fx:id="projectDescriptionField" promptText="Description" prefRowCount="4" GridPane.rowIndex="1" GridPane.columnIndex="1" VBox.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"/>
                 </children>
             </GridPane>
-            <HBox alignment="CENTER_LEFT" spacing="10.0">
-                <Button fx:id="addButton" mnemonicParsing="false" text="Add Project" />
-                <Button fx:id="updateButton" mnemonicParsing="false" text="Update Project" />
-                <Button fx:id="deleteButton" mnemonicParsing="false" text="Delete Project" />
-                <Button fx:id="clearButton" mnemonicParsing="false" text="Clear Form" />
-            </HBox>
-            <Label text="Project List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
-            <TableView fx:id="projectTable" prefHeight="0" VBox.vgrow="ALWAYS" styleClass="table-view">
-                <columns>
-                    <TableColumn fx:id="projectNameColumn" prefWidth="200.0" text="Project Name"/>
-                    <TableColumn fx:id="projectDescriptionColumn" prefWidth="600.0" text="Description"/>
-                </columns>
-            </TableView>
+                </VBox>
+                </items>
+            </SplitPane>
         </VBox>
     </children>
 </AnchorPane> 

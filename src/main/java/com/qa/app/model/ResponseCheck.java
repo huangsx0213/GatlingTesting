@@ -1,5 +1,15 @@
 package com.qa.app.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+/**
+ * Represents a response validation rule configured for a Gatling test.
+ * <p>
+ * The runtime "actual" result of the check is no longer persisted to the database,
+ * therefore it has been removed from this model. Any legacy JSON that still
+ * contains an "actual" field will be safely ignored via {@link JsonIgnoreProperties}.
+ */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ResponseCheck {
     private CheckType type;
     private String expression;
@@ -8,11 +18,14 @@ public class ResponseCheck {
     private String saveAs;
     // If true, this check becomes optional (non-fatal) in Gatling
     private boolean optional;
-    private String actual;
+    
+    // --- DB Check Specific Fields ---
+    private String dbAlias;     // Database connection alias
+    private String dbSql;       // SQL query or statement
+    private String dbColumn;    // Column to extract value from (for SELECT)
 
     public ResponseCheck() {
         this.optional = false;
-        this.actual = null;
     }
 
     public ResponseCheck(CheckType type, String expression, Operator operator, String expect, String saveAs) {
@@ -26,12 +39,10 @@ public class ResponseCheck {
         this.expect = expect;
         this.saveAs = saveAs;
         this.optional = optional;
-        this.actual = null;
     }
 
     /**
      * Copy constructor.
-     * @param other The object to copy.
      */
     public ResponseCheck(ResponseCheck other) {
         if (other != null) {
@@ -41,7 +52,9 @@ public class ResponseCheck {
             this.expect = other.expect;
             this.saveAs = other.saveAs;
             this.optional = other.optional;
-            this.actual = null; // Do not copy runtime 'actual' value
+            this.dbAlias = other.dbAlias;
+            this.dbSql = other.dbSql;
+            this.dbColumn = other.dbColumn;
         }
     }
 
@@ -92,12 +105,14 @@ public class ResponseCheck {
     public void setOptional(boolean optional) {
         this.optional = optional;
     }
+    
+    // --- Getters and Setters for new fields ---
+    public String getDbAlias() { return dbAlias; }
+    public void setDbAlias(String dbAlias) { this.dbAlias = dbAlias; }
 
-    public String getActual() {
-        return actual;
-    }
+    public String getDbSql() { return dbSql; }
+    public void setDbSql(String dbSql) { this.dbSql = dbSql; }
 
-    public void setActual(String actual) {
-        this.actual = actual;
-    }
+    public String getDbColumn() { return dbColumn; }
+    public void setDbColumn(String dbColumn) { this.dbColumn = dbColumn; }
 } 

@@ -8,7 +8,7 @@
     <children>
         <VBox spacing="15.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" VBox.vgrow="ALWAYS">
             <padding>
-                <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
+                <Insets top="5.0" right="5.0" bottom="5.0" left="5.0"/>
             </padding>
             
             <!-- Header Section -->
@@ -16,17 +16,34 @@
             <Separator />
             
             <!-- Main Content Area -->
-            <HBox spacing="15.0" VBox.vgrow="ALWAYS">
+            <SplitPane orientation="HORIZONTAL" dividerPositions="0.25" VBox.vgrow="ALWAYS">
+                <items>
                 <!-- Variables List Section -->
-                <VBox spacing="10.0" prefWidth="300.0" minWidth="250.0" maxWidth="350.0">
+                <VBox spacing="10.0" minWidth="0.0">
+                    <padding><Insets top="5.0" right="5.0" bottom="5.0" left="5.0"/></padding>
                     <Label text="Variables List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
-                    <ListView fx:id="variablesListView" VBox.vgrow="ALWAYS" styleClass="table-view" />
+                    <TableView fx:id="variablesTableView" VBox.vgrow="ALWAYS" styleClass="table-view">
+                        <columns>
+                            <TableColumn fx:id="nameColumn" text="Name" prefWidth="100.0" minWidth="100.0"/>
+                            <TableColumn fx:id="descriptionColumn" text="Description" />
+                        </columns>
+                    </TableView>
                 </VBox>
                 
                 <!-- Variable Details Section -->
-                <VBox spacing="15.0" HBox.hgrow="ALWAYS">
+                <VBox spacing="15.0" VBox.vgrow="ALWAYS">
+                    <padding><Insets top="5.0" bottom="5.0" left="5.0" right="5.0"/></padding>
                     <Label text="Variable Details" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
                     <Separator />
+                    
+                    <!-- Action Buttons -->
+                    <HBox spacing="10.0" alignment="CENTER_LEFT">
+                        <Button fx:id="addButton" text="Add" onAction="#handleAdd"/>
+                        <Button fx:id="saveButton" text="Update" onAction="#handleSave"/>
+                        <Button fx:id="duplicateButton" text="Duplicate" onAction="#handleDuplicate" />
+                        <Button fx:id="deleteButton" text="Delete" onAction="#handleDelete"/>
+                        <Button fx:id="clearButton" text="Clear" onAction="#handleClear"/>
+                    </HBox>
                     
                     <!-- Form Fields -->
                     <GridPane hgap="15.0" vgap="10.0" VBox.vgrow="NEVER">
@@ -40,7 +57,7 @@
                             <RowConstraints minHeight="40.0"/>
                         </rowConstraints>
                         <children>
-                            <Label text="Variable Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <Label text="Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
                             <TextField fx:id="nameField" promptText="Enter variable name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
                             
                             <Label text="Format:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
@@ -53,19 +70,12 @@
                     
                     <!-- Groovy Script Section -->
                     <VBox spacing="5.0" VBox.vgrow="ALWAYS">
-                        <Label text="Groovy Script:" style="-fx-font-weight: bold;" />
+                        <Label text="Groovy Script:"/>
                         <TextArea fx:id="scriptArea" promptText="Enter your Groovy script here..." VBox.vgrow="ALWAYS" wrapText="true" />
                     </VBox>
-                    
-                    <!-- Action Buttons -->
-                    <HBox spacing="10.0" alignment="CENTER_LEFT">
-                        <Button fx:id="addButton" text="Add Variable" onAction="#handleAdd" mnemonicParsing="false" />
-                        <Button fx:id="saveButton" text="Save Variable" onAction="#handleSave" mnemonicParsing="false" />
-                        <Button fx:id="deleteButton" text="Delete Variable" onAction="#handleDelete" mnemonicParsing="false" />
-                        <Button fx:id="clearButton" text="Clear Form" onAction="#handleClear" mnemonicParsing="false" />
-                    </HBox>
                 </VBox>
-            </HBox>
+                </items>
+            </SplitPane>
         </VBox>
     </children>
 </AnchorPane> 

@@ -3,7 +3,6 @@ package com.qa.app.service.impl;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
-
 import com.qa.app.dao.api.IGatlingTestDao;
 import com.qa.app.dao.impl.GatlingTestDaoImpl;
 import com.qa.app.model.GatlingTest;
@@ -12,16 +11,11 @@ import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IEndpointService;
 import com.qa.app.model.Endpoint;
-import com.qa.app.util.GatlingTestExecutor;
+import com.qa.app.service.runner.GatlingTestRunner;
 import com.qa.app.model.BodyTemplate;
 import com.qa.app.model.HeadersTemplate;
 import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.api.IHeadersTemplateService;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.qa.app.model.ResponseCheck;
-
 
 public class GatlingTestServiceImpl implements IGatlingTestService {
 
@@ -30,16 +24,41 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
     private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
 
+    /* -------------------------------------------------
+     *  Helper functional interfaces & utility wrappers
+     * ------------------------------------------------- */
+    @FunctionalInterface
+    private interface SqlCallable<T> {
+        T call() throws SQLException;
+    }
+
+    private <T> T withSql(SqlCallable<T> action, String errMsg) throws ServiceException {
+        try {
+            return action.call();
+        } catch (SQLException e) {
+            throw new ServiceException(errMsg + ": " + e.getMessage(), e);
+        }
+    }
+
+
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    private void validateTestBasicFields(GatlingTest test) throws ServiceException {
+        boolean endpointInfoMissing = (test.getEndpointId() <= 0) && isBlank(test.getEndpointName());
+        if (test == null || isBlank(test.getTcid()) || isBlank(test.getSuite()) || endpointInfoMissing) {
+            throw new ServiceException("Test validation failed: TCID, Suite, and Endpoint (ID or Name) are required.");
+        }
+    }
+
     @Override
     public void createTest(GatlingTest test) throws ServiceException {
+        validateTestBasicFields(test);
+
         try {
-            if (test == null || test.getTcid() == null || test.getTcid().trim().isEmpty() ||
-                test.getSuite() == null || test.getSuite().trim().isEmpty() ||
-                test.getEndpointName() == null || test.getEndpointName().trim().isEmpty()) {
-                throw new ServiceException("Test validation failed: TCID, Suite, and Endpoint Name are required.");
-            }
-            GatlingTest existingTest = testDao.getTestByTcid(test.getTcid());
-            if (existingTest != null) {
+            GatlingTest existing = testDao.getTestByTcid(test.getTcid());
+            if (existing != null) {
                 throw new ServiceException("Test with TCID '" + test.getTcid() + "' already exists.");
             }
             testDao.addTest(test);
@@ -50,38 +69,27 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
 
     @Override
     public GatlingTest findTestById(int id) throws ServiceException {
-        try {
-            return testDao.getTestById(id);
-        } catch (SQLException e) {
-            throw new ServiceException("Database error while finding test by ID: " + e.getMessage(), e);
-        }
+        return withSql(() -> testDao.getTestById(id), "Database error while finding test by ID");
     }
 
     @Override
     public GatlingTest findTestByTcid(String tcid) throws ServiceException {
-        try {
-            return testDao.getTestByTcid(tcid);
-        } catch (SQLException e) {
-            throw new ServiceException("Database error while finding test by TCID: " + e.getMessage(), e);
-        }
+        return withSql(() -> testDao.getTestByTcid(tcid), "Database error while finding test by TCID");
     }
 
     @Override
     public List<GatlingTest> findAllTests() throws ServiceException {
-        try {
-            return testDao.getAllTests();
-        } catch (SQLException e) {
-            throw new ServiceException("Database error while retrieving all tests: " + e.getMessage(), e);
-        }
+        return withSql(testDao::getAllTests, "Database error while retrieving all tests");
+    }
+
+    @Override
+    public List<GatlingTest> findAllTestsByProjectId(Integer projectId) throws ServiceException {
+        return withSql(() -> testDao.getTestsByProjectId(projectId), "Database error while retrieving tests by projectId");
     }
 
     @Override
     public List<GatlingTest> findTestsBySuite(String suite) throws ServiceException {
-        try {
-            return testDao.getTestsBySuite(suite);
-        } catch (SQLException e) {
-            throw new ServiceException("Database error while finding tests by suite: " + e.getMessage(), e);
-        }
+        return withSql(() -> testDao.getTestsBySuite(suite), "Database error while finding tests by suite");
     }
 
     @Override
@@ -90,8 +98,8 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             if (test == null || test.getId() <= 0 ||
                 test.getTcid() == null || test.getTcid().trim().isEmpty() ||
                 test.getSuite() == null || test.getSuite().trim().isEmpty() ||
-                test.getEndpointName() == null || test.getEndpointName().trim().isEmpty()) {
-                throw new ServiceException("Test validation failed: ID, TCID, Suite, and Endpoint Name are required.");
+                (test.getEndpointId() <= 0 && (test.getEndpointName() == null || test.getEndpointName().trim().isEmpty()))) {
+                throw new ServiceException("Test validation failed: ID, TCID, Suite, and Endpoint (ID or Name) are required.");
             }
             GatlingTest existingTest = testDao.getTestById(test.getId());
             if (existingTest == null) {
@@ -112,8 +120,8 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     @Override
     public void removeTest(int id) throws ServiceException {
         try {
-            GatlingTest existingTest = testDao.getTestById(id);
-            if (existingTest == null) {
+            GatlingTest existing = testDao.getTestById(id);
+            if (existing == null) {
                 throw new ServiceException("Test with ID " + id + " not found.");
             }
             testDao.deleteTest(id);
@@ -125,14 +133,18 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     @Override
     public void toggleTestRunStatus(int id) throws ServiceException {
         try {
-            GatlingTest test = testDao.getTestById(id);
-            if (test == null) {
+            GatlingTest t = testDao.getTestById(id);
+            if (t == null) {
                 throw new ServiceException("Test with ID " + id + " not found.");
             }
-            testDao.updateTestRunStatus(id, !test.isEnabled());
+            testDao.updateTestRunStatus(id, !t.isEnabled());
         } catch (SQLException e) {
             throw new ServiceException("Database error while toggling test run status: " + e.getMessage(), e);
         }
+    }
+
+    public void runTests(java.util.List<GatlingTest> tests, GatlingLoadParameters params) throws ServiceException {
+        runTests(tests, params, null);
     }
 
     @Override
@@ -142,25 +154,34 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         }
 
         // ① Expand dependencies and capture extra meta (origin, mode)
-        ExpandedResult expanded = expandTestsWithDependencies(tests);
+        ExpandedResult expanded = expandTestsWithDependenciesForRun(tests);
         List<GatlingTest> executionList = expanded.tests;
-
-        // ② Mark all response checks as pending for all to-run tests
-        markTestsPending(executionList);
 
         java.util.List<Endpoint> endpoints = new java.util.ArrayList<>();
         for (GatlingTest test : executionList) {
             enrichTemplates(test);
-            Endpoint endpoint = endpointService.getEndpointByName(test.getEndpointName());
+
+            Endpoint endpoint = null;
+            try {
+                if (test.getEndpointId() > 0) {
+                    endpoint = endpointService.getEndpointById(test.getEndpointId());
+                }
+                if (endpoint == null) {
+                    endpoint = endpointService.getEndpointByName(test.getEndpointName());
+                }
+            } catch (Exception ex) {
+                throw new ServiceException("Error retrieving endpoint for test: " + test.getTcid() + ": " + ex.getMessage(), ex);
+            }
+
             if (endpoint == null) {
                 throw new ServiceException("Endpoint not found for test: " + test.getTcid());
             }
+
             endpoints.add(endpoint);
         }
 
         try {
-            // Asynchronous execution, avoid blocking the calling thread (e.g. JavaFX UI thread)
-            GatlingTestExecutor.executeBatch(executionList, params, endpoints,
+            GatlingTestRunner.executeBatch(executionList, params, endpoints,
                     expanded.origins, expanded.modes, onComplete);
 
         } catch (Exception e) {
@@ -193,22 +214,6 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         } catch (Exception ignored) { }
     }
 
-    @Override
-    public void markTestsPending(List<GatlingTest> tests) throws ServiceException {
-        ObjectMapper mapper = new ObjectMapper();
-        for (GatlingTest test : tests) {
-            try {
-                java.util.List<ResponseCheck> list = mapper.readValue(test.getResponseChecks(), new TypeReference<java.util.List<ResponseCheck>>(){});
-                for (ResponseCheck rc : list) {
-                    rc.setActual("TO_RUN");
-                }
-                test.setResponseChecks(mapper.writeValueAsString(list));
-                testDao.updateTest(test);
-            } catch (Exception ex) {
-                System.err.println("Failed to mark test " + test.getTcid() + " pending: " + ex.getMessage());
-            }
-        }
-    }
 
     /**
      * Parse the Condition string, e.g. "[Setup]TC001,TC002;[Teardown]TC003" -> Map
@@ -237,7 +242,7 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         List<String> modes = new java.util.ArrayList<>();
     }
 
-    private ExpandedResult expandTestsWithDependencies(List<GatlingTest> selected) throws ServiceException {
+    private ExpandedResult expandTestsWithDependenciesForRun(List<GatlingTest> selected) throws ServiceException {
         ExpandedResult res = new ExpandedResult();
 
         for (GatlingTest main : selected) {
@@ -274,4 +279,5 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         }
         return res;
     }
+
 }

@@ -8,7 +8,9 @@ import com.qa.app.ui.vm.gatling.TagHandler;
 import com.qa.app.ui.vm.gatling.TemplateHandler;
 import com.qa.app.ui.vm.gatling.TestCondictionHandler;
 import com.qa.app.util.AppConfig;
-import com.qa.app.util.VariableGenerator;
+import com.qa.app.util.HelpTooltipManager;
+import com.qa.app.common.listeners.AppConfigChangeListener;
+import com.qa.app.service.script.VariableGenerator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -28,13 +30,28 @@ import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
 import com.qa.app.model.Operator;
 import javafx.util.converter.DefaultStringConverter;
-import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleStringProperty;
 import com.qa.app.model.GatlingLoadParameters;
 import com.qa.app.model.threadgroups.StandardThreadGroup;
 import com.qa.app.model.threadgroups.ThreadGroupType;
-import com.qa.app.ui.view.FunctionalTestReportStage;
 import javafx.beans.binding.Bindings;
+import com.qa.app.service.ProjectContext;
+import javafx.application.Platform;
+import javafx.geometry.Point2D;
+import javafx.scene.Node;
+import javafx.scene.layout.Region;
+import javafx.geometry.Insets;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.ComboBox;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import java.util.Optional;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
+import javafx.stage.Stage;
+import javafx.scene.image.Image;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -43,9 +60,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
-import javafx.scene.control.ComboBox;
 
-public class GatlingTestViewModel implements Initializable {
+public class GatlingTestViewModel implements Initializable, AppConfigChangeListener {
 
     @FXML
     private TextField testIdField;
@@ -81,6 +97,8 @@ public class GatlingTestViewModel implements Initializable {
     private TableColumn<DynamicVariable, String> bodyDynamicKeyColumn;
     @FXML
     private TableColumn<DynamicVariable, String> bodyDynamicValueColumn;
+    @FXML
+    private TableColumn<DynamicVariable, Void> bodyDynamicActionColumn;
     @FXML
     private TextField tagsInputField;
     @FXML
@@ -122,6 +140,8 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private TableColumn<DynamicVariable, String> headersTemplateValueColumn;
     @FXML
+    private TableColumn<DynamicVariable, Void> headersTemplateActionColumn;
+    @FXML
     private TableColumn<GatlingTest, String> headersTemplateNameColumn;
     @FXML
     private TableColumn<GatlingTest, String> bodyTemplateNameColumn;
@@ -136,6 +156,18 @@ public class GatlingTestViewModel implements Initializable {
     @FXML
     private TitledPane apiConfigPane;
 
+    @FXML
+    private Label headersHelpIcon;
+
+    @FXML
+    private Label bodyHelpIcon;
+
+    @FXML
+    private Label responseHelpIcon;
+
+    @FXML
+    private Button responseHelpButton;
+
     // Response Checks UI Elements
     @FXML
     private TableView<ResponseCheck> responseChecksTable;
@@ -147,8 +179,7 @@ public class GatlingTestViewModel implements Initializable {
     private TableColumn<ResponseCheck, Operator> checkOperatorColumn;
     @FXML
     private TableColumn<ResponseCheck, String> checkExpectColumn;
-    @FXML
-    private TableColumn<ResponseCheck, String> checkActualColumn;
+
     @FXML
     private TableColumn<ResponseCheck, String> checkSaveAsColumn;
 
@@ -156,10 +187,22 @@ public class GatlingTestViewModel implements Initializable {
     @FXML private TextField tagFilterField;          // Tag keyword filter field
     @FXML private ComboBox<String> enabledFilterCombo; // Enabled status filter
 
+    @FXML
+    private TableView<DynamicVariable> urlDynamicVarsTable;
+    @FXML
+    private TableColumn<DynamicVariable, String> urlDynamicKeyColumn;
+    @FXML
+    private TableColumn<DynamicVariable, String> urlDynamicValueColumn;
+    @FXML
+    private TableColumn<DynamicVariable, Void> urlDynamicActionColumn;
+    @FXML
+    private TextArea generatedUrlArea;
+
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
     private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
     private final IEndpointService endpointService = new EndpointServiceImpl();
+    private final IDbConnectionService dbConnectionService = new DbConnectionServiceImpl();
     private final ObservableList<GatlingTest> testList = FXCollections.observableArrayList();
     private final ObservableList<DynamicVariable> bodyTemplateVariables = FXCollections.observableArrayList();
     private Map<String, String> bodyTemplates = new HashMap<>();
@@ -167,6 +210,11 @@ public class GatlingTestViewModel implements Initializable {
     private Map<String, String> headersTemplates = new HashMap<>();
     private final ObservableList<Endpoint> endpointList = FXCollections.observableArrayList();
     private final ObservableList<String> endpointNameList = FXCollections.observableArrayList();
+    // Map for quick id-to-endpoint lookup
+    private final Map<Integer, Endpoint> endpointIdMap = new HashMap<>();
+
+    // New list for URL dynamic variables
+    private final ObservableList<DynamicVariable> urlDynamicVariables = FXCollections.observableArrayList();
 
     // Response checks data list
     private final ObservableList<ResponseCheck> responseChecks = FXCollections.observableArrayList();
@@ -174,7 +222,7 @@ public class GatlingTestViewModel implements Initializable {
     private MainViewModel mainViewModel;
     private final ObservableList<String> allTcids = FXCollections.observableArrayList();
     private final ObservableList<String> prefixOptions = FXCollections.observableArrayList("Setup", "Teardown",
-            "SuiteSetup", "SuiteTeardown", "CheckWith");
+            "SuiteSetup", "SuiteTeardown");
 
     // Used to store all TCID dropdown references
     private final List<CheckComboBox<String>> conditionTcidComboBoxes = new ArrayList<>();
@@ -192,6 +240,14 @@ public class GatlingTestViewModel implements Initializable {
     private final CheckBox selectAllCheckBox = new CheckBox();
 
     private boolean isUpdatingSelection = false;
+    
+    private Tooltip variableTooltip;
+
+    private Tooltip responseCheckTooltip;
+    private Tooltip executionFlowTooltip;
+
+    @FXML
+    private Label runHelpIcon;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -214,7 +270,6 @@ public class GatlingTestViewModel implements Initializable {
         setupConditionsTable();
 
         setupEndpointComboBox();
-        loadEndpoints();
 
         // initialize suiteComboBox
         loadAllSuites();
@@ -234,6 +289,13 @@ public class GatlingTestViewModel implements Initializable {
             enabledFilterCombo.setItems(FXCollections.observableArrayList("All", "Enabled", "Disabled"));
             enabledFilterCombo.setValue("All");
         }
+        
+        loadEndpoints();
+        loadAllTcids();
+        loadTests();
+        loadTemplates();
+        loadHeadersTemplates();
+        setupUrlDynamicVariablesHandler();
 
         if (viewReportButton != null) {
             viewReportButton.disableProperty().bind(
@@ -244,6 +306,30 @@ public class GatlingTestViewModel implements Initializable {
                 }, testTable.getSelectionModel().selectedItemProperty()))
             );
         }
+
+        AppConfig.addChangeListener(this);
+
+        // Populate variable help
+        List<Map<String, String>> varDefs = VariableGenerator.getInstance().getVariableDefinitions();
+        StringBuilder helpText = new StringBuilder("可用变量:\n");
+        for (Map<String, String> def : varDefs) {
+            helpText.append(def.get("format")).append(" - ").append(def.get("description")).append("\n");
+        }
+        // This label seems to be missing from the FXML, but the code references it.
+        // If variableHelpLabel is a valid FXML field, this will work. Otherwise, that's a separate bug.
+        // variableHelpLabel.setText(helpText.toString());
+
+        setupVariableHelpTooltips();
+        setupResponseCheckHelpTooltip();
+        setupRunHelpTooltip();
+    }
+
+    @Override
+    public void onConfigChanged() {
+        Platform.runLater(() -> {
+            loadTests();
+            loadEndpoints();
+        });
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -285,10 +371,10 @@ public class GatlingTestViewModel implements Initializable {
         // Initialize TemplateHandler
         bodyTemplateHandler = new TemplateHandler(
                 bodyTemplateComboBox, bodyTemplateVariables, bodyTemplates, bodyTemplateIdNameMap,
-                bodyDynamicVarsTable, bodyDynamicKeyColumn, bodyDynamicValueColumn, generatedBodyArea);
+                bodyDynamicVarsTable, bodyDynamicKeyColumn, bodyDynamicValueColumn, bodyDynamicActionColumn, generatedBodyArea);
         headersTemplateHandler = new TemplateHandler(
                 headersTemplateComboBox, headersTemplateVariables, headersTemplates, headersTemplateIdNameMap,
-                headersTemplateVarsTable, headersTemplateKeyColumn, headersTemplateValueColumn, generatedHeadersArea);
+                headersTemplateVarsTable, headersTemplateKeyColumn, headersTemplateValueColumn, headersTemplateActionColumn, generatedHeadersArea);
         bodyTemplateHandler.setup();
         headersTemplateHandler.setup();
     }
@@ -375,6 +461,12 @@ public class GatlingTestViewModel implements Initializable {
                 }
             }
         });
+
+        // Listener to populate URL variables when endpoint changes
+        endpointComboBox.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            populateUrlDynamicVariables(newVal);
+            updateGeneratedUrl();
+        });
     }
 
     private void setupTagHandler() {
@@ -447,28 +539,11 @@ public class GatlingTestViewModel implements Initializable {
             }
         });
         endpointColumn.setCellValueFactory(cellData -> {
-            String endpointName = cellData.getValue().getEndpointName();
-            // 查找当前环境下的endpoint
-            String envName = AppConfig.getCurrentEnv();
-            Integer envId = null;
-            try {
-                for (Environment env : environmentService.findAllEnvironments()) {
-                    if (env.getName().equals(envName)) {
-                        envId = env.getId();
-                        break;
-                    }
-                }
-            } catch (Exception e) {
-                // ignore
-            }
-            String display = endpointName == null ? "" : endpointName;
-            if (envId != null) {
-                for (Endpoint ep : endpointList) {
-                    if (ep.getName().equals(endpointName) && envId.equals(ep.getEnvironmentId())) {
-                        display = ep.getName() + " [ " + ep.getMethod() + " " + ep.getUrl() + " ]";
-                        break;
-                    }
-                }
+            int eid = cellData.getValue().getEndpointId();
+            Endpoint ep = endpointIdMap.get(eid);
+            String display = "";
+            if (ep != null) {
+                display = ep.getName() + " [ " + ep.getMethod() + " " + ep.getUrl() + " ]";
             }
             return new javafx.beans.property.SimpleStringProperty(display);
         });
@@ -582,9 +657,10 @@ public class GatlingTestViewModel implements Initializable {
     private void loadEndpoints() {
         endpointList.clear();
         endpointNameList.clear();
+        endpointIdMap.clear();
         try {
             // get current environment
-            String envName = AppConfig.getCurrentEnv();
+            String envName = AppConfig.getProperty("current.env", "dev");
             Integer envId = null;
             for (Environment env : environmentService.findAllEnvironments()) {
                 if (env.getName().equals(envName)) {
@@ -597,6 +673,7 @@ public class GatlingTestViewModel implements Initializable {
                 for (Endpoint ep : endpointService.getAllEndpoints()) {
                     if (envId.equals(ep.getEnvironmentId())) {
                         endpointList.add(ep);
+                        endpointIdMap.put(ep.getId(), ep);
                     }
                 }
             }
@@ -649,7 +726,7 @@ public class GatlingTestViewModel implements Initializable {
 
     private void loadTests() {
         try {
-            Integer projectId = AppConfig.getCurrentProjectId();
+            Integer projectId = ProjectContext.getCurrentProjectId();
             if (projectId != null) {
                 List<GatlingTest> tests = testService.findTestsByProjectId(projectId);
                 // Clear old selection states before loading new tests
@@ -772,6 +849,16 @@ public class GatlingTestViewModel implements Initializable {
         conditionHandler.getConditionRows().clear();
         updateGeneratedBody();
         updateGeneratedHeaders();
+
+        // Clear response checks
+        responseChecks.clear();
+        ensureDefaultStatusCheck();
+        if (responseChecksTable != null) {
+            responseChecksTable.refresh();
+        }
+
+        urlDynamicVariables.clear();
+        generatedUrlArea.setText("");
     }
 
     private void updateGeneratedBody() {
@@ -794,11 +881,9 @@ public class GatlingTestViewModel implements Initializable {
             conditionHandler.deserializeConditions(test.getConditions());
             expResultArea.setText(test.getResponseChecks());
             String display = null;
-            for (Endpoint ep : endpointList) {
-                if (ep.getName().equals(test.getEndpointName())) {
-                    display = ep.getName() + " [ " + ep.getMethod() + " " + ep.getUrl() + " ]";
-                    break;
-                }
+            Endpoint epFound = endpointIdMap.get(test.getEndpointId());
+            if (epFound != null) {
+                display = epFound.getName() + " [ " + epFound.getMethod() + " " + epFound.getUrl() + " ]";
             }
             endpointComboBox.setValue(display);
             if (bodyTemplateIdNameMap.containsKey(test.getBodyTemplateId())) {
@@ -806,21 +891,15 @@ public class GatlingTestViewModel implements Initializable {
             } else {
                 bodyTemplateComboBox.setValue(null);
             }
-            bodyTemplateVariables.clear();
-            if (test.getBodyDynamicVariables() != null) {
-                test.getBodyDynamicVariables()
-                        .forEach((key, value) -> bodyTemplateVariables.add(new DynamicVariable(key, value)));
-            }
+            bodyTemplateHandler.setAndFormatVariables(test.getBodyDynamicVariables());
+
             if (headersTemplateIdNameMap.containsKey(test.getHeadersTemplateId())) {
                 headersTemplateComboBox.setValue(headersTemplateIdNameMap.get(test.getHeadersTemplateId()));
             } else {
                 headersTemplateComboBox.setValue(null);
             }
-            headersTemplateVariables.clear();
-            if (test.getHeadersDynamicVariables() != null) {
-                test.getHeadersDynamicVariables()
-                        .forEach((key, value) -> headersTemplateVariables.add(new DynamicVariable(key, value)));
-            }
+            headersTemplateHandler.setAndFormatVariables(test.getHeadersDynamicVariables());
+
             tagHandler.setTagsFromString(test.getTags());
             waitTimeSpinner.getValueFactory().setValue(test.getWaitTime());
 
@@ -834,6 +913,18 @@ public class GatlingTestViewModel implements Initializable {
             }
             // Ensure default status row
             ensureDefaultStatusCheck();
+
+            // Populate URL dynamic variables based on endpoint URL and saved values
+            populateUrlDynamicVariables(display);
+            if(test!=null){
+                Map<String,String> saved = test.getEndpointDynamicVariables();
+                for (DynamicVariable dv : urlDynamicVariables) {
+                    if (saved!=null && saved.containsKey(dv.getKey())) {
+                        dv.setValue(saved.get(dv.getKey()));
+                    }
+                }
+            }
+            updateGeneratedUrl();
 
             updateGeneratedBody();
             updateGeneratedHeaders();
@@ -849,12 +940,20 @@ public class GatlingTestViewModel implements Initializable {
         String endpointDisplay = endpointComboBox.getValue();
         String endpointName = endpointDisplay == null ? "" : endpointDisplay.split(" \\[")[0].trim();
 
+        // Resolve endpoint ID
+        int endpointId = 0;
+        for (Endpoint ep : endpointList) {
+            if (ep.getName().equals(endpointName)) { endpointId = ep.getId(); break; }
+        }
+
         test.setEnabled(isEnabledCheckBox.isSelected());
         test.setSuite(suite);
         test.setTcid(tcid);
         test.setDescriptions(descriptions);
         test.setConditions(serializeConditions());
         test.setResponseChecks(expResultArea.getText());
+        test.setEndpointId(endpointId);
+        // keep name for UI convenience (not persisted)
         test.setEndpointName(endpointName);
         test.setBodyTemplateId(getBodyTemplateIdByName(bodyTemplateComboBox.getSelectionModel().getSelectedItem()));
         test.setHeadersTemplateId(
@@ -870,7 +969,11 @@ public class GatlingTestViewModel implements Initializable {
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         test.setHeadersDynamicVariables(headersVars);
         
-        // 存储原始模板（含占位符）以便运行时动态渲染
+        Map<String, String> urlVars = new HashMap<>();
+        urlDynamicVariables.forEach(dv -> urlVars.put(dv.getKey(), dv.getValue()));
+        test.setEndpointDynamicVariables(urlVars);
+
+        // Store raw templates for runtime rendering
         String selectedBodyTemplateName = bodyTemplateComboBox.getSelectionModel().getSelectedItem();
         if (selectedBodyTemplateName != null && bodyTemplates.containsKey(selectedBodyTemplateName)) {
             test.setBody(bodyTemplates.get(selectedBodyTemplateName));
@@ -885,9 +988,9 @@ public class GatlingTestViewModel implements Initializable {
             test.setHeaders(null);
         }
 
-        test.setProjectId(AppConfig.getCurrentProjectId());
+        test.setProjectId(ProjectContext.getCurrentProjectId());
 
-        // Serialize response checks to JSON and set to expResult field
+        // Serialize response checks to JSON
         try{
             String json = mapper.writeValueAsString(responseChecks);
             test.setResponseChecks(json);
@@ -895,7 +998,7 @@ public class GatlingTestViewModel implements Initializable {
             test.setResponseChecks(null);
         }
 
-        // new suite auto-add to dropdown
+        // new suite added to dropdown
         if (suite != null && !suite.isEmpty() && !suiteComboBox.getItems().contains(suite)) {
             suiteComboBox.getItems().add(suite);
         }
@@ -918,7 +1021,7 @@ public class GatlingTestViewModel implements Initializable {
             }
             return;
         }
-        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpointName, AppConfig.getCurrentProjectId());
+        GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpointName, ProjectContext.getCurrentProjectId());
         populateTestFromFields(newTest);
 
         try {
@@ -1053,16 +1156,7 @@ public class GatlingTestViewModel implements Initializable {
         testTable.getSelectionModel().clearSelection();
     }
 
-    @FXML
-    private void handleViewReport() {
-        GatlingTest selectedTest = testTable.getSelectionModel().getSelectedItem();
-        if (selectedTest != null && selectedTest.getReportPath() != null && !selectedTest.getReportPath().isEmpty()) {
-            new FunctionalTestReportStage(selectedTest.getReportPath());
-        } else {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION, "No report available for the selected test.", ButtonType.OK);
-            alert.showAndWait();
-        }
-    }
+
 
     @FXML
     private void handleRunTest() {
@@ -1075,76 +1169,49 @@ public class GatlingTestViewModel implements Initializable {
             return;
         }
 
-        // Make a stable copy of the selection *before* any refreshes
+        // Make a stable copy of the selection to avoid UI side-effects
         List<GatlingTest> testsToRun = new ArrayList<>(selectedTests);
 
-        // Persist any edits made in the detail pane to the focused test (if it is among the selections)
-        GatlingTest focusedTest = testTable.getSelectionModel().getSelectedItem();
-        if (focusedTest != null && testsToRun.contains(focusedTest)) {
-            populateTestFromFields(focusedTest);
+        // Persist current form edits back to the focused test (if part of the run set)
+        GatlingTest focused = testTable.getSelectionModel().getSelectedItem();
+        if (focused != null && testsToRun.contains(focused)) {
+            populateTestFromFields(focused);
         }
 
-        // Mark all selected tests as PENDING (set Actual -> "TO_RUN") in DB
-        try {
-            testService.markTestsPending(testsToRun);
-        } catch (ServiceException e) {
-            System.err.println("Failed to mark tests as pending: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        // Immediately reload data so the UI reflects the new "TO_RUN" status **while keeping the selection**
-        loadTests();
-        testTable.getSelectionModel().clearSelection();
-        for (GatlingTest t : testsToRun) {
-            testTable.getItems().stream()
-                    .filter(uiTest -> uiTest.getId() == t.getId())
-                    .findFirst()
-                    .ifPresent(uiTest -> testTable.getSelectionModel().select(uiTest));
-        }
-        if (testTable.getSelectionModel().getSelectedItem() != null) {
-            showTestDetails(testTable.getSelectionModel().getSelectedItem());
-        }
-        testTable.refresh();
-        updateSelectAllCheckBoxState();
-
-        // ----- Prepare Gatling load parameters (default single-thread run) -----
+        // Prepare minimal load profile (single user by default)
         GatlingLoadParameters params = new GatlingLoadParameters();
         params.setType(ThreadGroupType.STANDARD);
-        StandardThreadGroup config = new StandardThreadGroup();
-        config.setNumThreads(1);
-        config.setRampUp(0);
-        config.setLoops(1);
-        config.setScheduler(false);
-        config.setDelay(0);
-        params.setStandardThreadGroup(config);
+        StandardThreadGroup tg = new StandardThreadGroup();
+        tg.setNumThreads(1);
+        tg.setRampUp(0);
+        tg.setLoops(1);
+        tg.setScheduler(false);
+        tg.setDelay(0);
+        params.setStandardThreadGroup(tg);
 
+        // Notify UI + disable Run button to prevent duplicate clicks
         if (mainViewModel != null) {
-            mainViewModel.updateStatus("Starting to run " + testsToRun.size() + " tests with default settings.",
-                    MainViewModel.StatusType.INFO);
+            mainViewModel.updateStatus("Running " + testsToRun.size() + " Gatling test(s)...", MainViewModel.StatusType.INFO);
         }
+        // Disable button
+        runTestButton.setDisable(true);
 
-        // Callback to execute on test completion – refresh data & keep selection
         Runnable onComplete = () -> {
-            System.out.println("Gatling run finished. Refreshing UI.");
-            loadTests();
-            testTable.getSelectionModel().clearSelection();
-            for (GatlingTest ranTest : testsToRun) {
-                testTable.getItems().stream()
-                        .filter(t -> t.getId() == ranTest.getId())
-                        .findFirst()
-                        .ifPresent(t -> testTable.getSelectionModel().select(t));
-            }
-            if (testTable.getSelectionModel().getSelectedItem() != null) {
-                showTestDetails(testTable.getSelectionModel().getSelectedItem());
-            }
-            testTable.refresh();
-            updateSelectAllCheckBoxState();
+            // Re-enable Run button and refresh data on JavaFX thread
+            javafx.application.Platform.runLater(() -> {
+                runTestButton.setDisable(false);
+                loadTests();
+                testTable.refresh();
+                if (mainViewModel != null) {
+                    mainViewModel.updateStatus("Gatling test(s) completed.", MainViewModel.StatusType.SUCCESS);
+                }
+            });
         };
 
-        // Execute all selected tests sequentially within the same thread group configuration
         try {
             testService.runTests(testsToRun, params, onComplete);
         } catch (ServiceException ex) {
+            runTestButton.setDisable(false);
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to run test(s): " + ex.getMessage(),
                         MainViewModel.StatusType.ERROR);
@@ -1205,7 +1272,7 @@ public class GatlingTestViewModel implements Initializable {
     }
 
     public void refreshDynamicVariables() {
-        VariableGenerator.reloadCustomVariables();
+        VariableGenerator.getInstance().reloadCustomVariables();
         loadTemplates();
         loadHeadersTemplates();
         // refresh dynamic variables table
@@ -1220,7 +1287,11 @@ public class GatlingTestViewModel implements Initializable {
     // =====================
     @FXML
     private void handleAddResponseCheck() {
-        responseChecks.add(new ResponseCheck());
+        ResponseCheck newCheck = new ResponseCheck();
+        responseChecks.add(newCheck);
+        responseChecksTable.getSelectionModel().clearSelection();
+        responseChecksTable.getSelectionModel().select(newCheck);
+        responseChecksTable.scrollTo(newCheck);
     }
 
     @FXML
@@ -1265,56 +1336,36 @@ public class GatlingTestViewModel implements Initializable {
         responseChecksTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         if(responseChecksTable==null) return;
         responseChecksTable.setItems(responseChecks);
+        responseChecksTable.setFixedCellSize(Region.USE_COMPUTED_SIZE); // Make row height dynamic
 
         // Type column
         checkTypeColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleObjectProperty<>(cellData.getValue().getType()));
-        checkTypeColumn.setCellFactory(col -> new ComboBoxTableCell<ResponseCheck, CheckType>() {
-            {
-                getItems().addAll(CheckType.values());
-            }
-            @Override
-            public void updateItem(CheckType item, boolean empty) {
-                super.updateItem(item, empty);
-                int row = getIndex();
-                setEditable(!(row == 0));
-            }
+        checkTypeColumn.setCellFactory(ComboBoxTableCell.forTableColumn(CheckType.values()));
+        checkTypeColumn.setOnEditCommit(e -> {
+            e.getRowValue().setType(e.getNewValue());
+            responseChecksTable.refresh(); // Refresh table to show new cell factory for expression
         });
-        checkTypeColumn.setOnEditCommit(e -> e.getRowValue().setType(e.getNewValue()));
 
         // Expression column
-        checkExpressionColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getExpression()));
-        checkExpressionColumn.setCellFactory(column -> new TextFieldTableCell<ResponseCheck, String>(new DefaultStringConverter()) {
-            @Override
-            public void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                int row = getIndex();
-                setEditable(!(row == 0));
+        checkExpressionColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getExpression()));
+        checkExpressionColumn.setCellFactory(column -> new ExpressionCell());
+        checkExpressionColumn.setOnEditCommit(event -> {
+            ResponseCheck check = event.getRowValue();
+            if (check.getType() != CheckType.DB) {
+                check.setExpression(event.getNewValue());
             }
         });
-        checkExpressionColumn.setOnEditCommit(e -> e.getRowValue().setExpression(e.getNewValue()));
+
 
         // Operator column
         checkOperatorColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleObjectProperty<>(cellData.getValue().getOperator()));
-        checkOperatorColumn.setCellFactory(col -> new ComboBoxTableCell<ResponseCheck, Operator>() {
-            {
-                getItems().addAll(Operator.values());
-            }
-            @Override
-            public void updateItem(Operator item, boolean empty) {
-                super.updateItem(item, empty);
-                int row = getIndex();
-                setEditable(!(row == 0));
-            }
-        });
+        checkOperatorColumn.setCellFactory(ComboBoxTableCell.forTableColumn(Operator.values()));
         checkOperatorColumn.setOnEditCommit(e -> e.getRowValue().setOperator(e.getNewValue()));
 
         // Expect column
         checkExpectColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getExpect()));
-        checkExpectColumn.setCellFactory(column -> new TextFieldTableCell<>(new DefaultStringConverter()));
+        checkExpectColumn.setCellFactory(TextFieldTableCell.forTableColumn());
         checkExpectColumn.setOnEditCommit(event -> event.getRowValue().setExpect(event.getNewValue()));
-
-        checkActualColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getActual()));
-        checkActualColumn.setEditable(false);
 
         checkSaveAsColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getSaveAs()));
         checkSaveAsColumn.setCellFactory(TextFieldTableCell.forTableColumn());
@@ -1324,6 +1375,79 @@ public class GatlingTestViewModel implements Initializable {
 
         // ensure at least status row exists
         ensureDefaultStatusCheck();
+    }
+
+    private void showDbCheckEditDialog(ResponseCheck check) {
+        Dialog<ResponseCheck> dialog = new Dialog<>();
+        dialog.setTitle("Edit DB Check");
+        dialog.setHeaderText("Configure the database query and result validation.");
+
+        // Set Icon
+        Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
+        stage.getIcons().add(
+                new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
+
+        // Set the button types.
+        ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+
+        // Create the content grid.
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 20, 10, 10));
+
+        ComboBox<String> dbAliasComboBox = new ComboBox<>();
+        try {
+            dbAliasComboBox.setItems(FXCollections.observableArrayList(dbConnectionService.getAllAliases()));
+        } catch (Exception e) {
+            if(mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to load DB aliases: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+        }
+        dbAliasComboBox.setValue(check.getDbAlias());
+        dbAliasComboBox.setPrefWidth(350);
+
+        TextArea dbSqlArea = new TextArea(check.getDbSql());
+        dbSqlArea.setPromptText("SQL Query");
+        dbSqlArea.setWrapText(true);
+        dbSqlArea.setPrefWidth(350);
+        dbSqlArea.setPrefHeight(150);
+
+        TextField dbColumnField = new TextField(check.getDbColumn());
+        dbColumnField.setPromptText("Result Column to fetch");
+        dbColumnField.setPrefWidth(350);
+
+        grid.add(new Label("DB Connection Alias:"), 0, 0);
+        grid.add(dbAliasComboBox, 1, 0);
+        grid.add(new Label("SQL Query:"), 0, 1);
+        grid.add(dbSqlArea, 1, 1);
+        grid.add(new Label("Check Column:"), 0, 2);
+        grid.add(dbColumnField, 1, 2);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.setResizable(true);
+
+        // Request focus on the first input field by default.
+        Platform.runLater(dbAliasComboBox::requestFocus);
+
+        // Convert the result to a ResponseCheck object when the save button is clicked.
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == saveButtonType) {
+                check.setDbAlias(dbAliasComboBox.getValue());
+                check.setDbSql(dbSqlArea.getText());
+                check.setDbColumn(dbColumnField.getText());
+                return check;
+            }
+            return null;
+        });
+
+        Optional<ResponseCheck> result = dialog.showAndWait();
+
+        result.ifPresent(updatedCheck -> {
+            // The check object is modified in place, so just need to refresh the table to show new summary
+            responseChecksTable.refresh();
+        });
     }
 
     private void ensureDefaultStatusCheck(){
@@ -1380,5 +1504,285 @@ public class GatlingTestViewModel implements Initializable {
         loadTests();
         updateSuiteFilterOptions();
         updateSelectAllCheckBoxState();
+    }
+
+    private void setupUrlDynamicVariablesHandler() {
+        if (urlDynamicVarsTable == null) return; // FXML not loaded (unit tests)
+        urlDynamicKeyColumn.setCellValueFactory(new PropertyValueFactory<>("key"));
+        urlDynamicValueColumn.setCellValueFactory(new PropertyValueFactory<>("value"));
+        urlDynamicVarsTable.setItems(urlDynamicVariables);
+        urlDynamicVarsTable.setEditable(true);
+
+        // Value column with ComboBox suggestions (reuse VariableGenerator rules)
+        urlDynamicValueColumn.setCellFactory(col -> {
+            List<String> suggestions = VariableGenerator.getInstance().getVariableDefinitions().stream()
+                .map(def -> def.get("format"))
+                .collect(Collectors.toList());
+            ComboBoxTableCell<DynamicVariable, String> cell = new ComboBoxTableCell<>(
+                    new DefaultStringConverter(),
+                    FXCollections.observableArrayList(suggestions));
+            cell.setComboBoxEditable(true);
+            return cell;
+        });
+        urlDynamicValueColumn.setOnEditCommit(e -> {
+            e.getRowValue().setValue(e.getNewValue());
+            updateGeneratedUrl();
+        });
+
+        // Optional action column (Edit dialog for long text)
+        if (urlDynamicActionColumn != null) {
+            urlDynamicActionColumn.setSortable(false);
+            urlDynamicActionColumn.setCellFactory(col -> new TableCell<>() {
+                private final Button editBtn = new Button("Edit");
+                {
+                    editBtn.setStyle("-fx-background-color: transparent; -fx-border-color: transparent; -fx-cursor: hand;");
+                    editBtn.setMaxWidth(Double.MAX_VALUE);
+                    editBtn.setOnAction(evt -> {
+                        DynamicVariable var = getTableView().getItems().get(getIndex());
+                        String edited = showLargeTextEditDialog(var.getKey(), var.getValue());
+                        if (edited != null) {
+                            var.setValue(edited);
+                            updateGeneratedUrl();
+                        }
+                    });
+                }
+                @Override
+                protected void updateItem(Void item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty) {
+                        setGraphic(null);
+                    } else {
+                        setGraphic(editBtn);
+                    }
+                }
+            });
+        }
+
+        urlDynamicVariables.addListener((javafx.collections.ListChangeListener<DynamicVariable>) c -> updateGeneratedUrl());
+    }
+
+    private void populateUrlDynamicVariables(String endpointDisplay) {
+        urlDynamicVariables.clear();
+        if (endpointDisplay == null || endpointDisplay.isBlank()) return;
+        String endpointName = endpointDisplay.split(" \\[")[0].trim();
+        Endpoint ep = endpointList.stream().filter(e -> e.getName().equals(endpointName)).findFirst().orElse(null);
+        if (ep == null || ep.getUrl() == null) return;
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("@\\{([^}]+)\\}");
+        java.util.regex.Matcher matcher = pattern.matcher(ep.getUrl());
+        java.util.Set<String> found = new java.util.LinkedHashSet<>();
+        while (matcher.find()) {
+            found.add(matcher.group(1).trim());
+        }
+        for (String varName : found) {
+            urlDynamicVariables.add(new DynamicVariable(varName, ""));
+        }
+    }
+
+    private String buildGeneratedUrl() {
+        String endpointDisplay = endpointComboBox == null ? null : endpointComboBox.getValue();
+        Endpoint ep = getEndpointByName(endpointDisplay);
+        if (ep == null || ep.getUrl() == null) return "";
+
+        String url = ep.getUrl();
+        for (DynamicVariable dv : urlDynamicVariables) {
+            String value = VariableGenerator.getInstance().resolveVariables(dv.getValue());
+            if (value == null) value = "";
+            url = url.replaceAll("@\\{" + java.util.regex.Pattern.quote(dv.getKey()) + "\\}", java.util.regex.Matcher.quoteReplacement(value));
+        }
+        return url;
+    }
+
+    private void updateGeneratedUrl() {
+        if (generatedUrlArea != null) {
+            String u = buildGeneratedUrl();
+            generatedUrlArea.setText(u == null ? "" : u);
+        }
+    }
+
+    // Helper method (copied from TemplateHandler)
+    private String showLargeTextEditDialog(String key, String initialValue) {
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Edit Value - " + key);
+        ButtonType okButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelButtonType = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialog.getDialogPane().getButtonTypes().addAll(okButtonType, cancelButtonType);
+        TextArea textArea = new TextArea(initialValue);
+        textArea.setWrapText(true);
+        textArea.setPrefSize(400, 300);
+        dialog.getDialogPane().setContent(textArea);
+        dialog.setResizable(true);
+        dialog.setResultConverter(btn -> btn == okButtonType ? textArea.getText() : null);
+        java.util.Optional<String> result = dialog.showAndWait();
+        return result.orElse(null);
+    }
+
+    private Endpoint getEndpointByName(String displayString) {
+        if (displayString == null || displayString.isBlank()) {
+            return null;
+        }
+        String endpointName = displayString.split(" \\[")[0].trim();
+        return endpointList.stream()
+                .filter(e -> e.getName().equals(endpointName))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void setupVariableHelpTooltips() {
+        variableTooltip = HelpTooltipManager.buildVariableTooltip();
+        headersHelpIcon.setOnMouseClicked(event -> toggleTooltip(variableTooltip, headersHelpIcon));
+        bodyHelpIcon.setOnMouseClicked(event -> toggleTooltip(variableTooltip, bodyHelpIcon));
+    }
+
+    private void setupResponseCheckHelpTooltip() {
+        responseCheckTooltip = HelpTooltipManager.getResponseCheckTooltip();
+        // responseHelpIcon has been removed; use button instead.
+    }
+
+    private void setupRunHelpTooltip() {
+        executionFlowTooltip = HelpTooltipManager.getExecutionFlowTooltip();
+        if (runHelpIcon != null) {
+            runHelpIcon.setOnMouseClicked(e -> toggleTooltip(executionFlowTooltip, runHelpIcon));
+        }
+    }
+
+    private void toggleTooltip(Tooltip tooltip, Node ownerNode) {
+        if (tooltip.isShowing()) {
+            tooltip.hide();
+        } else {
+            Point2D p = ownerNode.localToScreen(ownerNode.getBoundsInLocal().getMaxX(), ownerNode.getBoundsInLocal().getMaxY());
+            tooltip.show(ownerNode, p.getX(), p.getY());
+        }
+    }
+
+    @FXML
+    private void handleResponseHelpClick() {
+        if (responseCheckTooltip != null) {
+            if (responseCheckTooltip.isShowing()) {
+                responseCheckTooltip.hide();
+            } else {
+                Point2D p = responseHelpButton.localToScreen(
+                    responseHelpButton.getBoundsInLocal().getMaxX(),
+                    responseHelpButton.getBoundsInLocal().getMinY()
+                );
+                responseCheckTooltip.show(responseHelpButton, p.getX(), p.getY());
+            }
+        }
+    }
+
+    /**
+     * Custom TableCell for the "Expression" column to handle rendering for different CheckType values.
+     * - For DB types, it shows a summary label and an "Edit" button on the far right.
+     * - For other types, it behaves like a standard TextFieldTableCell (shows text, becomes editable on double-click).
+     */
+    private class ExpressionCell extends TableCell<ResponseCheck, String> {
+        private TextField textField;
+        private final HBox dbCellBox;
+        private final Label dbSummaryLabel;
+        private final Button editDbButton;
+        private final Tooltip dbSqlTooltip;
+        private final Pane spacer;
+
+        public ExpressionCell() {
+            super();
+            // --- DB Cell Components ---
+            dbSummaryLabel = new Label();
+            editDbButton = new Button("Edit");
+            dbSqlTooltip = new Tooltip();
+            spacer = new Pane();
+            HBox.setHgrow(spacer, Priority.ALWAYS); // This makes the spacer grow, pushing the button to the right.
+            dbCellBox = new HBox(5, dbSummaryLabel, spacer, editDbButton);
+            dbCellBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+
+            editDbButton.setOnAction(event -> {
+                ResponseCheck check = getTableView().getItems().get(getIndex());
+                if (check != null) {
+                    showDbCheckEditDialog(check);
+                }
+            });
+
+            // The default TableView behavior (e.g., double-click) calls startEdit().
+            // The guard inside startEdit() now controls whether editing is allowed.
+        }
+
+        @Override
+        public void startEdit() {
+            if (!isEmpty()) {
+                ResponseCheck check = getTableView().getItems().get(getIndex());
+                // Prevent editing for DB type completely
+                if (check != null && check.getType() == CheckType.DB) {
+                    return;
+                }
+            }
+
+            super.startEdit();
+            if (textField == null) {
+                createTextField();
+            }
+            setText(null);
+            setGraphic(textField);
+            textField.setText(getItem());
+            textField.selectAll();
+            textField.requestFocus();
+        }
+
+        @Override
+        public void cancelEdit() {
+            super.cancelEdit();
+            setText(getItem());
+            setGraphic(null);
+        }
+
+        @Override
+        public void updateItem(String item, boolean empty) {
+            super.updateItem(item, empty);
+
+            if (empty || getTableRow() == null || getTableRow().getItem() == null) {
+                setText(null);
+                setGraphic(null);
+                return;
+            }
+
+            if (isEditing()) {
+                // This block is only entered for non-DB types due to the guard in startEdit().
+                if (textField != null) {
+                    textField.setText(getItem());
+                }
+                setText(null);
+                setGraphic(textField);
+            } else {
+                // Display mode (not editing)
+                ResponseCheck check = (ResponseCheck) getTableRow().getItem();
+                if (check.getType() == CheckType.DB) {
+                    String summary = String.format("Alias: %s, Col: %s",
+                        check.getDbAlias() != null ? check.getDbAlias() : "N/A",
+                        check.getDbColumn() != null ? check.getDbColumn() : "N/A"
+                    );
+                    dbSummaryLabel.setText(summary);
+                    String sql = check.getDbSql();
+                    if (sql != null && !sql.isEmpty()) {
+                        dbSqlTooltip.setText(sql);
+                        Tooltip.install(dbSummaryLabel, dbSqlTooltip);
+                    } else {
+                        Tooltip.uninstall(dbSummaryLabel, dbSqlTooltip);
+                    }
+                    setText(null);
+                    setGraphic(dbCellBox);
+                } else {
+                    setText(item);
+                    setGraphic(null);
+                }
+            }
+        }
+
+        private void createTextField() {
+            textField = new TextField(getItem());
+            textField.setMinWidth(this.getWidth() - this.getGraphicTextGap() * 2);
+            textField.setOnAction(evt -> commitEdit(textField.getText()));
+            textField.focusedProperty().addListener((obs, oldVal, newVal) -> {
+                if (!newVal) {
+                    commitEdit(textField.getText());
+                }
+            });
+        }
     }
 }

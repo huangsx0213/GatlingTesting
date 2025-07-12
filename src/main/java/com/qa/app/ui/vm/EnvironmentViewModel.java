@@ -3,19 +3,25 @@ package com.qa.app.ui.vm;
 import com.qa.app.model.Environment;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.impl.EnvironmentServiceImpl;
+import com.qa.app.util.AppConfig;
+import com.qa.app.common.listeners.AppConfigChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.control.TableView;
 import java.net.URL;
 import java.util.ResourceBundle;
+import com.qa.app.service.ProjectContext;
 
-public class EnvironmentViewModel implements Initializable {
+public class EnvironmentViewModel implements Initializable, AppConfigChangeListener {
     @FXML private TextField environmentNameField;
     @FXML private TextArea environmentDescriptionArea;
     @FXML private Button addButton;
+    @FXML
+    private Button duplicateButton;
     @FXML private Button updateButton;
     @FXML private Button deleteButton;
     @FXML private Button clearButton;
@@ -37,21 +43,35 @@ public class EnvironmentViewModel implements Initializable {
         environmentNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
         environmentDescriptionColumn.setCellValueFactory(cellData -> cellData.getValue().descriptionProperty());
         environmentTable.setItems(environmentList);
+        environmentTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         loadEnvironments();
         environmentTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> onTableSelectionChanged(newSel));
+        AppConfig.addChangeListener(this);
+    }
+
+    @Override
+    public void onConfigChanged() {
+        loadEnvironments();
     }
 
     private void loadEnvironments() {
         environmentList.clear();
-        Integer projectId = com.qa.app.util.AppConfig.getCurrentProjectId();
-        if (projectId != null) {
-            try {
-                environmentList.addAll(environmentService.findEnvironmentsByProjectId(projectId));
-            } catch (ServiceException e) {
-                if (mainViewModel != null) {
-                    mainViewModel.updateStatus("Failed to load environments: " + e.getMessage(), MainViewModel.StatusType.ERROR);
-                }
+        Integer projectId = ProjectContext.getCurrentProjectId();
+        if (projectId == null) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Please select a project first.", MainViewModel.StatusType.INFO);
             }
+            return;
+        }
+        try {
+            environmentList.addAll(environmentService.findEnvironmentsByProjectId(projectId));
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to load environments: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+        }
+        if (!environmentList.isEmpty()) {
+            environmentTable.getSelectionModel().selectFirst();
         }
     }
 
@@ -66,6 +86,31 @@ public class EnvironmentViewModel implements Initializable {
     }
 
     @FXML
+    private void handleDuplicateEnvironment(ActionEvent event) {
+        if (selectedEnvironment == null) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Please select an environment to duplicate.", MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
+        String newName = selectedEnvironment.getName() + " (copy)";
+        // We should add a check for name uniqueness if required.
+
+        try {
+            Environment newEnvironment = new Environment(newName, selectedEnvironment.getDescription(), ProjectContext.getCurrentProjectId());
+            environmentService.createEnvironment(newEnvironment);
+            loadEnvironments();
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Environment duplicated and added successfully.", MainViewModel.StatusType.SUCCESS);
+            }
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to duplicate environment: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+        }
+    }
+
+    @FXML
     private void handleAddEnvironment(ActionEvent event) {
         String name = environmentNameField.getText().trim();
         String description = environmentDescriptionArea.getText().trim();
@@ -75,7 +120,7 @@ public class EnvironmentViewModel implements Initializable {
             }
             return;
         }
-        Environment environment = new Environment(name, description, com.qa.app.util.AppConfig.getCurrentProjectId());
+        Environment environment = new Environment(name, description, ProjectContext.getCurrentProjectId());
         try {
             environmentService.createEnvironment(environment);
             loadEnvironments();
@@ -154,6 +199,5 @@ public class EnvironmentViewModel implements Initializable {
 
     public void refresh() {
         loadEnvironments();
-        clearForm();
     }
 } 

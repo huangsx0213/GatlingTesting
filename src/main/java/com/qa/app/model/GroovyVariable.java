@@ -4,23 +4,26 @@ public class GroovyVariable {
     private Integer id;
     private String name;
     private String value;
+    private String description;
     private Integer environmentId;
     private Integer projectId;
 
     public GroovyVariable() {
     }
 
-    public GroovyVariable(String name, String value, Integer environmentId, Integer projectId) {
+    public GroovyVariable(String name, String value, String description, Integer environmentId, Integer projectId) {
         this.name = name;
         this.value = value;
+        this.description = description;
         this.environmentId = environmentId;
         this.projectId = projectId;
     }
 
-    public GroovyVariable(Integer id, String name, String value, Integer environmentId, Integer projectId) {
+    public GroovyVariable(Integer id, String name, String value, String description, Integer environmentId, Integer projectId) {
         this.id = id;
         this.name = name;
         this.value = value;
+        this.description = description;
         this.environmentId = environmentId;
         this.projectId = projectId;
     }
@@ -47,6 +50,14 @@ public class GroovyVariable {
 
     public void setValue(String value) {
         this.value = value;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public Integer getEnvironmentId() {

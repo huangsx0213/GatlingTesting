@@ -12,6 +12,7 @@ public class Scenario {
     private final StringProperty description = new SimpleStringProperty();
     private final StringProperty threadGroupJson = new SimpleStringProperty();
     private final StringProperty scheduleJson = new SimpleStringProperty();
+    private final IntegerProperty projectId = new SimpleIntegerProperty();
 
     public Scenario() {}
 
@@ -40,6 +41,10 @@ public class Scenario {
     public String getScheduleJson() { return scheduleJson.get(); }
     public void setScheduleJson(String scheduleJson) { this.scheduleJson.set(scheduleJson); }
     public StringProperty scheduleJsonProperty() { return scheduleJson; }
+
+    public int getProjectId() { return projectId.get(); }
+    public void setProjectId(int projectId) { this.projectId.set(projectId); }
+    public IntegerProperty projectIdProperty() { return projectId; }
 
     @Override
     public String toString() {

@@ -19,6 +19,8 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TemplateValidator {
 
@@ -101,103 +103,107 @@ public class TemplateValidator {
     }
 
     private static String prettyPrintJsonFreemarker(String source) {
-        StringBuilder result = new StringBuilder();
-        int indent = 0;
-        String indentString = "  ";
-        String[] lines = source.split("\\R");
+        // 1. Pre-processing: Normalize smart quotes and placeholders
+        source = source.replace('\u201C', '"').replace('\u201D', '"');
+        
+        Pattern p = Pattern.compile("@\\s*\\{\\s*([\\s\\S]+?)\\s*\\}");
+        Matcher placeholderMatcher = p.matcher(source);
+        StringBuffer sb = new StringBuffer();
+        while (placeholderMatcher.find()) {
+            placeholderMatcher.appendReplacement(sb, "@{" + placeholderMatcher.group(1).trim() + "}");
+        }
+        placeholderMatcher.appendTail(sb);
+        source = sb.toString();
 
-        for (String line : lines) {
-            String trimmedLine = line.trim();
-
-            if (trimmedLine.startsWith("[#--") && trimmedLine.endsWith("--]")) {
-                if (!result.toString().isEmpty() && !result.toString().endsWith(System.lineSeparator())) {
-                    result.append(System.lineSeparator());
-                }
-                result.append(indentString.repeat(indent));
-                result.append(trimmedLine);
-                result.append(System.lineSeparator());
-                continue;
-            }
-
-            String contentPart = line;
-            String commentPart = "";
-            int commentStart = line.indexOf("[#--");
-            if (commentStart != -1) {
-                contentPart = line.substring(0, commentStart);
-                commentPart = line.substring(commentStart);
-            }
-
-            Pattern pattern = Pattern.compile("\"(?:\\\\.|[^\"\\\\])*\"|\\[/?#?[\\s\\S]*?\\]|[\\{\\}\\[\\],:]|[^\\s\"\\{\\}\\[\\],:]+");
-            Matcher matcher = pattern.matcher(contentPart);
-
-            boolean needsIndent = true;
-            String lastToken = result.toString().trim().endsWith("{") || result.toString().trim().endsWith("[") ? "" : "dummy";
-
-            while (matcher.find()) {
-                String token = matcher.group().trim();
-                if (token.isEmpty()) continue;
-
-                if (token.equals("}") || token.equals("]")) {
-                    indent = Math.max(0, indent - 1);
-                    if (!lastToken.isEmpty() && !result.toString().trim().endsWith("{") && !result.toString().trim().endsWith("[")) {
-                        result.append(System.lineSeparator());
-                    }
-                    result.append(indentString.repeat(indent));
-                } else if (needsIndent) {
-                    if (!result.toString().trim().isEmpty() && !result.toString().trim().endsWith("\n")) {
-                        result.append(System.lineSeparator());
-                    }
-                    result.append(indentString.repeat(indent));
-                }
-
-                result.append(token);
-
-                if (token.equals("{") || token.equals("[")) {
-                    indent++;
-                    needsIndent = true;
-                } else if (token.equals(",")) {
-                    needsIndent = true;
-                } else if (token.equals(":")) {
-                    result.append(" ");
-                    needsIndent = false;
-                } else {
-                    needsIndent = false;
-                }
-                lastToken = token;
-            }
-
-            if (!commentPart.isEmpty()) {
-                result.append(" ").append(commentPart.trim());
-            }
-
-            if (matcher.find(0) || !commentPart.isEmpty()) {
-                if (!result.toString().endsWith(System.lineSeparator())) {
-                    result.append(System.lineSeparator());
-                }
+        // 2. Tokenize
+        Pattern tokenPattern = Pattern.compile("\"(?:\\\\.|[^\"\\\\])*\"|@\\{[^}]+\\}|\\[#--[\\s\\S]*?--\\]|\\[/?#([a-zA-Z]+)[^]]*\\]|[\\{\\}\\[\\],:]|[^\\s\"\\{\\}\\[\\],:]+");
+        List<String> tokens = new ArrayList<>();
+        Matcher m = tokenPattern.matcher(source);
+        while (m.find()) {
+            String t = m.group().trim();
+            if (!t.isEmpty()) {
+                tokens.add(t);
             }
         }
-        String raw = result.toString();
-        return java.util.Arrays.stream(raw.split("\\R"))
-                .filter(line -> !line.trim().isEmpty())
-                .reduce((a, b) -> a + System.lineSeparator() + b)
-                .orElse("");
+
+        // 3. Formatting Logic with a stateful machine
+        StringBuilder result = new StringBuilder();
+        int indent = 0;
+        final String indentString = "  ";
+        boolean onNewLine = true;
+
+        for (int i = 0; i < tokens.size(); i++) {
+            String token = tokens.get(i);
+
+            // Pre-token logic: Handle indentation reduction
+            if (token.equals("}") || token.equals("]") || token.startsWith("[/#") || token.startsWith("[#else")) {
+                indent = Math.max(0, indent - 1);
+                if (!onNewLine) {
+                    result.append(System.lineSeparator());
+                    onNewLine = true;
+                }
+            }
+            
+            // Handle special `value [#if], [/#if]` pattern
+            boolean isValueToken = !"{}[],:".contains(token) && !token.startsWith("[#") && !token.startsWith("[/@");
+            if (isValueToken && i + 3 < tokens.size() && tokens.get(i+1).startsWith("[#if") && tokens.get(i+2).equals(",") && tokens.get(i+3).startsWith("[/#if")) {
+                if (onNewLine) {
+                    result.append(indentString.repeat(indent));
+                }
+                result.append(token).append(" ").append(tokens.get(i+1)).append(tokens.get(i+2)).append(tokens.get(i+3));
+                onNewLine = false; // We just printed content
+                i += 3; // Consume the pattern
+            } else {
+                 // Regular token processing
+                if (onNewLine) {
+                    result.append(indentString.repeat(indent));
+                }
+                result.append(token);
+                onNewLine = false;
+            }
+
+            // Post-token logic: Handle spacing and line breaks
+            if (token.equals(":")) {
+                result.append(" ");
+            }
+
+            if (token.equals("{") || token.equals("[") || token.equals(",") || token.startsWith("[#--") || token.startsWith("[#list") || token.startsWith("[#if") || token.startsWith("[/#") || token.startsWith("[#else")) {
+                result.append(System.lineSeparator());
+                onNewLine = true;
+            }
+            
+            // Post-token logic: Handle indentation increase
+            if (token.equals("{") || token.equals("[") || token.startsWith("[#list") || token.startsWith("[#if") || token.startsWith("[#else")) {
+                indent++;
+            }
+        }
+
+        return result.toString();
     }
 
     private static String prettyPrintXmlFreemarker(String source) {
-        StringBuilder result = new StringBuilder();
-        int indent = 0;
         String indentString = "  ";
         Pattern pattern = Pattern.compile("<!--[\\s\\S]*?-->|\\[/?#?[\\s\\S]*?\\]|<[^>]+>|[^<]+");
-        Matcher matcher = pattern.matcher(source);
 
-        while (matcher.find()) {
-            String token = matcher.group().trim();
-            if (token.isEmpty()) continue;
+        // Tokenize first so we can look ahead when necessary
+        List<String> tokens = new ArrayList<>();
+        Matcher m = pattern.matcher(source);
+        while (m.find()) {
+            String t = m.group();
+            if (t != null && !t.trim().isEmpty()) {
+                tokens.add(t.trim());
+            }
+        }
+
+        StringBuilder result = new StringBuilder();
+        int indent = 0;
+
+        for (int i = 0; i < tokens.size(); i++) {
+            String token = tokens.get(i);
 
             String contentPart = token;
             String commentPart = "";
             int ftlCommentStart = token.indexOf("[#--");
-
             if (ftlCommentStart > 0 && token.startsWith("<")) {
                 contentPart = token.substring(0, ftlCommentStart).trim();
                 commentPart = token.substring(ftlCommentStart).trim();
@@ -211,29 +217,70 @@ public class TemplateValidator {
             boolean isXmlComment = contentPart.startsWith("<!--");
             boolean isTextNode = !contentPart.startsWith("<");
 
+            // Decrease indent for closing elements before writing them
             if (isClosingTag || (isFtlDirective && contentPart.startsWith("[/#"))) {
                 indent = Math.max(0, indent - 1);
             }
 
-            result.append(indentString.repeat(indent));
-            result.append(contentPart);
+            // Attempt to inline: <tag>text</tag>
+            if (!isClosingTag && !isSelfClosingTag && !isProcessingInstruction && !isDoctype && !isFtlDirective && !isXmlComment) {
+                if (i + 2 < tokens.size()) {
+                    String nextToken = tokens.get(i + 1).trim();
+                    String nextNextToken = tokens.get(i + 2).trim();
 
+                    boolean nextIsText = !nextToken.startsWith("<");
+                    String elemName = getElementName(contentPart);
+                    if (nextIsText && !elemName.isEmpty() && nextNextToken.equals("</" + elemName + ">")) {
+                        // Inline representation
+                        result.append(indentString.repeat(indent))
+                              .append(contentPart)
+                              .append(nextToken)
+                              .append(nextNextToken);
+
+                        if (!commentPart.isEmpty()) {
+                            result.append(" ").append(commentPart);
+                        }
+
+                        result.append(System.lineSeparator());
+                        // Skip the two tokens we just processed
+                        i += 2;
+                        continue;
+                    }
+                }
+            }
+
+            // Default handling
+            result.append(indentString.repeat(indent)).append(contentPart);
             if (!commentPart.isEmpty()) {
                 result.append(" ").append(commentPart);
             }
-
             result.append(System.lineSeparator());
 
+            // Increase indent after opening tags when appropriate
             if (!isClosingTag && !isSelfClosingTag && !isProcessingInstruction && !isDoctype && !isFtlDirective && !isXmlComment && !isTextNode) {
                 indent++;
             } else if (isFtlDirective && !contentPart.startsWith("[/#") && !contentPart.contains("]")) {
-                String directiveName = contentPart.substring(2, contentPart.indexOf(" ")).trim();
+                int spaceIdx = contentPart.indexOf(" ");
+                int endIdx = spaceIdx > -1 ? spaceIdx : contentPart.length();
+                String directiveName = contentPart.substring(2, endIdx).trim();
                 if (!directiveName.equals("assign") && !directiveName.equals("include") && !directiveName.equals("import")) {
                     indent++;
                 }
             }
         }
+
         return result.toString().trim();
+    }
+
+    /**
+     * Extracts the XML element name from an opening tag like <tag ...> or </tag>
+     */
+    private static String getElementName(String tagToken) {
+        Matcher matcher = Pattern.compile("<\\/?\\s*([a-zA-Z0-9_:.-]+)").matcher(tagToken);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return "";
     }
 
     private static String preprocessForFreeMarker(String content) {

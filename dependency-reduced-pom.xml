@@ -11,12 +11,28 @@
         <artifactId>gatling-maven-plugin</artifactId>
         <version>${gatling.version}</version>
         <configuration>
-          <simulationClass>com.qa.app.util.DynamicJavaSimulation</simulationClass>
+          <simulationClass>com.qa.app.util.GatlingTestSimulation</simulationClass>
           <jvmArgs>
             <jvmArg>--add-opens=java.base/java.lang=ALL-UNNAMED</jvmArg>
             <jvmArg>--add-opens=java.base/java.util=ALL-UNNAMED</jvmArg>
           </jvmArgs>
         </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.6.1</version>
+        <executions>
+          <execution>
+            <id>set-classpath-property</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>build-classpath</goal>
+            </goals>
+            <configuration>
+              <outputFile>${project.build.directory}/gatling.classpath</outputFile>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>net.alchim31.maven</groupId>
@@ -40,12 +56,13 @@
           <options>
             <option>--add-opens=java.base/java.lang=ALL-UNNAMED</option>
             <option>--add-opens=java.base/java.util=ALL-UNNAMED</option>
+            <option>-Dgatling.classpath.file=${project.build.directory}/gatling.classpath</option>
           </options>
         </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.4</version>
+        <version>3.5.1</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -85,11 +102,11 @@
   </dependencies>
   <properties>
     <sqlite.jdbc.version>3.36.0.3</sqlite.jdbc.version>
-    <maven.compiler.target>21</maven.compiler.target>
     <maven.compiler.source>21</maven.compiler.source>
+    <gatling.version>3.14.3</gatling.version>
+    <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <javafx.version>21.0.1</javafx.version>
-    <gatling.version>3.14.3</gatling.version>
-    <scala.version>2.13.16</scala.version>
+    <scala.version>2.13.12</scala.version>
   </properties>
 </project>

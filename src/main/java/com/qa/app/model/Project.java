@@ -4,6 +4,7 @@ public class Project {
     private int id;
     private String name;
     private String description;
+    private boolean lastUsed;
 
     public Project() {}
 
@@ -40,5 +41,13 @@ public class Project {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public boolean isLastUsed() {
+        return lastUsed;
+    }
+
+    public void setLastUsed(boolean lastUsed) {
+        this.lastUsed = lastUsed;
     }
 } 

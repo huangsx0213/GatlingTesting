@@ -16,17 +16,24 @@ import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.impl.BodyTemplateServiceImpl;
 import com.qa.app.util.AppConfig;
+import com.qa.app.common.listeners.AppConfigChangeListener;
 import com.qa.app.ui.vm.gatling.TemplateValidator;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Alert.AlertType;
+import com.qa.app.service.ProjectContext;
+import javafx.scene.control.TableView;
 
-public class BodyTemplateViewModel implements Initializable {
+public class BodyTemplateViewModel implements Initializable, AppConfigChangeListener {
     @FXML
     private TextField bodyTemplateNameField;
     @FXML
     private TextArea bodyTemplateContentArea;
     @FXML
+    private TextArea bodyTemplateDescriptionArea;
+    @FXML
     private Button addButton;
+    @FXML
+    private Button duplicateButton;
     @FXML
     private Button updateButton;
     @FXML
@@ -37,6 +44,8 @@ public class BodyTemplateViewModel implements Initializable {
     private TableView<BodyTemplateItem> bodyTemplateTable;
     @FXML
     private TableColumn<BodyTemplateItem, String> bodyTemplateNameColumn;
+    @FXML
+    private TableColumn<BodyTemplateItem, String> bodyTemplateDescriptionColumn;
     @FXML
     private TableColumn<BodyTemplateItem, String> bodyTemplateContentColumn;
     @FXML
@@ -54,10 +63,19 @@ public class BodyTemplateViewModel implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         bodyTemplateNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
+        bodyTemplateDescriptionColumn.setCellValueFactory(cellData -> cellData.getValue().descriptionProperty());
         bodyTemplateContentColumn.setCellValueFactory(cellData -> cellData.getValue().contentProperty());
         bodyTemplateTable.setItems(bodyTemplateList);
-        bodyTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showBodyTemplateDetails(newSel));
+        bodyTemplateTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+        bodyTemplateTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                bodyTemplateContentArea.setText(newSelection.getContent());
+                bodyTemplateDescriptionArea.setText(newSelection.getDescription());
+                bodyTemplateNameField.setText(newSelection.getName());
+            }
+        });
         loadBodyTemplates();
+        AppConfig.addChangeListener(this);
         
         // Initialize format dropdown, now including FTL
         bodyFormatComboBox.getItems().addAll("FTL", "JSON", "XML", "TEXT");
@@ -78,26 +96,45 @@ public class BodyTemplateViewModel implements Initializable {
         setupContentColumnCellFactory();
     }
     
+    @Override
+    public void onConfigChanged() {
+        loadBodyTemplates();
+    }
+
     private void loadBodyTemplates() {
         bodyTemplateList.clear();
-        Integer projectId = AppConfig.getCurrentProjectId();
+        Integer projectId = ProjectContext.getCurrentProjectId();
         if (projectId != null) {
             try {
                 for (BodyTemplate t : bodyTemplateService.findBodyTemplatesByProjectId(projectId)) {
-                    bodyTemplateList.add(new BodyTemplateItem(t.getId(), t.getName(), t.getContent(), t.getProjectId()));
+                    bodyTemplateList.add(new BodyTemplateItem(t.getId(), t.getName(), t.getContent(), t.getDescription(), t.getProjectId()));
                 }
             } catch (ServiceException e) {
                 showError("Failed to load templates: " + e.getMessage());
             }
         }
+        if (!bodyTemplateList.isEmpty()) {
+            bodyTemplateTable.getSelectionModel().selectFirst();
+        }
     }
 
-    private void showBodyTemplateDetails(BodyTemplateItem item) {
-        if (item != null) {
-            bodyTemplateNameField.setText(item.getName());
-            bodyTemplateContentArea.setText(item.getContent());
-        } else {
-            clearFields();
+    @FXML
+    private void handleDuplicateTemplate() {
+        BodyTemplateItem selected = bodyTemplateTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showError("Please select a template to duplicate."); // Assuming showError handles mainViewModel status
+            return;
+        }
+        String newName = selected.getName() + " (copy)";
+        // We should add a check for name uniqueness if required by business logic.
+
+        try {
+            BodyTemplate newTemplate = new BodyTemplate(newName, selected.getContent(), selected.getDescription(), ProjectContext.getCurrentProjectId());
+            bodyTemplateService.createBodyTemplate(newTemplate);
+            loadBodyTemplates();
+            showSuccess("Template duplicated and added successfully.");
+        } catch (ServiceException e) {
+            showError("Failed to duplicate template: " + e.getMessage());
         }
     }
 
@@ -105,6 +142,7 @@ public class BodyTemplateViewModel implements Initializable {
     private void handleAddBodyTemplate() {
         String name = bodyTemplateNameField.getText().trim();
         String content = bodyTemplateContentArea.getText().trim();
+        String description = bodyTemplateDescriptionArea.getText().trim();
         if (name.isEmpty() || content.isEmpty()) {
             showError("Name and Content are required.");
             return;
@@ -118,7 +156,7 @@ public class BodyTemplateViewModel implements Initializable {
         }
 
         try {
-            BodyTemplate t = new BodyTemplate(name, content, AppConfig.getCurrentProjectId());
+            BodyTemplate t = new BodyTemplate(name, content, description, ProjectContext.getCurrentProjectId());
             bodyTemplateService.createBodyTemplate(t);
             loadBodyTemplates();
             clearFields();
@@ -146,7 +184,7 @@ public class BodyTemplateViewModel implements Initializable {
         }
 
         try {
-            BodyTemplate t = new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), content, AppConfig.getCurrentProjectId());
+            BodyTemplate t = new BodyTemplate(selected.getId(), bodyTemplateNameField.getText().trim(), content, bodyTemplateDescriptionArea.getText().trim(), ProjectContext.getCurrentProjectId());
             bodyTemplateService.updateBodyTemplate(t);
             loadBodyTemplates();
             clearFields();
@@ -184,6 +222,13 @@ public class BodyTemplateViewModel implements Initializable {
         String content = bodyTemplateContentArea.getText();
         if (format == null || content.isEmpty()) return;
 
+        // Validate before formatting
+        TemplateValidator.ValidationResult validationResult = TemplateValidator.validate(content, format);
+        if (!validationResult.isValid) {
+            showError("Validation Error: " + validationResult.errorMessage);
+            return;
+        }
+
         try {
             // Unify formatting logic: always format in place and show status.
             String formatted = TemplateValidator.format(content, format);
@@ -214,6 +259,7 @@ public class BodyTemplateViewModel implements Initializable {
     private void clearFields() {
         bodyTemplateNameField.clear();
         bodyTemplateContentArea.clear();
+        bodyTemplateDescriptionArea.clear();
         bodyFormatComboBox.getSelectionModel().selectFirst();
         bodyTemplateTable.getSelectionModel().clearSelection();
     }
@@ -307,12 +353,14 @@ public class BodyTemplateViewModel implements Initializable {
         private final int id;
         private final javafx.beans.property.SimpleStringProperty name;
         private final javafx.beans.property.SimpleStringProperty content;
+        private final javafx.beans.property.SimpleStringProperty description;
         private final Integer projectId;
 
-        public BodyTemplateItem(int id, String name, String content, Integer projectId) {
+        public BodyTemplateItem(int id, String name, String content, String description, Integer projectId) {
             this.id = id;
             this.name = new javafx.beans.property.SimpleStringProperty(name);
             this.content = new javafx.beans.property.SimpleStringProperty(content);
+            this.description = new javafx.beans.property.SimpleStringProperty(description);
             this.projectId = projectId;
         }
 
@@ -321,6 +369,8 @@ public class BodyTemplateViewModel implements Initializable {
         public javafx.beans.property.StringProperty nameProperty() { return name; }
         public String getContent() { return content.get(); }
         public javafx.beans.property.StringProperty contentProperty() { return content; }
+        public String getDescription() { return description.get(); }
+        public javafx.beans.property.StringProperty descriptionProperty() { return description; }
         public Integer getProjectId() { return projectId; }
     }
 } 

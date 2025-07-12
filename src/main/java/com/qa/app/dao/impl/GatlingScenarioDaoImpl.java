@@ -1,9 +1,9 @@
 package com.qa.app.dao.impl;
 
 import com.qa.app.dao.api.IGatlingScenarioDao;
+import com.qa.app.dao.util.DBUtil;
 import com.qa.app.model.Scenario;
 import com.qa.app.model.ScenarioStep;
-import com.qa.app.util.DBUtil;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -13,13 +13,14 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
 
     @Override
     public void addScenario(Scenario scenario) throws SQLException {
-        String sql = "INSERT INTO scenario(name, desc, thread_group_json, schedule_json) VALUES(?,?,?,?)";
+        String sql = "INSERT INTO scenario(name, desc, thread_group_json, schedule_json, project_id) VALUES(?,?,?,?,?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, scenario.getName());
             ps.setString(2, scenario.getDescription());
             ps.setString(3, scenario.getThreadGroupJson());
             ps.setString(4, scenario.getScheduleJson());
+            ps.setInt(5, scenario.getProjectId());
             ps.executeUpdate();
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) scenario.setId(rs.getInt(1));
@@ -29,14 +30,15 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
 
     @Override
     public void updateScenario(Scenario scenario) throws SQLException {
-        String sql = "UPDATE scenario SET name=?, desc=?, thread_group_json=?, schedule_json=? WHERE id=?";
+        String sql = "UPDATE scenario SET name=?, desc=?, thread_group_json=?, schedule_json=?, project_id=? WHERE id=?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, scenario.getName());
             ps.setString(2, scenario.getDescription());
             ps.setString(3, scenario.getThreadGroupJson());
             ps.setString(4, scenario.getScheduleJson());
-            ps.setInt(5, scenario.getId());
+            ps.setInt(5, scenario.getProjectId());
+            ps.setInt(6, scenario.getId());
             ps.executeUpdate();
         }
     }
@@ -63,7 +65,7 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
 
     @Override
     public Scenario getScenarioById(int id) throws SQLException {
-        String sql = "SELECT id, name, desc, thread_group_json, schedule_json FROM scenario WHERE id=?";
+        String sql = "SELECT id, name, desc, thread_group_json, schedule_json, project_id FROM scenario WHERE id=?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -75,6 +77,7 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
                     sc.setDescription(rs.getString("desc"));
                     sc.setThreadGroupJson(rs.getString("thread_group_json"));
                     sc.setScheduleJson(rs.getString("schedule_json"));
+                    sc.setProjectId(rs.getInt("project_id"));
                     return sc;
                 }
             }
@@ -83,20 +86,23 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
     }
 
     @Override
-    public List<Scenario> getAllScenarios() throws SQLException {
-        String sql = "SELECT id, name, desc, thread_group_json, schedule_json FROM scenario ORDER BY id DESC";
+    public List<Scenario> getAllScenarios(Integer projectId) throws SQLException {
+        String sql = "SELECT id, name, desc, thread_group_json, schedule_json, project_id FROM scenario WHERE project_id = ? ORDER BY id DESC";
         List<Scenario> list = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                Scenario sc = new Scenario();
-                sc.setId(rs.getInt("id"));
-                sc.setName(rs.getString("name"));
-                sc.setDescription(rs.getString("desc"));
-                sc.setThreadGroupJson(rs.getString("thread_group_json"));
-                sc.setScheduleJson(rs.getString("schedule_json"));
-                list.add(sc);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, projectId);
+            try(ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Scenario sc = new Scenario();
+                    sc.setId(rs.getInt("id"));
+                    sc.setName(rs.getString("name"));
+                    sc.setDescription(rs.getString("desc"));
+                    sc.setThreadGroupJson(rs.getString("thread_group_json"));
+                    sc.setScheduleJson(rs.getString("schedule_json"));
+                    sc.setProjectId(rs.getInt("project_id"));
+                    list.add(sc);
+                }
             }
         }
         return list;

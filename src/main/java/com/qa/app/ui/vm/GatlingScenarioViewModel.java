@@ -21,8 +21,12 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.util.converter.IntegerStringConverter;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
+import javafx.scene.control.Button;
+import com.qa.app.util.AppConfig;
+import com.qa.app.common.listeners.AppConfigChangeListener;
+import com.qa.app.service.ProjectContext;
 
-public class ScenarioViewModel {
+public class GatlingScenarioViewModel implements AppConfigChangeListener {
 
     // -------------- FXML components --------------
     @FXML private TextField scenarioNameField;
@@ -101,12 +105,12 @@ public class ScenarioViewModel {
 
     private final ObservableList<com.qa.app.model.threadgroups.UltimateThreadGroupStep> ultimateSteps = FXCollections.observableArrayList();
 
-    private com.qa.app.util.UserPreferences loadPrefs;
-
     private final java.util.Map<Scenario, javafx.beans.property.BooleanProperty> selectionMap = new java.util.HashMap<>();
     private final javafx.scene.control.CheckBox selectAllCheckBoxSc = new javafx.scene.control.CheckBox();
 
     private boolean isUpdatingSelection = false;
+
+    @FXML private Button runScenarioButton;
 
     public void setMainViewModel(MainViewModel vm) {
         this.mainViewModel = vm;
@@ -114,6 +118,7 @@ public class ScenarioViewModel {
 
     @FXML
     public void initialize() {
+        AppConfig.addChangeListener(this);
         // bind table data
         availableTestTable.setItems(availableTests);
         scenarioStepTable.setItems(steps);
@@ -234,7 +239,18 @@ public class ScenarioViewModel {
         }
     }
 
+    @Override
+    public void onConfigChanged() {
+        reloadTests();
+        reloadScenarios();
+        updateSuiteFilterOptions();
+    }
+
     private void updateSuiteFilterOptions() {
+        if (availableTests.isEmpty()) {
+            suiteFilterCombo.setItems(FXCollections.observableArrayList("All"));
+            return;
+        }
         List<String> suites = availableTests.stream()
                 .map(GatlingTest::getSuite)
                 .filter(s -> s != null && !s.isBlank())
@@ -247,7 +263,10 @@ public class ScenarioViewModel {
     private void reloadTests() {
         try {
             availableTests.clear();
-            availableTests.addAll(testService.findAllTests());
+            Integer projectId = ProjectContext.getCurrentProjectId();
+            if (projectId != null) {
+                availableTests.addAll(testService.findAllTestsByProjectId(projectId));
+            }
             updateSuiteFilterOptions();
         } catch (ServiceException e) {
             showError("load test cases failed: " + e.getMessage());
@@ -257,7 +276,11 @@ public class ScenarioViewModel {
     private void reloadScenarios() {
         try {
             selectionMap.clear();
-            scenarios.setAll(scenarioService.findAllScenarios());
+            scenarios.clear();
+            Integer projectId = ProjectContext.getCurrentProjectId();
+            if (projectId != null) {
+                scenarios.setAll(scenarioService.findAllScenarios(projectId));
+            }
             for (Scenario sc : scenarios) {
                 javafx.beans.property.BooleanProperty selected = new javafx.beans.property.SimpleBooleanProperty(false);
                 selected.addListener((obs, wasSel, isSel) -> {
@@ -401,6 +424,12 @@ public class ScenarioViewModel {
         Scenario sc = new Scenario();
         sc.setName(name);
         sc.setDescription(scenarioDescArea.getText());
+        Integer projectId = ProjectContext.getCurrentProjectId();
+        if (projectId == null) {
+            showError("No project selected!");
+            return;
+        }
+        sc.setProjectId(projectId);
         try {
             com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
             sc.setThreadGroupJson(om.writeValueAsString(buildLoadParameters()));
@@ -497,19 +526,34 @@ public class ScenarioViewModel {
             return;
         }
 
+        // Disable the Run button to prevent duplicate clicks
+        Button srcBtn;
+        if (runScenarioButton != null) {
+            srcBtn = runScenarioButton;
+        } else if (evt.getSource() instanceof Button) {
+            srcBtn = (Button) evt.getSource();
+        } else {
+            srcBtn = null;
+        }
+        if (srcBtn != null) srcBtn.setDisable(true);
+
+        String runningMsg = "Running " + selected.size() + " scenario(s)...";
+        if (mainViewModel != null) {
+            mainViewModel.updateStatus(runningMsg, MainViewModel.StatusType.INFO);
+        } else {
+            com.qa.app.ui.vm.MainViewModel.showGlobalStatus(runningMsg, com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
+        }
+
+        Runnable onComplete = () -> javafx.application.Platform.runLater(() -> {
+            if (srcBtn != null) srcBtn.setDisable(false);
+            reloadScenarios();
+        });
+
         try {
-            if (selected.size() == 1) {
-                scenarioService.runScenario(selected.get(0).getId());
-            } else {
-                scenarioService.runScenarios(new java.util.ArrayList<>(selected));
-            }
-            String runMsg = "Running " + selected.size() + " scenario(s).";
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus(runMsg, MainViewModel.StatusType.INFO);
-            } else {
-                com.qa.app.ui.vm.MainViewModel.showGlobalStatus(runMsg, com.qa.app.ui.vm.MainViewModel.StatusType.INFO);
-            }
+            // Always call the multi-scenario API for simplicity
+            scenarioService.runScenarios(new java.util.ArrayList<>(selected), onComplete);
         } catch (ServiceException e) {
+            if (srcBtn != null) srcBtn.setDisable(false);
             showError(e.getMessage());
         }
     }
@@ -613,9 +657,6 @@ public class ScenarioViewModel {
     }
 
     private void initLoadModelPane() {
-        // load user preferences
-        loadPrefs = com.qa.app.util.UserPreferences.load();
-
         // Ultimate table setup
         if (ultimateStepsTable != null) {
             ultimateStepsTable.setItems(ultimateSteps);
@@ -646,38 +687,8 @@ public class ScenarioViewModel {
             standardDelaySpinner.disableProperty().bind(standardSchedulerCheckBox.selectedProperty().not());
             standardLoopsSpinner.disableProperty().bind(standardSchedulerCheckBox.selectedProperty());
         }
-
-        // apply prefs to UI
-        if (loadPrefs != null) applyPrefsToUI();
     }
 
-    private void applyPrefsToUI() {
-        if (loadPrefs == null) return;
-        // Standard
-        var s = loadPrefs.standard;
-        if (s != null) {
-            standardNumThreadsSpinner.getValueFactory().setValue(s.getNumThreads());
-            standardRampUpSpinner.getValueFactory().setValue(s.getRampUp());
-            standardLoopsSpinner.getValueFactory().setValue(s.getLoops());
-            standardSchedulerCheckBox.setSelected(s.isScheduler());
-            standardDurationSpinner.getValueFactory().setValue(s.getDuration());
-            standardDelaySpinner.getValueFactory().setValue(s.getDelay());
-        }
-        // Stepping
-        var st = loadPrefs.stepping;
-        if (st != null) {
-            steppingNumThreadsSpinner.getValueFactory().setValue(st.getNumThreads());
-            steppingInitialDelaySpinner.getValueFactory().setValue(st.getInitialDelay());
-            steppingStartUsersSpinner.getValueFactory().setValue(st.getStartUsers());
-            steppingIncrementUsersSpinner.getValueFactory().setValue(st.getIncrementUsers());
-            steppingIncrementTimeSpinner.getValueFactory().setValue(st.getIncrementTime());
-            steppingHoldLoadSpinner.getValueFactory().setValue(st.getHoldLoad());
-        }
-        // Ultimate
-        if (loadPrefs.ultimate != null && loadPrefs.ultimate.getSteps() != null) {
-            ultimateSteps.setAll(loadPrefs.ultimate.getSteps());
-        }
-    }
 
     private com.qa.app.model.GatlingLoadParameters buildLoadParameters() {
         com.qa.app.model.GatlingLoadParameters params = new com.qa.app.model.GatlingLoadParameters();

@@ -24,6 +24,7 @@ public class GatlingTest {
     private final IntegerProperty projectId = new SimpleIntegerProperty();
     private Map<String, String> dynamicVariables = new HashMap<>();
     private Map<String, String> headersDynamicVariables = new HashMap<>();
+    private Map<String, String> endpointDynamicVariables = new HashMap<>();
     private String reportPath;
     private Boolean lastRunPassed;
 
@@ -47,7 +48,7 @@ public class GatlingTest {
     public GatlingTest(int id, boolean isEnabled, String suite, String tcid, String descriptions,
                       String conditions, String responseChecks,
                       int endpointId, String headers, String body,
-                      String tags, int waitTime, int bodyTemplateId, int headersTemplateId, Map<String, String> dynamicVariables, Map<String, String> headersDynamicVariables) {
+                      String tags, int waitTime, int bodyTemplateId, int headersTemplateId, Map<String, String> dynamicVariables, Map<String, String> headersDynamicVariables, Map<String, String> endpointDynamicVariables) {
         this.id.set(id);
         this.isEnabled.set(isEnabled);
         this.suite.set(suite);
@@ -64,6 +65,7 @@ public class GatlingTest {
         this.headersTemplateId.set(headersTemplateId);
         this.dynamicVariables = dynamicVariables;
         this.headersDynamicVariables = headersDynamicVariables;
+        this.endpointDynamicVariables = endpointDynamicVariables;
     }
 
     /**
@@ -90,6 +92,7 @@ public class GatlingTest {
         // Deep copy maps to avoid shared references
         this.dynamicVariables = new HashMap<>(other.getBodyDynamicVariables());
         this.headersDynamicVariables = new HashMap<>(other.getHeadersDynamicVariables());
+        this.endpointDynamicVariables = new HashMap<>(other.getEndpointDynamicVariables());
     }
 
     // Getters and Setters
@@ -154,6 +157,9 @@ public class GatlingTest {
 
     public Map<String, String> getHeadersDynamicVariables() { return headersDynamicVariables; }
     public void setHeadersDynamicVariables(Map<String, String> headersDynamicVariables) { this.headersDynamicVariables = headersDynamicVariables; }
+
+    public Map<String, String> getEndpointDynamicVariables() { return endpointDynamicVariables; }
+    public void setEndpointDynamicVariables(Map<String, String> endpointDynamicVariables) { this.endpointDynamicVariables = endpointDynamicVariables; }
 
     public String getEndpointName() { return endpointName.get(); }
     public void setEndpointName(String endpointName) { this.endpointName.set(endpointName); }

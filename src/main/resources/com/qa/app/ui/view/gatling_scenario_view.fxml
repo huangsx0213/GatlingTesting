@@ -4,7 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.qa.app.ui.vm.ScenarioViewModel">
+<AnchorPane prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.qa.app.ui.vm.GatlingScenarioViewModel">
     <children>
         <VBox spacing="15.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" VBox.vgrow="ALWAYS">
             <padding>
@@ -12,7 +12,7 @@
             </padding>
 
             <!-- Title -->
-            <Label text="Scenario Management" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
+            <Label text="Gatling Scenario Management" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" />
             <Separator />
 
             <!-- Basic info grid -->
@@ -222,7 +222,7 @@
                 <Button text="Delete" onAction="#handleDeleteScenario" />
                 <Button text="Clear" onAction="#handleClearScenarioForm" />
                 <Separator orientation="VERTICAL" />
-                <Button text="Run Selected Scenario(s)" onAction="#handleRunScenario" />
+                <Button fx:id="runScenarioButton" text="Run Selected Scenario(s)" onAction="#handleRunScenario" />
                 <Button text="Schedule" onAction="#handleScheduleScenario" />
             </HBox>
 

@@ -1,4 +1,4 @@
-package com.qa.app.util;
+package com.qa.app.dao.util;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -47,16 +47,20 @@ public class DBUtil {
                     + " wait_time INTEGER DEFAULT 0,"
                     + " conditions TEXT,"
                     + " descriptions TEXT,"
-                    + " endpoint_name TEXT NOT NULL,"
+                    + " endpoint_id INTEGER,"
                     + " headers_template_id INTEGER,"
                     + " body_template_id INTEGER,"
+                    + " endpoint_dynamic_variables TEXT,"
                     + " headers_dynamic_variables TEXT,"
                     + " body_dynamic_variables TEXT,"
                     + " response_checks TEXT,"
                     + " project_id INTEGER,"
                     + " report_path TEXT,"
                     + " last_run_passed BOOLEAN,"
-                    + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE"
+                    + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
+                    + " FOREIGN KEY(endpoint_id) REFERENCES endpoints(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
+                    + " FOREIGN KEY(headers_template_id) REFERENCES headers_templates(id) ON DELETE SET NULL ON UPDATE CASCADE,"
+                    + " FOREIGN KEY(body_template_id) REFERENCES body_templates(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
             stmt.execute(testsSql);
 
@@ -66,6 +70,7 @@ public class DBUtil {
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + " name TEXT NOT NULL UNIQUE,"
                     + " content TEXT NOT NULL,"
+                    + " description TEXT,"
                     + " project_id INTEGER,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
@@ -110,6 +115,7 @@ public class DBUtil {
                     + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
                     + "name TEXT NOT NULL, "
                     + "value TEXT, "
+                    + "description TEXT, "
                     + "environment_id INTEGER, "
                     + "project_id INTEGER, "
                     + "FOREIGN KEY (environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
@@ -132,7 +138,9 @@ public class DBUtil {
                     " name TEXT NOT NULL UNIQUE," +
                     " desc TEXT," +
                     " thread_group_json TEXT," +
-                    " schedule_json TEXT" +
+                    " schedule_json TEXT," +
+                    " project_id INTEGER," +
+                    " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE" +
                     ");";
             stmt.execute(scenarioSql);
 
@@ -158,13 +166,34 @@ public class DBUtil {
                     " FOREIGN KEY(scenario_id) REFERENCES scenario(id) ON DELETE CASCADE ON UPDATE CASCADE" +
                     ");";
             stmt.execute(schedSql);
+
+            // Create db_connections table if it doesn't exist
+            String dbConnectionsSql = "CREATE TABLE IF NOT EXISTS db_connections("
+                    + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + " alias TEXT UNIQUE NOT NULL,"
+                    + " description TEXT,"
+                    + " db_type TEXT,"
+                    + " host TEXT,"
+                    + " port INTEGER,"
+                    + " db_name TEXT,"
+                    + " schema_name TEXT,"
+                    + " service_name TEXT,"
+                    + " username TEXT,"
+                    + " password TEXT,"
+                    + " pool_size INTEGER DEFAULT 5,"
+                    + " project_id INTEGER,"
+                    + " environment_id INTEGER,"
+                    + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
+                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE"
+                    + ");";
+            stmt.execute(dbConnectionsSql);
+
             
             System.out.println("Database schema initialized. All tables are up to date.");
         } catch (SQLException e) {
             System.err.println("Error initializing database: " + e.getMessage());
         }
     }
-
 
     // Main method to initialize the database when the application starts or for testing
     public static void main(String[] args) {

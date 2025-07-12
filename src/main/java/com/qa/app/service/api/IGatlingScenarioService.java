@@ -11,7 +11,7 @@ public interface IGatlingScenarioService {
     void updateScenario(Scenario sc, List<ScenarioStep> steps) throws ServiceException;
     void deleteScenario(int scenarioId) throws ServiceException;
     Scenario duplicateScenario(int scenarioId) throws ServiceException;
-    List<Scenario> findAllScenarios() throws ServiceException;
+    List<Scenario> findAllScenarios(Integer projectId) throws ServiceException;
     List<ScenarioStep> findStepsByScenarioId(int scenarioId) throws ServiceException;
 
     void runScenario(int scenarioId) throws ServiceException;
@@ -25,6 +25,9 @@ public interface IGatlingScenarioService {
      * @throws ServiceException if any underlying error occurs
      */
     void runScenarios(java.util.List<com.qa.app.model.Scenario> scenarios) throws ServiceException;
+
+    void runScenarios(java.util.List<com.qa.app.model.Scenario> scenarios,
+                      java.lang.Runnable onComplete) throws ServiceException;
 
     void upsertSchedule(int scenarioId, String cronExpr, boolean enabled) throws ServiceException;
     com.qa.app.model.ScenarioSchedule getSchedule(int scenarioId) throws ServiceException;

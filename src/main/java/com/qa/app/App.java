@@ -9,7 +9,8 @@ import javafx.scene.image.Image;
 
 import java.io.IOException;
 
-import com.qa.app.util.DBUtil;
+import com.qa.app.dao.util.DBUtil;
+import com.qa.app.util.AppConfig;
 
 public class App extends Application {
 
@@ -18,6 +19,9 @@ public class App extends Application {
         // Initialize database and create tables if they don't exist
         DBUtil.initializeDatabase();
         
+        // Force load configuration before UI initialization
+        AppConfig.reload();
+        
         // Load the FXML file for the main view
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/qa/app/ui/view/main_view.fxml"));
         Parent root = loader.load();
@@ -25,6 +29,7 @@ public class App extends Application {
         primaryStage.setTitle("Gatling Testing System");
         primaryStage.setScene(new Scene(root, 1440, 900));
         primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
+        primaryStage.setMaximized(true);
         primaryStage.show();
     }
 

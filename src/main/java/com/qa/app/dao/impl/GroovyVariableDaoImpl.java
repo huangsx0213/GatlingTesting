@@ -1,8 +1,8 @@
 package com.qa.app.dao.impl;
 
 import com.qa.app.dao.api.IGroovyVariableDao;
+import com.qa.app.dao.util.DBUtil;
 import com.qa.app.model.GroovyVariable;
-import com.qa.app.util.DBUtil;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -12,20 +12,21 @@ public class GroovyVariableDaoImpl implements IGroovyVariableDao {
 
     @Override
     public void add(GroovyVariable variable) throws SQLException {
-        String sql = "INSERT INTO groovy_variables (name, value, environment_id, project_id) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO groovy_variables (name, value, description, environment_id, project_id) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, variable.getName());
             pstmt.setString(2, variable.getValue());
+            pstmt.setString(3, variable.getDescription());
             if (variable.getEnvironmentId() == null) {
-                pstmt.setNull(3, Types.INTEGER);
+                pstmt.setNull(4, Types.INTEGER);
             } else {
-                pstmt.setInt(3, variable.getEnvironmentId());
+                pstmt.setInt(4, variable.getEnvironmentId());
             }
             if (variable.getProjectId() != null) {
-                pstmt.setInt(4, variable.getProjectId());
+                pstmt.setInt(5, variable.getProjectId());
             } else {
-                pstmt.setNull(4, Types.INTEGER);
+                pstmt.setNull(5, Types.INTEGER);
             }
             pstmt.executeUpdate();
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
@@ -38,22 +39,23 @@ public class GroovyVariableDaoImpl implements IGroovyVariableDao {
 
     @Override
     public void update(GroovyVariable variable) throws SQLException {
-        String sql = "UPDATE groovy_variables SET name = ?, value = ?, environment_id = ?, project_id = ? WHERE id = ?";
+        String sql = "UPDATE groovy_variables SET name = ?, value = ?, description = ?, environment_id = ?, project_id = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, variable.getName());
             pstmt.setString(2, variable.getValue());
+            pstmt.setString(3, variable.getDescription());
             if (variable.getEnvironmentId() == null) {
-                pstmt.setNull(3, Types.INTEGER);
+                pstmt.setNull(4, Types.INTEGER);
             } else {
-                pstmt.setInt(3, variable.getEnvironmentId());
+                pstmt.setInt(4, variable.getEnvironmentId());
             }
             if (variable.getProjectId() != null) {
-                pstmt.setInt(4, variable.getProjectId());
+                pstmt.setInt(5, variable.getProjectId());
             } else {
-                pstmt.setNull(4, Types.INTEGER);
+                pstmt.setNull(5, Types.INTEGER);
             }
-            pstmt.setInt(5, variable.getId());
+            pstmt.setInt(6, variable.getId());
             pstmt.executeUpdate();
         }
     }
@@ -127,6 +129,7 @@ public class GroovyVariableDaoImpl implements IGroovyVariableDao {
                 rs.getInt("id"),
                 rs.getString("name"),
                 rs.getString("value"),
+                rs.getString("description"),
                 rs.getObject("environment_id") == null ? null : rs.getInt("environment_id"),
                 rs.getObject("project_id") == null ? null : rs.getInt("project_id")
         );

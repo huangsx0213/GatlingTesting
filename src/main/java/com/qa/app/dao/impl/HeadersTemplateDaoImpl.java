@@ -6,20 +6,21 @@ import java.util.List;
 
 import com.qa.app.dao.api.IHeadersTemplateDao;
 import com.qa.app.model.HeadersTemplate;
-import com.qa.app.util.DBUtil;
+import com.qa.app.dao.util.DBUtil;
 
 public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
     @Override
     public void addHeadersTemplate(HeadersTemplate template) throws SQLException {
-        String sql = "INSERT INTO headers_templates (name, content, project_id) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO headers_templates (name, content, description, project_id) VALUES (?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, template.getName());
             pstmt.setString(2, template.getContent());
+            pstmt.setString(3, template.getDescription());
             if (template.getProjectId() != null) {
-                pstmt.setInt(3, template.getProjectId());
+                pstmt.setInt(4, template.getProjectId());
             } else {
-                pstmt.setNull(3, java.sql.Types.INTEGER);
+                pstmt.setNull(4, java.sql.Types.INTEGER);
             }
             pstmt.executeUpdate();
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
@@ -32,17 +33,18 @@ public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
 
     @Override
     public void updateHeadersTemplate(HeadersTemplate template) throws SQLException {
-        String sql = "UPDATE headers_templates SET name = ?, content = ?, project_id = ? WHERE id = ?";
+        String sql = "UPDATE headers_templates SET name = ?, content = ?, description = ?, project_id = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, template.getName());
             pstmt.setString(2, template.getContent());
+            pstmt.setString(3, template.getDescription());
             if (template.getProjectId() != null) {
-                pstmt.setInt(3, template.getProjectId());
+                pstmt.setInt(4, template.getProjectId());
             } else {
-                pstmt.setNull(3, java.sql.Types.INTEGER);
+                pstmt.setNull(4, java.sql.Types.INTEGER);
             }
-            pstmt.setInt(4, template.getId());
+            pstmt.setInt(5, template.getId());
             pstmt.executeUpdate();
         }
     }
@@ -122,6 +124,7 @@ public class HeadersTemplateDaoImpl implements IHeadersTemplateDao {
                 rs.getInt("id"),
                 rs.getString("name"),
                 rs.getString("content"),
+                rs.getString("description"),
                 rs.getObject("project_id") == null ? null : rs.getInt("project_id")
         );
     }

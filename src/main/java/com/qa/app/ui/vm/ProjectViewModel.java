@@ -1,6 +1,7 @@
 package com.qa.app.ui.vm;
 
 import com.qa.app.model.Project;
+import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IProjectService;
 import com.qa.app.service.impl.ProjectServiceImpl;
 import javafx.collections.FXCollections;
@@ -8,6 +9,7 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.control.TableView;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -16,6 +18,8 @@ public class ProjectViewModel implements Initializable {
     @FXML private TextField projectNameField;
     @FXML private TextArea projectDescriptionField;
     @FXML private Button addButton;
+    @FXML
+    private Button duplicateButton;
     @FXML private Button updateButton;
     @FXML private Button deleteButton;
     @FXML private Button clearButton;
@@ -33,17 +37,28 @@ public class ProjectViewModel implements Initializable {
         projectNameColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getName()));
         projectDescriptionColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getDescription()));
         projectTable.setItems(projectList);
+        projectTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         loadProjects();
         projectTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> onTableSelectionChanged(newSel));
         addButton.setOnAction(e -> handleAddProject());
+        duplicateButton.setOnAction(e -> handleDuplicateProject());
         updateButton.setOnAction(e -> handleUpdateProject());
         deleteButton.setOnAction(e -> handleDeleteProject());
         clearButton.setOnAction(e -> handleClearForm());
     }
 
     private void loadProjects() {
-        projectList.clear();
-        projectList.addAll(projectService.getAllProjects());
+        try {
+            projectList.clear();
+            projectList.addAll(projectService.getAllProjects());
+            if (!projectList.isEmpty()) {
+                projectTable.getSelectionModel().selectFirst();
+            }
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to load projects: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+        }
     }
 
     private void onTableSelectionChanged(Project project) {
@@ -53,6 +68,29 @@ public class ProjectViewModel implements Initializable {
             projectDescriptionField.setText(project.getDescription());
         } else {
             clearForm();
+        }
+    }
+
+    private void handleDuplicateProject() {
+        if (selectedProject == null) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Please select a project to duplicate.", MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
+        String newName = selectedProject.getName() + " (copy)";
+        // A check for project name uniqueness should be added if necessary.
+
+        try {
+            projectService.addProject(new Project(newName, selectedProject.getDescription()));
+            loadProjects();
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Project duplicated and added successfully.", MainViewModel.StatusType.SUCCESS);
+            }
+        } catch (ServiceException e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to duplicate project: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
         }
     }
 
@@ -72,7 +110,7 @@ public class ProjectViewModel implements Initializable {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Project added successfully.", MainViewModel.StatusType.SUCCESS);
             }
-        } catch (Exception e) {
+        } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to add project: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
@@ -95,7 +133,7 @@ public class ProjectViewModel implements Initializable {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Project updated successfully.", MainViewModel.StatusType.SUCCESS);
             }
-        } catch (Exception e) {
+        } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to update project: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
@@ -116,7 +154,7 @@ public class ProjectViewModel implements Initializable {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Project deleted successfully.", MainViewModel.StatusType.SUCCESS);
             }
-        } catch (Exception e) {
+        } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to delete project: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
@@ -140,6 +178,8 @@ public class ProjectViewModel implements Initializable {
 
     public void refresh() {
         loadProjects();
-        clearForm();
+        if (!projectList.isEmpty()) {
+            projectTable.getSelectionModel().selectFirst();
+        }
     }
 } 

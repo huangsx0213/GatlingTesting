@@ -5,6 +5,7 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.control.TableView;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -16,9 +17,11 @@ import com.qa.app.service.api.IEndpointService;
 import com.qa.app.service.api.IEnvironmentService;
 import com.qa.app.service.impl.EndpointServiceImpl;
 import com.qa.app.service.impl.EnvironmentServiceImpl;
+import com.qa.app.service.ProjectContext;
 import com.qa.app.util.AppConfig;
+import com.qa.app.common.listeners.AppConfigChangeListener;
 
-public class EndpointViewModel implements Initializable {
+public class EndpointViewModel implements Initializable, AppConfigChangeListener {
     @FXML
     private TextField endpointNameField;
     @FXML
@@ -29,6 +32,8 @@ public class EndpointViewModel implements Initializable {
     private ComboBox<Environment> environmentComboBox;
     @FXML
     private Button addButton;
+    @FXML
+    private Button duplicateButton;
     @FXML
     private Button updateButton;
     @FXML
@@ -67,8 +72,13 @@ public class EndpointViewModel implements Initializable {
             return new javafx.beans.property.SimpleStringProperty(envName);
         });
         endpointTable.setItems(endpointList);
-        endpointTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showEndpointDetails(newSel));
-        methodComboBox.setItems(FXCollections.observableArrayList("GET", "POST", "PUT", "DELETE"));
+        endpointTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+        endpointTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                populateFields(newSelection);
+            }
+        });
+        methodComboBox.setItems(FXCollections.observableArrayList("GET", "POST", "PUT", "DELETE", "PATCH"));
         methodComboBox.setPromptText("Select Method");
         methodComboBox.setButtonCell(new ListCell<>() {
             @Override
@@ -81,41 +91,26 @@ public class EndpointViewModel implements Initializable {
                 }
             }
         });
+        loadEnvironments();
         loadEndpoints();
-        try {
-            environmentList.setAll(environmentService.findAllEnvironments());
-        } catch (ServiceException e) {
-            environmentList.clear();
-        }
-        environmentComboBox.setItems(environmentList);
-        environmentComboBox.setConverter(new javafx.util.StringConverter<Environment>() {
-            @Override
-            public String toString(Environment env) {
-                return env == null ? "" : env.getName();
-            }
-            @Override
-            public Environment fromString(String s) {
-                return environmentList.stream().filter(e -> e.getName().equals(s)).findFirst().orElse(null);
-            }
-        });
-        environmentComboBox.setPromptText("Select Environment");
-        environmentComboBox.setButtonCell(new ListCell<>() {
-            @Override
-            protected void updateItem(Environment item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(environmentComboBox.getPromptText());
-                } else {
-                    setText(item.getName());
-                }
-            }
-        });
-        environmentComboBox.getSelectionModel().clearSelection();
+
+        AppConfig.addChangeListener(this);
+    }
+
+    @Override
+    public void onConfigChanged() {
+        loadEnvironments();
+        loadEndpoints();
+    }
+
+    public void refresh() {
+        loadEnvironments();
+        loadEndpoints();
     }
 
     private void loadEndpoints() {
         endpointList.clear();
-        Integer projectId = AppConfig.getCurrentProjectId();
+        Integer projectId = ProjectContext.getCurrentProjectId();
         if (projectId != null) {
             try {
                 for (Endpoint e : endpointService.getEndpointsByProjectId(projectId)) {
@@ -125,9 +120,21 @@ public class EndpointViewModel implements Initializable {
                 // 可加错误提示
             }
         }
+        if (!endpointList.isEmpty()) {
+            endpointTable.getSelectionModel().selectFirst();
+        }
     }
 
-    private void showEndpointDetails(EndpointItem item) {
+    private void loadEnvironments() {
+        try {
+            environmentList.setAll(environmentService.findAllEnvironments());
+        } catch (ServiceException e) {
+            environmentList.clear();
+        }
+        environmentComboBox.setItems(environmentList);
+    }
+
+    private void populateFields(EndpointItem item) {
         if (item != null) {
             endpointNameField.setText(item.getName());
             methodComboBox.setValue(item.getMethod());
@@ -140,6 +147,35 @@ public class EndpointViewModel implements Initializable {
             environmentComboBox.setValue(env);
         } else {
             clearFields();
+        }
+    }
+
+    @FXML
+    private void handleDuplicateEndpoint() {
+        EndpointItem selected = endpointTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Please select an endpoint to duplicate.", MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
+
+        String newName = selected.getName() + " (copy)";
+        while (isNameEnvDuplicate(newName, selected.getEnvironmentId(), null)) {
+            newName += " (copy)";
+        }
+
+        try {
+            Endpoint newEndpoint = new Endpoint(newName, selected.getMethod(), selected.getUrl(), selected.getEnvironmentId(), ProjectContext.getCurrentProjectId());
+            endpointService.addEndpoint(newEndpoint);
+            loadEndpoints();
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Endpoint duplicated and added successfully.", MainViewModel.StatusType.SUCCESS);
+            }
+        } catch (ServiceException ex) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to duplicate endpoint: " + ex.getMessage(), MainViewModel.StatusType.ERROR);
+            }
         }
     }
 
@@ -174,7 +210,7 @@ public class EndpointViewModel implements Initializable {
             return;
         }
         try {
-            Endpoint e = new Endpoint(name, method, url, envId, AppConfig.getCurrentProjectId());
+            Endpoint e = new Endpoint(name, method, url, envId, ProjectContext.getCurrentProjectId());
             endpointService.addEndpoint(e);
             loadEndpoints();
             clearFields();
@@ -215,7 +251,7 @@ public class EndpointViewModel implements Initializable {
             return;
         }
         try {
-            Endpoint e = new Endpoint(selected.getId(), name, method, url, envId, AppConfig.getCurrentProjectId());
+            Endpoint e = new Endpoint(selected.getId(), name, method, url, envId, ProjectContext.getCurrentProjectId());
             endpointService.updateEndpoint(e);
             loadEndpoints();
             for (EndpointItem item : endpointList) {
@@ -275,21 +311,6 @@ public class EndpointViewModel implements Initializable {
 
     public void setMainViewModel(MainViewModel mainViewModel) {
         this.mainViewModel = mainViewModel;
-    }
-
-    public void refreshEnvironmentComboBox() {
-        try {
-            environmentList.setAll(environmentService.findAllEnvironments());
-        } catch (ServiceException e) {
-            environmentList.clear();
-        }
-        environmentComboBox.setItems(environmentList);
-    }
-
-    public void refresh() {
-        refreshEnvironmentComboBox();
-        loadEndpoints();
-        clearFields();
     }
 
     // 内部类用于表格项
