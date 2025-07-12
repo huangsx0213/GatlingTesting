@@ -20,6 +20,9 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.Set;
+import java.util.Arrays;
+import java.util.HashSet;
 
 import com.qa.app.model.Project;
 import com.qa.app.service.ProjectContext;
@@ -59,6 +62,23 @@ public class MainViewModel implements Initializable {
     );
     private final Map<String, String> fxmlMapping = new HashMap<>();
     private final Map<String, Node> loadedTabs = new HashMap<>();
+
+    /**
+     * The seven management functions that should always share the same single
+     * Tab instance. When the user selects any of these entries from the
+     * navigation list we will either re-use the existing shared tab (if it is
+     * already present) or create one if it does not yet exist, replacing its
+     * content and text on every switch instead of opening additional tabs.
+     */
+    private static final Set<String> SINGLE_TAB_ITEMS = new HashSet<>(Arrays.asList(
+            "Endpoint Management",
+            "Headers Template Management",
+            "Body Template Management",
+            "Environment Management",
+            "Project Management",
+            "Variables Management",
+            "Application Properties"
+    ));
 
     // Enum for status types
     public enum StatusType {
@@ -147,58 +167,95 @@ public class MainViewModel implements Initializable {
     }
 
     private void openOrSelectTab(String tabName) {
-        // AppConfig.reload(); // It's better to reload config only when necessary, e.g., in App Properties tab
-        // Check if tab is already open
+        // ------------------------------------------------------------------
+        // 1. General check: if a tab with the exact same name already exists,
+        //    simply select it and refresh its content (original behaviour).
+        //    This prevents duplicate tabs for items like "Gatling Test
+        //    Management" which are *not* part of SINGLE_TAB_ITEMS.
+        // ------------------------------------------------------------------
         for (Tab tab : contentTabPane.getTabs()) {
             if (tab.getText().equals(tabName)) {
+                // Ensure Gatling Test Management stays at index 0 and is not closable
+                if ("Gatling Test Management".equals(tabName)) {
+                    tab.setClosable(false);
+                    if (contentTabPane.getTabs().indexOf(tab) != 0) {
+                        contentTabPane.getTabs().remove(tab);
+                        contentTabPane.getTabs().add(0, tab);
+                    }
+                }
+
                 contentTabPane.getSelectionModel().select(tab);
+                refreshTabContent(tabName, tab.getContent());
+                return;
+            }
+        }
+
+        // First, handle the group that should always occupy a single Tab
+        if (SINGLE_TAB_ITEMS.contains(tabName)) {
+            // Try to find an existing tab in this group (could be the same or another item)
+            Tab existingGroupTab = null;
+            for (Tab tab : contentTabPane.getTabs()) {
+                if (SINGLE_TAB_ITEMS.contains(tab.getText())) {
+                    existingGroupTab = tab;
+                    // If it's already showing the requested page, simply select and refresh
+                    if (tab.getText().equals(tabName)) {
+                        contentTabPane.getSelectionModel().select(tab);
+                        refreshTabContent(tabName, tab.getContent());
+                        return;
+                    }
+                    break; // We need only one such tab
+                }
+            }
+
+            // Prepare (or retrieve) the content node for the requested page
+            String fxmlPath = fxmlMapping.get(tabName);
+            if (fxmlPath == null) {
+                showGlobalStatus("No FXML mapping for: " + tabName, StatusType.ERROR);
+                return;
+            }
+
+            try {
+                Node contentNode = loadedTabs.get(tabName);
+                FXMLLoader loader = null;
+                if (contentNode == null) {
+                    loader = new FXMLLoader(getClass().getResource(fxmlPath));
+                    contentNode = loader.load();
+                    Object controller = loader.getController();
+                    // Re-use the same helper to wire the controller (code extracted below)
+                    wireController(controller);
+                    contentNode.getProperties().put("controller", controller);
+                    loadedTabs.put(tabName, contentNode);
+                }
+
+                if (existingGroupTab != null) {
+                    // Replace the content and label of the existing tab
+                    existingGroupTab.setText(tabName);
+                    existingGroupTab.setContent(contentNode);
+                    attachContextMenu(existingGroupTab);
+                    contentTabPane.getSelectionModel().select(existingGroupTab);
+                } else {
+                    // No tab from the group is open yet – create one normally
+                    Tab newTab = new Tab(tabName);
+                    newTab.setContent(contentNode);
+                    newTab.setClosable(true);
+                    contentTabPane.getTabs().add(newTab);
+                    attachContextMenu(newTab);
+                    newTab.setOnClosed(event -> loadedTabs.remove(tabName));
+                    contentTabPane.getSelectionModel().select(newTab);
+                }
+
                 if (currentFeatureLabel != null) {
                     currentFeatureLabel.setText(tabName);
                 }
-                // refresh content when switch to opened tab
-                Node contentNode = tab.getContent();
-                Object controller = null;
-                if (contentNode != null) {
-                    controller = contentNode.getProperties().get("controller");
-                }
-                if (controller == null && contentNode != null) {
-                    // try to get controller by UserData
-                    controller = contentNode.getUserData();
-                }
-                if (controller instanceof GatlingTestViewModel) {
-                    ((GatlingTestViewModel) controller).refreshDynamicVariables();
-                    ((GatlingTestViewModel) controller).refresh();
-                } else if (controller instanceof BodyTemplateViewModel) {
-                    ((BodyTemplateViewModel) controller).refresh();
-                } else if (controller instanceof HeadersTemplateViewModel) {
-                    ((HeadersTemplateViewModel) controller).refresh();
-                } else if (controller instanceof EnvironmentViewModel) {
-                    ((EnvironmentViewModel) controller).refresh();
-                } else if (controller instanceof EndpointViewModel) {
-                    ((EndpointViewModel) controller).refresh();
-                } else if (controller instanceof ProjectViewModel) {
-                    ((ProjectViewModel) controller).setMainViewModel(this);
-                    ((ProjectViewModel) controller).refresh();
-                } else if (controller instanceof ApplicationPropertiesViewModel) {
-                    ((ApplicationPropertiesViewModel) controller).setMainViewModel(this);
-                    ((ApplicationPropertiesViewModel) controller).loadProperties();
-                } else if (controller instanceof GroovyVariableViewModel) {
-                    ((GroovyVariableViewModel) controller).refresh();
-                } else if (controller instanceof GatlingTestReportViewModel) {
-                    ((GatlingTestReportViewModel) controller).refresh();
-                } else if (controller instanceof GatlingScenarioViewModel) {
-                    // currently no refresh method needed, placeholder for future
-                } else if (controller instanceof GatlingInternalReportViewModel) {
-                    ((GatlingInternalReportViewModel) controller).refresh();
-                }
-                // Gatling tab is not closable and always in the first position
-                if (tabName.equals("Gatling Test Management")) {
-                    tab.setClosable(false);
-                    // Keep current position; no forced move to first
-                    attachContextMenu(tab);
-                }
-                return;
+
+                // Refresh the content we just displayed
+                refreshTabContent(tabName, contentNode);
+            } catch (IOException e) {
+                System.err.println("Failed to load FXML for tab: " + tabName + " from " + fxmlPath);
+                e.printStackTrace();
+                showGlobalStatus("Error loading page: " + tabName, StatusType.ERROR);
             }
+            return; // We are done handling the single-tab items
         }
 
         // If not open, load and add new tab
@@ -241,10 +298,12 @@ public class MainViewModel implements Initializable {
                 newTab.setContent(contentNode);
                 if (tabName.equals("Gatling Test Management")) {
                     newTab.setClosable(false);
+                    // Always insert Gatling Test tab at the first position
+                    contentTabPane.getTabs().add(0, newTab);
                 } else {
                     newTab.setClosable(true);
+                    contentTabPane.getTabs().add(newTab);
                 }
-                contentTabPane.getTabs().add(newTab);
                 attachContextMenu(newTab);
                 newTab.setOnClosed(event -> loadedTabs.remove(tabName)); // Remove from cache on close
 
@@ -253,35 +312,7 @@ public class MainViewModel implements Initializable {
                     currentFeatureLabel.setText(tabName);
                 }
                 // refresh content when open new tab
-                Object controller = contentNode.getProperties().get("controller");
-                if (controller == null) {
-                    controller = contentNode.getUserData();
-                }
-                if (controller instanceof GatlingTestViewModel) {
-                    ((GatlingTestViewModel) controller).refreshDynamicVariables();
-                    ((GatlingTestViewModel) controller).refresh();
-                } else if (controller instanceof BodyTemplateViewModel) {
-                    ((BodyTemplateViewModel) controller).refresh();
-                } else if (controller instanceof HeadersTemplateViewModel) {
-                    ((HeadersTemplateViewModel) controller).refresh();
-                } else if (controller instanceof EnvironmentViewModel) {
-                    ((EnvironmentViewModel) controller).refresh();
-                } else if (controller instanceof EndpointViewModel) {
-                    ((EndpointViewModel) controller).refresh();
-                } else if (controller instanceof ProjectViewModel) {
-                    ((ProjectViewModel) controller).refresh();
-                } else if (controller instanceof ApplicationPropertiesViewModel) {
-                    ((ApplicationPropertiesViewModel) controller).setMainViewModel(this);
-                    ((ApplicationPropertiesViewModel) controller).loadProperties();
-                } else if (controller instanceof GroovyVariableViewModel) {
-                    ((GroovyVariableViewModel) controller).refresh();
-                } else if (controller instanceof GatlingTestReportViewModel) {
-                    ((GatlingTestReportViewModel) controller).refresh();
-                } else if (controller instanceof GatlingScenarioViewModel) {
-                    // currently no refresh method needed, placeholder for future
-                } else if (controller instanceof GatlingInternalReportViewModel) {
-                    ((GatlingInternalReportViewModel) controller).refresh();
-                }
+                refreshTabContent(tabName, contentNode);
             } catch (IOException e) {
                 System.err.println("Failed to load FXML for tab: " + tabName + " from " + fxmlPath);
                 e.printStackTrace();
@@ -289,6 +320,71 @@ public class MainViewModel implements Initializable {
             }
         } else {
             showGlobalStatus("No FXML mapping for: " + tabName, StatusType.ERROR);
+        }
+    }
+
+    /**
+     * Wires the shared MainViewModel into sub-controllers that expose a
+     * setMainViewModel method to maintain previous behaviour.
+     */
+    private void wireController(Object controller) {
+        if (controller instanceof GatlingTestViewModel) {
+            ((GatlingTestViewModel) controller).setMainViewModel(this);
+        } else if (controller instanceof BodyTemplateViewModel) {
+            ((BodyTemplateViewModel) controller).setMainViewModel(this);
+        } else if (controller instanceof HeadersTemplateViewModel) {
+            ((HeadersTemplateViewModel) controller).setMainViewModel(this);
+        } else if (controller instanceof EnvironmentViewModel) {
+            ((EnvironmentViewModel) controller).setMainViewModel(this);
+        } else if (controller instanceof EndpointViewModel) {
+            ((EndpointViewModel) controller).setMainViewModel(this);
+        } else if (controller instanceof ProjectViewModel) {
+            ((ProjectViewModel) controller).setMainViewModel(this);
+        } else if (controller instanceof ApplicationPropertiesViewModel) {
+            ((ApplicationPropertiesViewModel) controller).setMainViewModel(this);
+        } else if (controller instanceof GroovyVariableViewModel) {
+            ((GroovyVariableViewModel) controller).setMainViewModel(this);
+        } else if (controller instanceof GatlingScenarioViewModel) {
+            ((GatlingScenarioViewModel) controller).setMainViewModel(this);
+        }
+    }
+
+    /**
+     * Centralised method to refresh a tab's controller based on its type in
+     * order to avoid duplication in several locations.
+     */
+    private void refreshTabContent(String tabName, Node contentNode) {
+        Object controller = null;
+        if (contentNode != null) {
+            controller = contentNode.getProperties().get("controller");
+            if (controller == null) {
+                controller = contentNode.getUserData();
+            }
+        }
+
+        if (controller instanceof GatlingTestViewModel) {
+            ((GatlingTestViewModel) controller).refreshDynamicVariables();
+            ((GatlingTestViewModel) controller).refresh();
+        } else if (controller instanceof BodyTemplateViewModel) {
+            ((BodyTemplateViewModel) controller).refresh();
+        } else if (controller instanceof HeadersTemplateViewModel) {
+            ((HeadersTemplateViewModel) controller).refresh();
+        } else if (controller instanceof EnvironmentViewModel) {
+            ((EnvironmentViewModel) controller).refresh();
+        } else if (controller instanceof EndpointViewModel) {
+            ((EndpointViewModel) controller).refresh();
+        } else if (controller instanceof ProjectViewModel) {
+            ((ProjectViewModel) controller).refresh();
+        } else if (controller instanceof ApplicationPropertiesViewModel) {
+            ((ApplicationPropertiesViewModel) controller).loadProperties();
+        } else if (controller instanceof GroovyVariableViewModel) {
+            ((GroovyVariableViewModel) controller).refresh();
+        } else if (controller instanceof GatlingTestReportViewModel) {
+            ((GatlingTestReportViewModel) controller).refresh();
+        } else if (controller instanceof GatlingScenarioViewModel) {
+            // currently no refresh method needed
+        } else if (controller instanceof GatlingInternalReportViewModel) {
+            ((GatlingInternalReportViewModel) controller).refresh();
         }
     }
 
