@@ -22,6 +22,7 @@ public class GatlingTest {
     private final IntegerProperty headersTemplateId = new SimpleIntegerProperty();
     private final StringProperty endpointName = new SimpleStringProperty();
     private final IntegerProperty projectId = new SimpleIntegerProperty();
+    private int displayOrder;
     private Map<String, String> dynamicVariables = new HashMap<>();
     private Map<String, String> headersDynamicVariables = new HashMap<>();
     private Map<String, String> endpointDynamicVariables = new HashMap<>();
@@ -31,6 +32,8 @@ public class GatlingTest {
     // Deprecated fields removed: expStatus, saveFields
 
     public GatlingTest() {
+        // This constructor should be empty or initialize properties with default values.
+        // The erroneous line has been removed.
     }
 
     public GatlingTest(String suite, String tcid, String descriptions, String endpointName, Integer projectId) {
@@ -175,6 +178,14 @@ public class GatlingTest {
     }
     public IntegerProperty projectIdProperty() {
         return projectId;
+    }
+
+    public int getDisplayOrder() {
+        return displayOrder;
+    }
+
+    public void setDisplayOrder(int displayOrder) {
+        this.displayOrder = displayOrder;
     }
 
     public String getReportPath() {

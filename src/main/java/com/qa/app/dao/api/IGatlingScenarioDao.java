@@ -13,6 +13,7 @@ public interface IGatlingScenarioDao {
     void deleteScenario(int scenarioId) throws SQLException;
     Scenario getScenarioById(int id) throws SQLException;
     List<Scenario> getAllScenarios(Integer projectId) throws SQLException;
+    void updateOrder(List<Scenario> scenarios) throws SQLException;
 
     // Scenario steps
     void deleteStepsByScenarioId(int scenarioId) throws SQLException;

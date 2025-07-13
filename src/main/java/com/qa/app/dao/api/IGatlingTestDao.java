@@ -15,4 +15,5 @@ public interface IGatlingTestDao {
     void deleteTest(int id) throws SQLException;
     void updateTestRunStatus(int id, boolean isEnabled) throws SQLException;
     List<GatlingTest> getTestsByProjectId(Integer projectId) throws SQLException;
+    void updateOrder(List<GatlingTest> tests) throws SQLException;
 }

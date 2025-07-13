@@ -17,13 +17,13 @@
                 <!-- Form Section (no ScrollPane) -->
                 <VBox spacing="10.0" VBox.vgrow="ALWAYS">
                     <children>
-                        <Accordion fx:id="testAccordion" VBox.vgrow="ALWAYS">
-                            <panes>
-                                <!-- Basic Information Pane -->
-                                <TitledPane fx:id="basicInfoPane" text="Basic Information" expanded="false">
+                        <TabPane fx:id="testManagementTabPane" VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
+                            <tabs>
+                                <!-- Basic Information Tab -->
+                                <Tab text="Basic Information">
                                     <content>
                                         <VBox spacing="10.0">
-                                            <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
+                                            <padding><Insets top="15" left="10" right="10" bottom="15"/></padding>
                                             <!-- First Row: Is Run, Test Suite, Test Case ID, Tags, Wait Time -->
                                             <HBox spacing="15.0" alignment="CENTER_LEFT">
                                                 <children>
@@ -98,202 +98,200 @@
                                             </HBox>
                                         </VBox>
                                     </content>
-                                </TitledPane>
+                                </Tab>
                                 
-                                <!-- API Configuration Pane -->
-                                <TitledPane fx:id="apiConfigPane" text="API Configuration" expanded="true">
+                                <!-- API Configuration Tab -->
+                                <Tab text="API Configuration">
                                     <content>
-                                        <ScrollPane fitToWidth="true" prefHeight="450.0" VBox.vgrow="ALWAYS" hbarPolicy="NEVER" style="-fx-padding:0;">
-                                            <content>
-                                                <TabPane fx:id="apiConfigTabPane" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
-                                                    <tabs>
-                                                        <!-- Endpoint Tab -->
-                                                        <Tab text="Endpoint">
-                                                            <content>
-                                                                <VBox spacing="10.0">
-                                                                    <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
-                                                                    <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                                        <TabPane fx:id="apiConfigTabPane" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+                                            <tabs>
+                                                <!-- Endpoint Tab -->
+                                                <Tab text="Endpoint">
+                                                    <content>
+                                                        <VBox spacing="10.0">
+                                                            <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
+                                                            <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                                                                <children>
+                                                                    <Label text="Endpoint:" style="-fx-font-weight: bold;" />
+                                                                    <ComboBox fx:id="endpointComboBox" promptText="Select Endpoint" maxWidth="Infinity" VBox.vgrow="NEVER" />
+                                                                </children>
+                                                            </VBox>
+                                                            <!-- New URL Variable Section -->
+                                                            <HBox spacing="15.0" alignment="TOP_LEFT">
+                                                                <children>
+                                                                    <VBox spacing="5.0" prefWidth="400.0" VBox.vgrow="ALWAYS">
                                                                         <children>
-                                                                            <Label text="Endpoint:" style="-fx-font-weight: bold;" />
-                                                                            <ComboBox fx:id="endpointComboBox" promptText="Select Endpoint" maxWidth="Infinity" VBox.vgrow="NEVER" />
+                                                                            <Label text="URL User Defined Variables:" style="-fx-font-weight: bold;" />
+                                                                            <TableView fx:id="urlDynamicVarsTable" VBox.vgrow="ALWAYS" styleClass="table-view">
+                                                                                <columns>
+                                                                                    <TableColumn fx:id="urlDynamicKeyColumn" prefWidth="150.0" text="Key" />
+                                                                                    <TableColumn fx:id="urlDynamicValueColumn" prefWidth="250.0" text="Value" />
+                                                                                    <TableColumn fx:id="urlDynamicActionColumn" prefWidth="60.0" text="Action" />
+                                                                                </columns>
+                                                                                <columnResizePolicy>
+                                                                                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                                                </columnResizePolicy>
+                                                                            </TableView>
                                                                         </children>
                                                                     </VBox>
-                                                                    <!-- New URL Variable Section -->
-                                                                    <HBox spacing="15.0" alignment="TOP_LEFT">
+                                                                    <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                                                                         <children>
-                                                                            <VBox spacing="5.0" prefWidth="400.0" VBox.vgrow="ALWAYS">
-                                                                                <children>
-                                                                                    <Label text="URL User Defined Variables:" style="-fx-font-weight: bold;" />
-                                                                                    <TableView fx:id="urlDynamicVarsTable" VBox.vgrow="ALWAYS" styleClass="table-view">
-                                                                                        <columns>
-                                                                                            <TableColumn fx:id="urlDynamicKeyColumn" prefWidth="150.0" text="Key" />
-                                                                                            <TableColumn fx:id="urlDynamicValueColumn" prefWidth="250.0" text="Value" />
-                                                                                            <TableColumn fx:id="urlDynamicActionColumn" prefWidth="60.0" text="Action" />
-                                                                                        </columns>
-                                                                                        <columnResizePolicy>
-                                                                                            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                                                                        </columnResizePolicy>
-                                                                                    </TableView>
-                                                                                </children>
-                                                                            </VBox>
-                                                                            <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
-                                                                                <children>
-                                                                                    <Label text="Generated URL Preview:" style="-fx-font-weight: bold;" />
-                                                                                    <TextArea fx:id="generatedUrlArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" />
-                                                                                </children>
-                                                                            </VBox>
+                                                                            <Label text="Generated URL Preview:" style="-fx-font-weight: bold;" />
+                                                                            <TextArea fx:id="generatedUrlArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" />
                                                                         </children>
-                                                                    </HBox>
-                                                                </VBox>
-                                                            </content>
-                                                        </Tab>
-                                                        <!-- Headers Tab -->
-                                                        <Tab text="Headers">
-                                                            <content>
-                                                                <VBox spacing="10.0">
-                                                                    <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
-                                                                    <HBox spacing="15.0" alignment="TOP_LEFT">
+                                                                    </VBox>
+                                                                </children>
+                                                            </HBox>
+                                                        </VBox>
+                                                    </content>
+                                                </Tab>
+                                                <!-- Headers Tab -->
+                                                <Tab text="Headers">
+                                                    <content>
+                                                        <VBox spacing="10.0">
+                                                            <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
+                                                            <HBox spacing="15.0" alignment="TOP_LEFT">
+                                                                <children>
+                                                                    <VBox spacing="5.0" prefWidth="400.0" VBox.vgrow="ALWAYS">
                                                                         <children>
-                                                                            <VBox spacing="5.0" prefWidth="400.0" VBox.vgrow="ALWAYS">
-                                                                                <children>
-                                                                                    <Label text="Headers Template:" style="-fx-font-weight: bold;" />
-                                                                                    <ComboBox fx:id="headersTemplateComboBox" promptText="Select headers template" />
-                                                                                    <HBox spacing="5" alignment="CENTER_LEFT">
-                                                                                        <Label text="Headers User Defined Variables:" style="-fx-font-weight: bold;" />
-                                                                                        <Label fx:id="headersHelpIcon" text="?" style="-fx-font-weight: bold; -fx-text-fill: blue; -fx-cursor: hand;">
-                                                                                            <font>
-                                                                                                <Font name="System Bold" size="14.0" />
-                                                                                            </font>
-                                                                                        </Label>
-                                                                                    </HBox>
-                                                                                    <TableView fx:id="headersTemplateVarsTable" VBox.vgrow="ALWAYS" styleClass="table-view">
-                                                                                        <columns>
-                                                                                            <TableColumn fx:id="headersTemplateKeyColumn" prefWidth="150.0" text="Key" />
-                                                                                            <TableColumn fx:id="headersTemplateValueColumn" prefWidth="250.0" text="Value" />
-                                                                                            <TableColumn fx:id="headersTemplateActionColumn" prefWidth="60.0" text="Action" />
-                                                                                        </columns>
-                                                                                        <columnResizePolicy>
-                                                                                            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                                                                        </columnResizePolicy>
-                                                                                    </TableView>
-                                                                                </children>
-                                                                            </VBox>
-                                                                            <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
-                                                                                <children>
-                                                                                    <Label text="Generated Headers Preview:" style="-fx-font-weight: bold;" />
-                                                                                    <TextArea fx:id="generatedHeadersArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" />
-                                                                                </children>
-                                                                            </VBox>
+                                                                            <Label text="Headers Template:" style="-fx-font-weight: bold;" />
+                                                                            <ComboBox fx:id="headersTemplateComboBox" promptText="Select headers template" />
+                                                                            <HBox spacing="5" alignment="CENTER_LEFT">
+                                                                                <Label text="Headers User Defined Variables:" style="-fx-font-weight: bold;" />
+                                                                                <Label fx:id="headersHelpIcon" text="?" style="-fx-font-weight: bold; -fx-text-fill: blue; -fx-cursor: hand;">
+                                                                                    <font>
+                                                                                        <Font name="System Bold" size="14.0" />
+                                                                                    </font>
+                                                                                </Label>
+                                                                            </HBox>
+                                                                            <TableView fx:id="headersTemplateVarsTable" VBox.vgrow="ALWAYS" styleClass="table-view">
+                                                                                <columns>
+                                                                                    <TableColumn fx:id="headersTemplateKeyColumn" prefWidth="150.0" text="Key" />
+                                                                                    <TableColumn fx:id="headersTemplateValueColumn" prefWidth="250.0" text="Value" />
+                                                                                    <TableColumn fx:id="headersTemplateActionColumn" prefWidth="60.0" text="Action" />
+                                                                                </columns>
+                                                                                <columnResizePolicy>
+                                                                                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                                                </columnResizePolicy>
+                                                                            </TableView>
                                                                         </children>
-                                                                    </HBox>
-                                                                </VBox>
-                                                            </content>
-                                                        </Tab>
-                                                        <!-- Body Tab -->
-                                                        <Tab text="Body">
-                                                            <content>
-                                                                <VBox spacing="10.0">
-                                                                    <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
-                                                                    <HBox spacing="15.0" alignment="TOP_LEFT">
+                                                                    </VBox>
+                                                                    <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                                                                         <children>
-                                                                            <VBox spacing="5.0" prefWidth="400.0" VBox.vgrow="ALWAYS">
-                                                                                <children>
-                                                                                    <Label text="Body Template:" style="-fx-font-weight: bold;" />
-                                                                                    <ComboBox fx:id="bodyTemplateComboBox" promptText="Select body template" />
-                                                                                    <HBox spacing="5" alignment="CENTER_LEFT">
-                                                                                        <Label text="Body User Defined Variables:" style="-fx-font-weight: bold;" />
-                                                                                         <Label fx:id="bodyHelpIcon" text="?" style="-fx-font-weight: bold; -fx-text-fill: blue; -fx-cursor: hand;">
-                                                                                            <font>
-                                                                                                <Font name="System Bold" size="14.0" />
-                                                                                            </font>
-                                                                                        </Label>
-                                                                                    </HBox>
-                                                                                    <TableView fx:id="bodyDynamicVarsTable" VBox.vgrow="ALWAYS" styleClass="table-view">
-                                                                                        <columns>
-                                                                                            <TableColumn fx:id="bodyDynamicKeyColumn" prefWidth="150.0" text="Key" />
-                                                                                            <TableColumn fx:id="bodyDynamicValueColumn" prefWidth="250.0" text="Value" />
-                                                                                            <TableColumn fx:id="bodyDynamicActionColumn" prefWidth="60.0" text="Action" />
-                                                                                        </columns>
-                                                                                        <columnResizePolicy>
-                                                                                            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                                                                        </columnResizePolicy>
-                                                                                    </TableView>
-                                                                                </children>
-                                                                            </VBox>
-                                                                            <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
-                                                                                <children>
-                                                                                    <Label text="Generated Body Preview:" style="-fx-font-weight: bold;" />
-                                                                                    <TextArea fx:id="generatedBodyArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" />
-                                                                                </children>
-                                                                            </VBox>
+                                                                            <Label text="Generated Headers Preview:" style="-fx-font-weight: bold;" />
+                                                                            <TextArea fx:id="generatedHeadersArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" />
                                                                         </children>
-                                                                    </HBox>
-                                                                </VBox>
-                                                            </content>
-                                                        </Tab>
-                                                    </tabs>
-                                                </TabPane>
-                                            </content>
-                                        </ScrollPane>
+                                                                    </VBox>
+                                                                </children>
+                                                            </HBox>
+                                                        </VBox>
+                                                    </content>
+                                                </Tab>
+                                                <!-- Body Tab -->
+                                                <Tab text="Body">
+                                                    <content>
+                                                        <VBox spacing="10.0">
+                                                            <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
+                                                            <HBox spacing="15.0" alignment="TOP_LEFT">
+                                                                <children>
+                                                                    <VBox spacing="5.0" prefWidth="400.0" VBox.vgrow="ALWAYS">
+                                                                        <children>
+                                                                            <Label text="Body Template:" style="-fx-font-weight: bold;" />
+                                                                            <ComboBox fx:id="bodyTemplateComboBox" promptText="Select body template" />
+                                                                            <HBox spacing="5" alignment="CENTER_LEFT">
+                                                                                <Label text="Body User Defined Variables:" style="-fx-font-weight: bold;" />
+                                                                                 <Label fx:id="bodyHelpIcon" text="?" style="-fx-font-weight: bold; -fx-text-fill: blue; -fx-cursor: hand;">
+                                                                                    <font>
+                                                                                        <Font name="System Bold" size="14.0" />
+                                                                                    </font>
+                                                                                </Label>
+                                                                            </HBox>
+                                                                            <TableView fx:id="bodyDynamicVarsTable" VBox.vgrow="ALWAYS" styleClass="table-view">
+                                                                                <columns>
+                                                                                    <TableColumn fx:id="bodyDynamicKeyColumn" prefWidth="150.0" text="Key" />
+                                                                                    <TableColumn fx:id="bodyDynamicValueColumn" prefWidth="250.0" text="Value" />
+                                                                                    <TableColumn fx:id="bodyDynamicActionColumn" prefWidth="60.0" text="Action" />
+                                                                                </columns>
+                                                                                <columnResizePolicy>
+                                                                                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                                                </columnResizePolicy>
+                                                                            </TableView>
+                                                                        </children>
+                                                                    </VBox>
+                                                                    <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+                                                                        <children>
+                                                                            <Label text="Generated Body Preview:" style="-fx-font-weight: bold;" />
+                                                                            <TextArea fx:id="generatedBodyArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" />
+                                                                        </children>
+                                                                    </VBox>
+                                                                </children>
+                                                            </HBox>
+                                                        </VBox>
+                                                    </content>
+                                                </Tab>
+                                            </tabs>
+                                        </TabPane>
                                     </content>
-                                </TitledPane>
+                                </Tab>
                                 
-                                <!-- Response Configuration Pane -->
-                                <TitledPane fx:id="responsePane" expanded="false">
-                                    <graphic>
-                                        <Label text="Response Configuration" style="-fx-font-weight: bold;" />
-                                    </graphic>
+                                <!-- Response Configuration Tab -->
+                                <Tab text="Response Configuration">
                                     <content>
-                                        <HBox spacing="5.0" alignment="TOP_LEFT">
-                                            <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
-                                            <children>
-                                                <TableView fx:id="responseChecksTable" editable="true" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" styleClass="table-view">
-                                                    <columns>
-                                                        <TableColumn fx:id="checkTypeColumn" prefWidth="100.0" text="Type" />
-                                                        <TableColumn fx:id="checkExpressionColumn" prefWidth="300.0" text="Expression" />
-                                                        <TableColumn fx:id="checkOperatorColumn" prefWidth="100.0" text="Operator" />
-                                                        <TableColumn fx:id="checkExpectColumn" prefWidth="200.0" text="Expect" />
-                                                        <TableColumn fx:id="checkSaveAsColumn" prefWidth="150.0" text="Save As" />
-                                                    </columns>
-                                                    <columnResizePolicy>
-                                                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                                    </columnResizePolicy>
-                                                </TableView>
-                                                <!-- Check Editor VBox Removed -->
-                                                <VBox spacing="5.0" alignment="TOP_CENTER" prefWidth="40.0" maxWidth="40.0" minWidth="40.0">
-                                                    <children>
-                                                        <Button onAction="#handleAddResponseCheck" text="+" prefWidth="30.0" maxWidth="30.0" minWidth="30.0" />
-                                                        <Button onAction="#handleRemoveResponseCheck" text="-" prefWidth="30.0" maxWidth="30.0" minWidth="30.0" />
-                                                        <Button fx:id="copyResponseCheckButton" text="⧉" onAction="#handleCopyResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0">
-                                                            <tooltip><Tooltip text="Copy selected check(s)"/></tooltip>
-                                                        </Button>
-                                                        <Button fx:id="pasteResponseCheckButton" text="⎘" onAction="#handlePasteResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0">
-                                                            <tooltip><Tooltip text="Paste check(s) from clipboard"/></tooltip>
-                                                        </Button>
-                                                        <Button fx:id="responseHelpButton" text="?" onAction="#handleResponseHelpClick" prefWidth="30.0" maxWidth="30.0" minWidth="30.0">
-                                                            <tooltip><Tooltip text="Show help for response checks"/></tooltip>
-                                                        </Button>
-                                                    </children>
-                                                </VBox>
-                                            </children>
-                                        </HBox>
+                                        <VBox spacing="10.0">
+                                            <padding><Insets top="15" left="10" right="10" bottom="15"/></padding>
+                                            <HBox spacing="5" alignment="CENTER_LEFT">
+                                                <Label text="Response Checks:" style="-fx-font-weight: bold;" />
+                                                <Label fx:id="responseHelpIcon" text="?" style="-fx-font-weight: bold; -fx-text-fill: blue; -fx-cursor: hand;">
+                                                    <font>
+                                                        <Font name="System Bold" size="14.0" />
+                                                    </font>
+                                                </Label>
+                                            </HBox>
+                                            <HBox spacing="5.0" alignment="TOP_LEFT" VBox.vgrow="ALWAYS">
+                                                <children>
+                                                    <TableView fx:id="responseChecksTable" editable="true" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" styleClass="table-view">
+                                                        <columns>
+                                                            <TableColumn fx:id="checkTypeColumn" text="Check Type" prefWidth="120.0" />
+                                                            <TableColumn fx:id="checkExpressionColumn" text="Check Expression" prefWidth="300.0" />
+                                                            <TableColumn fx:id="checkOperatorColumn" text="Operator" prefWidth="120.0" />
+                                                            <TableColumn fx:id="checkExpectColumn" text="Expected Value" prefWidth="200.0" />
+                                                            <TableColumn fx:id="checkSaveAsColumn" text="Save As" prefWidth="120.0" />
+                                                        </columns>
+                                                        <columnResizePolicy>
+                                                            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                        </columnResizePolicy>
+                                                    </TableView>
+                                                    <VBox spacing="5.0" alignment="TOP_CENTER" prefWidth="40.0" maxWidth="40.0" minWidth="40.0">
+                                                        <children>
+                                                            <Button onAction="#handleAddResponseCheck" text="+" prefWidth="30.0" maxWidth="30.0" minWidth="30.0" />
+                                                            <Button onAction="#handleRemoveResponseCheck" text="-" prefWidth="30.0" maxWidth="30.0" minWidth="30.0" />
+                                                            <Button fx:id="copyResponseCheckButton" text="⧉" onAction="#handleCopyResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0">
+                                                                <tooltip><Tooltip text="Copy selected check(s)"/></tooltip>
+                                                            </Button>
+                                                            <Button fx:id="pasteResponseCheckButton" text="⎘" onAction="#handlePasteResponseCheck" prefWidth="30.0" maxWidth="30.0" minWidth="30.0">
+                                                                <tooltip><Tooltip text="Paste check(s) from clipboard"/></tooltip>
+                                                            </Button>
+                                                            <Button fx:id="responseHelpButton" text="?" onAction="#handleResponseHelpClick" prefWidth="30.0" maxWidth="30.0" minWidth="30.0">
+                                                                <tooltip><Tooltip text="Show help for response checks"/></tooltip>
+                                                            </Button>
+                                                        </children>
+                                                    </VBox>
+                                                </children>
+                                            </HBox>
+                                        </VBox>
                                     </content>
-                                </TitledPane>
-                            </panes>
-                        </Accordion>
+                                </Tab>
+                            </tabs>
+                        </TabPane>
                         <!-- Hidden field for ID -->
                         <TextField fx:id="testIdField" visible="false" managed="false" />
-                        <!-- Hidden legacy fields to keep ViewModel compatibility -->
-                        <VBox visible="false" managed="false">
-                            <children>
-                                <TextArea fx:id="expResultArea" />
-                            </children>
-                        </VBox>
-                        <VBox visible="false" managed="false">
-                            <children>
-                                <TextArea fx:id="saveFieldsArea" />
-                            </children>
-                        </VBox>
+                         <!-- Hidden legacy fields to keep ViewModel compatibility -->
+                         <VBox visible="false" managed="false">
+                             <children>
+                                 <TextArea fx:id="expResultArea" />
+                                 <TextArea fx:id="saveFieldsArea" />
+                             </children>
+                         </VBox>
                     </children>
                 </VBox>
                 
@@ -308,6 +306,8 @@
                         <Button fx:id="duplicateButton" mnemonicParsing="false" onAction="#handleDuplicateTest" text="Duplicate" />
                         <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDeleteTest" text="Delete" />
                         <Button fx:id="clearButton" mnemonicParsing="false" onAction="#handleClearFields" text="Clear" />
+                        <Button fx:id="moveUpButton" mnemonicParsing="false" onAction="#handleMoveUp" text="Up" />
+                        <Button fx:id="moveDownButton" mnemonicParsing="false" onAction="#handleMoveDown" text="Down" />
                         <Separator orientation="VERTICAL" />
                         <Button fx:id="runTestButton" mnemonicParsing="false" onAction="#handleRunTest" text="Run Selected Test(s)" />
                         <Label fx:id="runHelpIcon" text="?" style="-fx-font-weight: bold; -fx-text-fill: blue; -fx-cursor: hand;">

@@ -99,6 +99,18 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
     }
 
     @Override
+    public void updateOrder(List<Scenario> scenarios) throws ServiceException {
+        try {
+            if (scenarios == null || scenarios.isEmpty()) {
+                return; // Nothing to update
+            }
+            scenarioDao.updateOrder(scenarios);
+        } catch (Exception e) {
+            throw new ServiceException("Database error while updating scenario order: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public void runScenario(int scenarioId) throws ServiceException {
         try {
             Scenario sc = scenarioDao.getScenarioById(scenarioId);

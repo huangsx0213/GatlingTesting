@@ -116,6 +116,10 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     @FXML
     private Button viewReportButton;
     @FXML
+    private Button moveUpButton;
+    @FXML
+    private Button moveDownButton;
+    @FXML
     private TableView<GatlingTest> testTable;
     @FXML
     private TableColumn<GatlingTest, Boolean> isEnabledColumn;
@@ -151,10 +155,6 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     private TextArea generatedHeadersArea;
     @FXML
     private TextArea generatedBodyArea;
-    @FXML
-    private Accordion testAccordion;
-    @FXML
-    private TitledPane apiConfigPane;
 
     @FXML
     private Label headersHelpIcon;
@@ -277,10 +277,6 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
         // TagHandler initialization
         setupTagHandler();
-
-        if(testAccordion!=null && apiConfigPane!=null){
-            testAccordion.setExpandedPane(apiConfigPane);
-        }
 
         setupResponseChecksTable();
 
@@ -1156,7 +1152,58 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         testTable.getSelectionModel().clearSelection();
     }
 
+    @FXML
+    private void handleMoveUp() {
+        GatlingTest selectedTest = testTable.getSelectionModel().getSelectedItem();
+        if (selectedTest == null) {
+            return;
+        }
 
+        int index = testList.indexOf(selectedTest);
+        if (index > 0) {
+            // Swap with the element above
+            GatlingTest aboveTest = testList.get(index - 1);
+            testList.set(index - 1, selectedTest);
+            testList.set(index, aboveTest);
+            
+            updateDisplayOrderAndPersist();
+            testTable.getSelectionModel().select(index - 1);
+        }
+    }
+
+    @FXML
+    private void handleMoveDown() {
+        GatlingTest selectedTest = testTable.getSelectionModel().getSelectedItem();
+        if (selectedTest == null) {
+            return;
+        }
+
+        int index = testList.indexOf(selectedTest);
+        if (index < testList.size() - 1) {
+            // Swap with the element below
+            GatlingTest belowTest = testList.get(index + 1);
+            testList.set(index + 1, selectedTest);
+            testList.set(index, belowTest);
+
+            updateDisplayOrderAndPersist();
+            testTable.getSelectionModel().select(index + 1);
+        }
+    }
+
+    private void updateDisplayOrderAndPersist() {
+        try {
+            for (int i = 0; i < testList.size(); i++) {
+                testList.get(i).setDisplayOrder(i + 1);
+            }
+            testService.updateOrder(new ArrayList<>(testList));
+            // Optional: Show success status
+        } catch (ServiceException e) {
+            // Show error status
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to update test order: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+        }
+    }
 
     @FXML
     private void handleRunTest() {

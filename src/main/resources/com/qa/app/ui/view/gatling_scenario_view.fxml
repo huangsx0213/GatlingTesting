@@ -29,10 +29,10 @@
                 </children>
             </GridPane>
 
-            <!-- Case List && Scenario Steps -->
-            <Accordion fx:id="scenarioAccordion" VBox.vgrow="ALWAYS">
-                <panes>
-                    <TitledPane fx:id="scenarioDetailsPane" text="Scenario Details" expanded="true">
+            <!-- Case List, Scenario Steps, Load Model, Scheduler -->
+            <TabPane fx:id="scenarioTabPane" VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
+                <tabs>
+                    <Tab text="Scenario Details">
                         <content>
                             <SplitPane orientation="HORIZONTAL" prefHeight="320.0" maxHeight="320.0" minHeight="320.0">
                                 <items>
@@ -100,9 +100,9 @@
                                 </items>
                             </SplitPane>
                         </content>
-                    </TitledPane>
+                    </Tab>
                     <!-- Load Model Configuration -->
-                    <TitledPane text="Load Model" expanded="false">
+                    <Tab text="Load Model">
                         <content>
                             <VBox spacing="10.0">
                                 <TabPane fx:id="loadModelTabPane" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS" prefHeight="450.0">
@@ -186,9 +186,9 @@
                                 </TabPane>
                             </VBox>
                         </content>
-                    </TitledPane>
+                    </Tab>
                     <!-- Scheduler settings -->
-                    <TitledPane text="Scheduler Settings" expanded="false">
+                    <Tab text="Scheduler Settings">
                         <content>
                             <GridPane hgap="10" vgap="8">
                                 <padding><Insets top="10" right="10" left="10" bottom="10"/></padding>
@@ -210,9 +210,9 @@
                                 </children>
                             </GridPane>
                         </content>
-                    </TitledPane>
-                </panes>
-            </Accordion>
+                    </Tab>
+                </tabs>
+            </TabPane>
 
             <!-- Action buttons -->
             <HBox alignment="CENTER_LEFT" spacing="10.0">
@@ -221,6 +221,8 @@
                 <Button text="Duplicate" onAction="#handleDuplicateScenario" />
                 <Button text="Delete" onAction="#handleDeleteScenario" />
                 <Button text="Clear" onAction="#handleClearScenarioForm" />
+                <Button fx:id="moveScenarioUpButton" text="Up" onAction="#handleMoveScenarioUp" />
+                <Button fx:id="moveScenarioDownButton" text="Down" onAction="#handleMoveScenarioDown" />
                 <Separator orientation="VERTICAL" />
                 <Button fx:id="runScenarioButton" text="Run Selected Scenario(s)" onAction="#handleRunScenario" />
                 <Button text="Schedule" onAction="#handleScheduleScenario" />

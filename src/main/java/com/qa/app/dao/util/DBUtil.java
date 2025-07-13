@@ -57,6 +57,7 @@ public class DBUtil {
                     + " project_id INTEGER,"
                     + " report_path TEXT,"
                     + " last_run_passed BOOLEAN,"
+                    + " display_order INT,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
                     + " FOREIGN KEY(endpoint_id) REFERENCES endpoints(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
                     + " FOREIGN KEY(headers_template_id) REFERENCES headers_templates(id) ON DELETE SET NULL ON UPDATE CASCADE,"
@@ -140,6 +141,7 @@ public class DBUtil {
                     " thread_group_json TEXT," +
                     " schedule_json TEXT," +
                     " project_id INTEGER," +
+                    " display_order INT," +
                     " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE" +
                     ");";
             stmt.execute(scenarioSql);
