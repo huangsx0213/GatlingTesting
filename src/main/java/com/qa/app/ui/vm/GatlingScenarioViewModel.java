@@ -114,6 +114,12 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         this.mainViewModel = vm;
     }
 
+    public void refresh() {
+        reloadTests();
+        reloadScenarios();
+        updateSuiteFilterOptions();
+    }
+
     @FXML
     public void initialize() {
         AppConfig.addChangeListener(this);
