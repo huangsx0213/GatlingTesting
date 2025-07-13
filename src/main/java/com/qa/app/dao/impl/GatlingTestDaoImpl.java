@@ -19,40 +19,65 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     @Override
     public void addTest(GatlingTest test) throws SQLException {
         String sql = "INSERT INTO gatling_tests (is_enabled, suite, tcid, descriptions, conditions, " +
-                    "endpoint_id, tags, wait_time, headers_template_id, body_template_id, endpoint_dynamic_variables, headers_dynamic_variables, body_dynamic_variables, response_checks, project_id, report_path, last_run_passed) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            pstmt.setBoolean(1, test.isEnabled());
-            pstmt.setString(2, test.getSuite());
-            pstmt.setString(3, test.getTcid());
-            pstmt.setString(4, test.getDescriptions());
-            pstmt.setString(5, test.getConditions());
-            pstmt.setInt(6, test.getEndpointId());
-            pstmt.setString(7, test.getTags());
-            pstmt.setInt(8, test.getWaitTime());
-            pstmt.setInt(9, test.getHeadersTemplateId());
-            pstmt.setInt(10, test.getBodyTemplateId());
-            pstmt.setString(11, convertMapToJson(test.getEndpointDynamicVariables()));
-            pstmt.setString(12, convertMapToJson(test.getHeadersDynamicVariables()));
-            pstmt.setString(13, convertMapToJson(test.getBodyDynamicVariables()));
-            pstmt.setString(14, test.getResponseChecks());
-            if (test.getProjectId() != null) {
-                pstmt.setInt(15, test.getProjectId());
-            } else {
-                pstmt.setNull(15, java.sql.Types.INTEGER);
-            }
-            pstmt.setString(16, test.getReportPath());
-            if (test.getLastRunPassed() != null) {
-                pstmt.setBoolean(17, test.getLastRunPassed());
-            } else {
-                pstmt.setNull(17, java.sql.Types.BOOLEAN);
-            }
-            pstmt.executeUpdate();
-            try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    test.setId(generatedKeys.getInt(1));
+                    "endpoint_id, tags, wait_time, headers_template_id, body_template_id, endpoint_dynamic_variables, headers_dynamic_variables, body_dynamic_variables, response_checks, project_id, report_path, last_run_passed, display_order) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DBUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                int maxOrder = 0;
+                String maxOrderSql = "SELECT MAX(display_order) FROM gatling_tests WHERE project_id = ?";
+                if (test.getProjectId() == null) {
+                    maxOrderSql = "SELECT MAX(display_order) FROM gatling_tests WHERE project_id IS NULL";
                 }
+                try (PreparedStatement psOrder = conn.prepareStatement(maxOrderSql)) {
+                    if (test.getProjectId() != null) {
+                        psOrder.setInt(1, test.getProjectId());
+                    }
+                    ResultSet rs = psOrder.executeQuery();
+                    if (rs.next()) {
+                        maxOrder = rs.getInt(1);
+                    }
+                }
+                test.setDisplayOrder(maxOrder + 1);
+
+                try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                    pstmt.setBoolean(1, test.isEnabled());
+                    pstmt.setString(2, test.getSuite());
+                    pstmt.setString(3, test.getTcid());
+                    pstmt.setString(4, test.getDescriptions());
+                    pstmt.setString(5, test.getConditions());
+                    pstmt.setInt(6, test.getEndpointId());
+                    pstmt.setString(7, test.getTags());
+                    pstmt.setInt(8, test.getWaitTime());
+                    pstmt.setInt(9, test.getHeadersTemplateId());
+                    pstmt.setInt(10, test.getBodyTemplateId());
+                    pstmt.setString(11, convertMapToJson(test.getEndpointDynamicVariables()));
+                    pstmt.setString(12, convertMapToJson(test.getHeadersDynamicVariables()));
+                    pstmt.setString(13, convertMapToJson(test.getBodyDynamicVariables()));
+                    pstmt.setString(14, test.getResponseChecks());
+                    if (test.getProjectId() != null) {
+                        pstmt.setInt(15, test.getProjectId());
+                    } else {
+                        pstmt.setNull(15, java.sql.Types.INTEGER);
+                    }
+                    pstmt.setString(16, test.getReportPath());
+                    if (test.getLastRunPassed() != null) {
+                        pstmt.setBoolean(17, test.getLastRunPassed());
+                    } else {
+                        pstmt.setNull(17, java.sql.Types.BOOLEAN);
+                    }
+                    pstmt.setInt(18, test.getDisplayOrder());
+                    pstmt.executeUpdate();
+                    try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                        if (generatedKeys.next()) {
+                            test.setId(generatedKeys.getInt(1));
+                        }
+                    }
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
             }
         }
     }
@@ -91,7 +116,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
 
     @Override
     public List<GatlingTest> getAllTests() throws SQLException {
-        String sql = "SELECT * FROM gatling_tests ORDER BY id";
+        String sql = "SELECT * FROM gatling_tests ORDER BY display_order";
         List<GatlingTest> tests = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection();
              Statement stmt = conn.createStatement();
@@ -105,7 +130,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
 
     @Override
     public List<GatlingTest> getTestsBySuite(String suite) throws SQLException {
-        String sql = "SELECT * FROM gatling_tests WHERE suite = ? ORDER BY id";
+        String sql = "SELECT * FROM gatling_tests WHERE suite = ? ORDER BY display_order";
         List<GatlingTest> tests = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -123,7 +148,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     public void updateTest(GatlingTest test) throws SQLException {
         String sql = "UPDATE gatling_tests SET is_enabled = ?, suite = ?, tcid = ?, descriptions = ?, " +
                     "conditions = ?, endpoint_id = ?, tags = ?, wait_time = ?, headers_template_id = ?, " +
-                    "body_template_id = ?, endpoint_dynamic_variables = ?, headers_dynamic_variables = ?, body_dynamic_variables = ?, response_checks = ?, project_id = ?, report_path = ?, last_run_passed = ? WHERE id = ?";
+                    "body_template_id = ?, endpoint_dynamic_variables = ?, headers_dynamic_variables = ?, body_dynamic_variables = ?, response_checks = ?, project_id = ?, report_path = ?, last_run_passed = ?, display_order = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setBoolean(1, test.isEnabled());
@@ -151,7 +176,8 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             } else {
                 pstmt.setNull(17, java.sql.Types.BOOLEAN);
             }
-            pstmt.setInt(18, test.getId());
+            pstmt.setInt(18, test.getDisplayOrder());
+            pstmt.setInt(19, test.getId());
             pstmt.executeUpdate();
         }
     }
@@ -178,7 +204,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
     }
 
     public List<GatlingTest> getTestsByProjectId(Integer projectId) throws SQLException {
-        String sql = "SELECT * FROM gatling_tests WHERE project_id = ? ORDER BY id";
+        String sql = "SELECT * FROM gatling_tests WHERE project_id = ? ORDER BY display_order";
         List<GatlingTest> tests = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -220,6 +246,7 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
         } else {
             test.setLastRunPassed(null);
         }
+        test.setDisplayOrder(rs.getInt("display_order"));
         return test;
     }
 
@@ -245,5 +272,25 @@ public class GatlingTestDaoImpl implements IGatlingTestDao {
             // Optionally, return an empty map or re-throw a custom exception
         }
         return map;
+    }
+
+    @Override
+    public void updateOrder(List<GatlingTest> tests) throws SQLException {
+        String sql = "UPDATE gatling_tests SET display_order = ? WHERE id = ?";
+        try (Connection conn = DBUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                for (GatlingTest test : tests) {
+                    ps.setInt(1, test.getDisplayOrder());
+                    ps.setInt(2, test.getId());
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        }
     }
 }

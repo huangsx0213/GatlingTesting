@@ -198,6 +198,18 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         }
     }
 
+    @Override
+    public void updateOrder(List<GatlingTest> tests) throws ServiceException {
+        try {
+            if (tests == null || tests.isEmpty()) {
+                return; // Nothing to update
+            }
+            testDao.updateOrder(tests);
+        } catch (SQLException e) {
+            throw new ServiceException("Database error while updating test order: " + e.getMessage(), e);
+        }
+    }
+
     private void enrichTemplates(GatlingTest test) {
         try {
             if ((test.getBody() == null || test.getBody().isEmpty()) && test.getBodyTemplateId() > 0) {

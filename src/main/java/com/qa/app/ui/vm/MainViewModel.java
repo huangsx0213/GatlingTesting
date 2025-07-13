@@ -166,6 +166,10 @@ public class MainViewModel implements Initializable {
             if (currentFeatureLabel != null) {
                 currentFeatureLabel.setText(firstItem);
             }
+            // Open scenario tab by default as second fixed tab
+            openOrSelectTab("Gatling Scenario Management");
+            // Ensure we revert selection back to first tab
+            contentTabPane.getSelectionModel().select(0);
         }
     }
 
@@ -184,6 +188,15 @@ public class MainViewModel implements Initializable {
                     if (contentTabPane.getTabs().indexOf(tab) != 0) {
                         contentTabPane.getTabs().remove(tab);
                         contentTabPane.getTabs().add(0, tab);
+                    }
+                }
+                // Ensure Scenario tab fixed at index 1 and not closable
+                if ("Gatling Scenario Management".equals(tabName)) {
+                    tab.setClosable(false);
+                    int desiredIndex = Math.min(1, contentTabPane.getTabs().size());
+                    if (contentTabPane.getTabs().indexOf(tab) != desiredIndex) {
+                        contentTabPane.getTabs().remove(tab);
+                        contentTabPane.getTabs().add(desiredIndex, tab);
                     }
                 }
 
@@ -305,6 +318,11 @@ public class MainViewModel implements Initializable {
                     newTab.setClosable(false);
                     // Always insert Gatling Test tab at the first position
                     contentTabPane.getTabs().add(0, newTab);
+                } else if (tabName.equals("Gatling Scenario Management")) {
+                    newTab.setClosable(false);
+                    // Always insert Gatling Scenario tab at the second position
+                    int insertIndex = Math.min(1, contentTabPane.getTabs().size());
+                    contentTabPane.getTabs().add(insertIndex, newTab);
                 } else {
                     newTab.setClosable(true);
                     contentTabPane.getTabs().add(newTab);
@@ -389,7 +407,7 @@ public class MainViewModel implements Initializable {
         } else if (controller instanceof GatlingTestReportViewModel) {
             ((GatlingTestReportViewModel) controller).refresh();
         } else if (controller instanceof GatlingScenarioViewModel) {
-            // currently no refresh method needed
+            ((GatlingScenarioViewModel) controller).refresh();
         } else if (controller instanceof GatlingInternalReportViewModel) {
             ((GatlingInternalReportViewModel) controller).refresh();
         } else if (controller instanceof DbConnectionViewModel) {
@@ -499,7 +517,13 @@ public class MainViewModel implements Initializable {
             contentTabPane.getTabs().removeIf(t -> t.isClosable());
         });
 
-        contextMenu.getItems().addAll(closeRightItem, closeAllItem);
+        // Only add context menu to closable tabs or add different options for fixed tabs
+        if (tab.isClosable()) {
+            contextMenu.getItems().addAll(closeRightItem, closeAllItem);
+        } else {
+            // For fixed tabs, only add the option to close other tabs
+            contextMenu.getItems().add(closeAllItem);
+        }
         tab.setContextMenu(contextMenu);
     }
 }

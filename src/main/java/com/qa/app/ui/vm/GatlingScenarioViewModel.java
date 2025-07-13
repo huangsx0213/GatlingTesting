@@ -60,10 +60,6 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     @FXML private Spinner<Integer> minuteSpinner;
     @FXML private Spinner<Integer> secondSpinner;
 
-    @FXML private javafx.scene.control.Accordion scenarioAccordion;
-    @FXML private javafx.scene.control.TitledPane scenarioDetailsPane; // fx:id must match
-    // note: ensure FXML gives fx:id="scenarioDetailsPane" to first titles pane
-
     // ----------------- data -------------------
     private final ObservableList<GatlingTest> availableTests = FXCollections.observableArrayList();
     private final ObservableList<ScenarioStep> steps = FXCollections.observableArrayList();
@@ -111,9 +107,17 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     private boolean isUpdatingSelection = false;
 
     @FXML private Button runScenarioButton;
+    @FXML private Button moveScenarioUpButton;
+    @FXML private Button moveScenarioDownButton;
 
     public void setMainViewModel(MainViewModel vm) {
         this.mainViewModel = vm;
+    }
+
+    public void refresh() {
+        reloadTests();
+        reloadScenarios();
+        updateSuiteFilterOptions();
     }
 
     @FXML
@@ -187,11 +191,6 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         reloadScenarios();
 
         updateSuiteFilterOptions();
-
-        // set default expanded pane
-        if (scenarioAccordion != null && scenarioDetailsPane != null) {
-            scenarioAccordion.setExpandedPane(scenarioDetailsPane);
-        }
 
         // ----- Load Model Pane initialization -----
         initLoadModelPane();
@@ -366,6 +365,47 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     @FXML
     private void handleClearSteps(ActionEvent evt) {
         steps.clear();
+    }
+
+    @FXML
+    private void handleMoveScenarioUp() {
+        Scenario selected = scenarioTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            return;
+        }
+
+        int index = scenarios.indexOf(selected);
+        if (index > 0) {
+            java.util.Collections.swap(scenarios, index, index - 1);
+            updateScenarioOrderAndPersist();
+            scenarioTable.getSelectionModel().select(index - 1);
+        }
+    }
+
+    @FXML
+    private void handleMoveScenarioDown() {
+        Scenario selected = scenarioTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            return;
+        }
+
+        int index = scenarios.indexOf(selected);
+        if (index > -1 && index < scenarios.size() - 1) {
+            java.util.Collections.swap(scenarios, index, index + 1);
+            updateScenarioOrderAndPersist();
+            scenarioTable.getSelectionModel().select(index + 1);
+        }
+    }
+
+    private void updateScenarioOrderAndPersist() {
+        try {
+            for (int i = 0; i < scenarios.size(); i++) {
+                scenarios.get(i).setDisplayOrder(i + 1);
+            }
+            scenarioService.updateOrder(new ArrayList<>(scenarios));
+        } catch (ServiceException e) {
+            showError("Failed to update scenario order: " + e.getMessage());
+        }
     }
 
     private void reindexSteps() {

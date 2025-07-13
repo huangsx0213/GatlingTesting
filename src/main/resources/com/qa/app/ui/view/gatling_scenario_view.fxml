@@ -29,15 +29,16 @@
                 </children>
             </GridPane>
 
-            <!-- Case List && Scenario Steps -->
-            <Accordion fx:id="scenarioAccordion" VBox.vgrow="ALWAYS">
-                <panes>
-                    <TitledPane fx:id="scenarioDetailsPane" text="Scenario Details" expanded="true">
+            <!-- Case List, Scenario Steps, Load Model, Scheduler -->
+            <TabPane fx:id="scenarioTabPane" VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
+                <tabs>
+                    <Tab text="Scenario Details">
                         <content>
-                            <SplitPane orientation="HORIZONTAL" prefHeight="320.0" maxHeight="320.0" minHeight="320.0">
+                            <SplitPane orientation="HORIZONTAL" prefHeight="320.0" maxHeight="320.0" minHeight="320.0" dividerPositions="0.6, 0.65">
                                 <items>
                                     <!-- Case list -->
-                                    <VBox spacing="8.0">
+                                    <VBox spacing="5.0">
+                                        <SplitPane.resizableWithParent>true</SplitPane.resizableWithParent>
                                         <children>
                                             <Label text="Case List" style="-fx-font-weight: bold;" />
                                             <!-- Filter bar -->
@@ -51,7 +52,7 @@
                                                     <Button text="Reset" onAction="#handleResetFilter" />
                                                 </children>
                                             </HBox>
-                                            <TableView fx:id="availableTestTable" prefWidth="400.0" VBox.vgrow="ALWAYS" editable="false">
+                                            <TableView fx:id="availableTestTable" prefWidth="600.0" VBox.vgrow="ALWAYS" editable="false">
                                                 <columns>
                                                     <TableColumn fx:id="tcidCol" text="TCID" prefWidth="80.0" />
                                                     <TableColumn fx:id="suiteCol" text="Suite" prefWidth="120.0" />
@@ -66,7 +67,8 @@
                                     </VBox>
 
                                     <!-- Operation buttons -->
-                                    <VBox spacing="10.0" alignment="CENTER" prefWidth="90.0">
+                                    <VBox spacing="5.0" alignment="CENTER" prefWidth="35.0">
+                                        <SplitPane.resizableWithParent>false</SplitPane.resizableWithParent>
                                         <children>
                                             <Button text="→" fx:id="addButton" onAction="#handleAddToSteps" prefWidth="30" minWidth="30" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
                                             <Button text="←" fx:id="removeButton" onAction="#handleRemoveFromSteps" prefWidth="30" minWidth="30" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
@@ -78,13 +80,14 @@
 
                                     <!-- Scenario steps -->
                                     <VBox spacing="5.0">
+                                        <SplitPane.resizableWithParent>true</SplitPane.resizableWithParent>
                                         <children>
                                             <HBox spacing="10" alignment="CENTER_LEFT">
                                                 <children>
                                                     <Label text="Scenario Steps" style="-fx-font-weight: bold;" />
                                                 </children>
                                             </HBox>
-                                            <TableView fx:id="scenarioStepTable" prefWidth="600.0" VBox.vgrow="ALWAYS">
+                                            <TableView fx:id="scenarioStepTable" prefWidth="400.0" VBox.vgrow="ALWAYS">
                                                 <columns>
                                                     <TableColumn fx:id="orderCol" text="#" prefWidth="60.0" />
                                                     <TableColumn fx:id="stepTcidCol" text="TCID" prefWidth="150.0" />
@@ -100,9 +103,9 @@
                                 </items>
                             </SplitPane>
                         </content>
-                    </TitledPane>
+                    </Tab>
                     <!-- Load Model Configuration -->
-                    <TitledPane text="Load Model" expanded="false">
+                    <Tab text="Load Model">
                         <content>
                             <VBox spacing="10.0">
                                 <TabPane fx:id="loadModelTabPane" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS" prefHeight="450.0">
@@ -186,9 +189,9 @@
                                 </TabPane>
                             </VBox>
                         </content>
-                    </TitledPane>
+                    </Tab>
                     <!-- Scheduler settings -->
-                    <TitledPane text="Scheduler Settings" expanded="false">
+                    <Tab text="Scheduler Settings">
                         <content>
                             <GridPane hgap="10" vgap="8">
                                 <padding><Insets top="10" right="10" left="10" bottom="10"/></padding>
@@ -210,9 +213,9 @@
                                 </children>
                             </GridPane>
                         </content>
-                    </TitledPane>
-                </panes>
-            </Accordion>
+                    </Tab>
+                </tabs>
+            </TabPane>
 
             <!-- Action buttons -->
             <HBox alignment="CENTER_LEFT" spacing="10.0">
@@ -221,6 +224,8 @@
                 <Button text="Duplicate" onAction="#handleDuplicateScenario" />
                 <Button text="Delete" onAction="#handleDeleteScenario" />
                 <Button text="Clear" onAction="#handleClearScenarioForm" />
+                <Button fx:id="moveScenarioUpButton" text="Up" onAction="#handleMoveScenarioUp" />
+                <Button fx:id="moveScenarioDownButton" text="Down" onAction="#handleMoveScenarioDown" />
                 <Separator orientation="VERTICAL" />
                 <Button fx:id="runScenarioButton" text="Run Selected Scenario(s)" onAction="#handleRunScenario" />
                 <Button text="Schedule" onAction="#handleScheduleScenario" />

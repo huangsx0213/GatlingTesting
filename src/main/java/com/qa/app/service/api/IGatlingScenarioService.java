@@ -13,6 +13,7 @@ public interface IGatlingScenarioService {
     Scenario duplicateScenario(int scenarioId) throws ServiceException;
     List<Scenario> findAllScenarios(Integer projectId) throws ServiceException;
     List<ScenarioStep> findStepsByScenarioId(int scenarioId) throws ServiceException;
+    void updateOrder(List<Scenario> scenarios) throws ServiceException;
 
     void runScenario(int scenarioId) throws ServiceException;
 
