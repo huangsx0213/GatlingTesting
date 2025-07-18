@@ -501,7 +501,12 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     private void handleSaveScenario(ActionEvent evt) {
         Scenario selected = scenarioTable.getSelectionModel().getSelectedItem();
         if (selected == null) { showError("please select a scenario to update"); return; }
-        selected.setName(scenarioNameField.getText());
+        String name = scenarioNameField.getText();
+        if (name == null || name.isBlank()) {
+            showError("scenario name cannot be empty");
+            return;
+        }
+        selected.setName(name);
         selected.setDescription(scenarioDescArea.getText());
         try {
             com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();

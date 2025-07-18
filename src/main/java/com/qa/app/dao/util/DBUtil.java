@@ -82,6 +82,7 @@ public class DBUtil {
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + " name TEXT NOT NULL UNIQUE,"
                     + " content TEXT NOT NULL,"
+                    + " description TEXT,"
                     + " project_id INTEGER,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
