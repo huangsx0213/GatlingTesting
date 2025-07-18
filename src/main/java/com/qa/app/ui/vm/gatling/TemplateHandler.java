@@ -304,7 +304,7 @@ public class TemplateHandler {
 
         // Set Icon
         Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
-        stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
+        stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.png")));
 
         java.util.Optional<String> result = dialog.showAndWait();
         return result.orElse(null);

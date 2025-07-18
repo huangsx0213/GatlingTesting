@@ -12,6 +12,10 @@ import com.qa.app.service.api.IEndpointService;
 import java.util.List;
 import java.util.Map;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.io.IOException;
+
 public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
 
     private final IGatlingScenarioDao scenarioDao = new GatlingScenarioDaoImpl();
@@ -332,6 +336,20 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
     }
 
     private static String assembleClasspath() {
+        // Prefer classpath provided by Maven build plugin (read from a file to avoid command line length limits)
+        String classpathFile = System.getProperty("gatling.classpath.file");
+        if (classpathFile != null) {
+            try {
+                String dependencyClasspath = new String(Files.readAllBytes(Paths.get(classpathFile)));
+                String projectClassesPath = Paths.get(System.getProperty("user.dir"), "target", "classes").toString();
+                // Prepend the project's own classes to the classpath
+                return projectClassesPath + java.io.File.pathSeparator + dependencyClasspath;
+            } catch (IOException e) {
+                System.err.println("WARN: Failed to read classpath from " + classpathFile + ", falling back to default.");
+            }
+        }
+
+        // Fallback to original method for other environments (e.g., IDE, fat JAR)
         String cp = System.getProperty("java.class.path");
         try {
             String selfPath = new java.io.File(GatlingScenarioServiceImpl.class.getProtectionDomain()

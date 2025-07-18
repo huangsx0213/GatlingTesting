@@ -25,7 +25,7 @@ public class GatlingCodeArchiver {
 
     /* ---------- Config ---------- */
     private static final Set<String> TEXT_EXTENSIONS = Set.of(
-            "java", "xml", "properties", "conf", "config", "txt", "fxml", "css", "md", "json", "yml", "yaml");
+            "java", "xml", "properties", "conf", "config", "txt", "fxml", "css", "md", "json", "yml", "yaml","png","js");
     private static final List<String> EXCLUDE_DIRS = List.of(
             ".git", "target", ".idea", "out", "logs", ".cursor", ".vscode");
 

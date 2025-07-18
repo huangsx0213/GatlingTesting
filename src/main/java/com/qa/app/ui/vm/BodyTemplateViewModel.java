@@ -326,7 +326,7 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
     private void setDialogIcon(Alert alert) {
         Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
         try {
-            stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
+            stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.png")));
         } catch (Exception e) {
             // ignore
         }

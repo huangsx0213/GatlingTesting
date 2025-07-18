@@ -95,7 +95,7 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
                     // set icon
                     Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
                     try {
-                        stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
+                        stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.png")));
                     } catch (Exception e) {
                         // ignore
                     }

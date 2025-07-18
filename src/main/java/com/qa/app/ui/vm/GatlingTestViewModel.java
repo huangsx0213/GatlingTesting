@@ -1432,7 +1432,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         // Set Icon
         Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
         stage.getIcons().add(
-                new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
+                new Image(getClass().getResourceAsStream("/static/icon/favicon.png")));
 
         // Set the button types.
         ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);

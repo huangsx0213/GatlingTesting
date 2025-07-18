@@ -99,11 +99,23 @@
       <type>pom</type>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>8.0.33</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.7.3</version>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
   <properties>
     <sqlite.jdbc.version>3.36.0.3</sqlite.jdbc.version>
     <maven.compiler.source>21</maven.compiler.source>
-    <gatling.version>3.14.3</gatling.version>
+    <gatling.version>3.13.5</gatling.version>
     <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <javafx.version>21.0.1</javafx.version>
