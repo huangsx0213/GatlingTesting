@@ -28,6 +28,8 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.scene.image.Image;
+import javafx.stage.Stage;
 
 public class EndpointViewModel implements Initializable, AppConfigChangeListener {
     @FXML
@@ -260,12 +262,16 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
             String consistencyWarning = endpointService.checkVariableConsistency(tempEndpoint);
             boolean proceed = true; // Default to proceed if no warning
             if (consistencyWarning != null) {
-                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                ButtonType okButton = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+                ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION, consistencyWarning, okButton, cancelButton);
                 alert.setTitle("Variable Consistency Warning");
                 alert.setHeaderText("Potential variable mismatch across environments.");
-                alert.setContentText(consistencyWarning);
+                // Add application icon to alert window
+                Stage alertStage = (Stage) alert.getDialogPane().getScene().getWindow();
+                alertStage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.png")));
                 Optional<ButtonType> result = alert.showAndWait();
-                proceed = result.isPresent() && result.get() == ButtonType.OK;
+                proceed = result.isPresent() && result.get() == okButton;
             }
 
             if (proceed) {

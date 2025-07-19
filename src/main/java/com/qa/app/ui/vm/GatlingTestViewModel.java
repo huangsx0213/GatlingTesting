@@ -1467,7 +1467,8 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
         // Set the button types.
         ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+        ButtonType cancelButtonType = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, cancelButtonType);
 
         // Create the content grid.
         GridPane grid = new GridPane();
