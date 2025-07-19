@@ -314,6 +314,25 @@ public class GatlingTestSimulation extends Simulation {
         GatlingTest test = item.test;
         Endpoint endpoint = item.endpoint;
 
+        // ===================== NEW: Re-resolve endpoint for SETUP / TEARDOWN =====================
+        if (item.getTestMode() == com.qa.app.model.reports.TestMode.SETUP ||
+            item.getTestMode() == com.qa.app.model.reports.TestMode.TEARDOWN) {
+            try {
+                // Re-fetch by name & current environment to ensure we get the correct URL template
+                if (test.getEndpointName() != null && !test.getEndpointName().isBlank()) {
+                    Integer envId = com.qa.app.service.EnvironmentContext.getCurrentEnvironmentId();
+                    EndpointDaoImpl epDao = new EndpointDaoImpl();
+                    Endpoint resolvedEp = epDao.getEndpointByNameAndEnv(test.getEndpointName(), envId);
+                    if (resolvedEp != null) {
+                        endpoint = resolvedEp;
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[WARN] Failed to resolve endpoint for SETUP/TEARDOWN: " + e.getMessage());
+            }
+        }
+        // =========================================================================================
+
         // Build composite key to ensure uniqueness across different origins.
         // For SETUP and TEARDOWN steps that may be shared by multiple main TCIDs,
         // include the origin TCID in the key: origin|tcid|mode. This prevents collisions
@@ -347,6 +366,9 @@ public class GatlingTestSimulation extends Simulation {
         String processedUrl = TestRunContext.processVariableReferences(endpoint.getUrl());
         // Then render user-defined @{var} placeholders
         processedUrl = RuntimeTemplateProcessor.render(processedUrl, test.getEndpointDynamicVariables());
+
+        // Capture the fully resolved URL once for lambdas to avoid non-final variable issue
+        final String resolvedUrl = processedUrl;
 
         switch (method) {
             case "POST":
@@ -676,7 +698,7 @@ public class GatlingTestSimulation extends Simulation {
             // 1. Build RequestInfo (with resolved variables)
             RequestInfo requestInfo = new RequestInfo();
             requestInfo.setMethod(method);
-            requestInfo.setUrl(endpoint.getUrl());
+            requestInfo.setUrl(resolvedUrl);
 
             // Re-process templates to get the resolved values for the report
             String finalHeaders = RuntimeTemplateProcessor.render(test.getHeaders(), test.getHeadersDynamicVariables());
@@ -802,7 +824,12 @@ public class GatlingTestSimulation extends Simulation {
 
             String refName = test.getTcid() + "." + refTcid + "_PRE";
             String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
-            String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), java.util.Collections.emptyMap());
+            java.util.Map<String,String> dynVars = (refTest != null && refTest.getEndpointDynamicVariables() != null)
+                    ? refTest.getEndpointDynamicVariables()
+                    : java.util.Collections.emptyMap();
+            String refUrl = RuntimeTemplateProcessor.render(
+                    TestRunContext.processVariableReferences(refEndpoint.getUrl()),
+                    dynVars);
 
             HttpRequestActionBuilder refReq;
             switch (refMethod) {
@@ -1034,7 +1061,12 @@ public class GatlingTestSimulation extends Simulation {
 
             String refName = test.getTcid() + "." + refTcid + "_PRE_CHECK";
             String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
-            String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), java.util.Collections.emptyMap());
+            java.util.Map<String,String> dynVarsPre = (refTest != null && refTest.getEndpointDynamicVariables() != null)
+                    ? refTest.getEndpointDynamicVariables()
+                    : java.util.Collections.emptyMap();
+            String refUrl = RuntimeTemplateProcessor.render(
+                    TestRunContext.processVariableReferences(refEndpoint.getUrl()),
+                    dynVarsPre);
 
             HttpRequestActionBuilder refReq;
             switch (refMethod) {
@@ -1274,7 +1306,12 @@ public class GatlingTestSimulation extends Simulation {
 
             String refName = test.getTcid() + "." + refTcid + "_PST";
             String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
-            String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), java.util.Collections.emptyMap());
+            java.util.Map<String,String> dynVarsAfter = (refTestAfter != null && refTestAfter.getEndpointDynamicVariables() != null)
+                    ? refTestAfter.getEndpointDynamicVariables()
+                    : java.util.Collections.emptyMap();
+            String refUrl = RuntimeTemplateProcessor.render(
+                    TestRunContext.processVariableReferences(refEndpoint.getUrl()),
+                    dynVarsAfter);
 
             HttpRequestActionBuilder refReq;
             switch (refMethod) {
@@ -1504,7 +1541,12 @@ public class GatlingTestSimulation extends Simulation {
 
             String refName = test.getTcid() + "." + refTcid + "_PST_CHECK";
             String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
-            String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), java.util.Collections.emptyMap());
+            java.util.Map<String,String> dynVarsPst = (refTest != null && refTest.getEndpointDynamicVariables() != null)
+                    ? refTest.getEndpointDynamicVariables()
+                    : java.util.Collections.emptyMap();
+            String refUrl = RuntimeTemplateProcessor.render(
+                    TestRunContext.processVariableReferences(refEndpoint.getUrl()),
+                    dynVarsPst);
 
             HttpRequestActionBuilder refReq;
             switch (refMethod) {
