@@ -99,6 +99,31 @@ public class EndpointDaoImpl implements IEndpointDao {
         return null;
     }
 
+    private Endpoint mapRowToEndpoint(ResultSet rs) throws SQLException {
+        Endpoint endpoint = new Endpoint();
+        endpoint.setId(rs.getInt("id"));
+        endpoint.setName(rs.getString("name"));
+        endpoint.setMethod(rs.getString("method"));
+        endpoint.setUrl(rs.getString("url"));
+        endpoint.setEnvironmentId(rs.getObject("environment_id") == null ? null : rs.getInt("environment_id"));
+        endpoint.setProjectId(rs.getObject("project_id") == null ? null : rs.getInt("project_id"));
+        return endpoint;
+    }
+
+    @Override
+    public List<Endpoint> getEndpointsByName(String name) throws SQLException {
+        String sql = "SELECT * FROM endpoints WHERE name = ?";
+        try (Connection conn = DBUtil.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            ResultSet rs = pstmt.executeQuery();
+            List<Endpoint> endpoints = new ArrayList<>();
+            while (rs.next()) {
+                endpoints.add(mapRowToEndpoint(rs));
+            }
+            return endpoints;
+        }
+    }
+
     @Override
     public Endpoint getEndpointByNameAndEnv(String name, Integer environmentId) throws SQLException {
         String sql = "SELECT * FROM endpoints WHERE name = ? AND environment_id " + (environmentId == null ? "IS NULL" : "= ?") ;

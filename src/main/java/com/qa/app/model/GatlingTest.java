@@ -13,7 +13,7 @@ public class GatlingTest {
     private final StringProperty descriptions = new SimpleStringProperty();
     private final StringProperty conditions = new SimpleStringProperty();
     private final StringProperty responseChecks = new SimpleStringProperty();
-    private final IntegerProperty endpointId = new SimpleIntegerProperty();
+    // private final IntegerProperty endpointId = new SimpleIntegerProperty(); // Deprecated
     private final StringProperty headers = new SimpleStringProperty();
     private final StringProperty body = new SimpleStringProperty();
     private final StringProperty tags = new SimpleStringProperty();
@@ -50,7 +50,7 @@ public class GatlingTest {
 
     public GatlingTest(int id, boolean isEnabled, String suite, String tcid, String descriptions,
                       String conditions, String responseChecks,
-                      int endpointId, String headers, String body,
+                      String headers, String body,
                       String tags, int waitTime, int bodyTemplateId, int headersTemplateId, Map<String, String> dynamicVariables, Map<String, String> headersDynamicVariables, Map<String, String> endpointDynamicVariables) {
         this.id.set(id);
         this.isEnabled.set(isEnabled);
@@ -59,7 +59,6 @@ public class GatlingTest {
         this.descriptions.set(descriptions);
         this.conditions.set(conditions);
         this.responseChecks.set(responseChecks);
-        this.endpointId.set(endpointId);
         this.headers.set(headers);
         this.body.set(body);
         this.tags.set(tags);
@@ -83,7 +82,6 @@ public class GatlingTest {
         this.descriptions.set(other.getDescriptions());
         this.conditions.set(other.getConditions());
         this.responseChecks.set(other.getResponseChecks());
-        this.endpointId.set(other.getEndpointId());
         this.headers.set(other.getHeaders());
         this.body.set(other.getBody());
         this.tags.set(other.getTags());
@@ -127,9 +125,11 @@ public class GatlingTest {
     public void setResponseChecks(String responseChecks) { this.responseChecks.set(responseChecks); }
     public StringProperty responseChecksProperty() { return responseChecks; }
 
+    /* Deprecated
     public int getEndpointId() { return endpointId.get(); }
     public void setEndpointId(int endpointId) { this.endpointId.set(endpointId); }
     public IntegerProperty endpointIdProperty() { return endpointId; }
+    */
 
     public String getHeaders() { return headers.get(); }
     public void setHeaders(String headers) { this.headers.set(headers); }

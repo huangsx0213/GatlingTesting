@@ -23,8 +23,8 @@
                     <Label text="Endpoint List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
                     <TableView fx:id="endpointTable" VBox.vgrow="ALWAYS" styleClass="table-view">
                         <columns>
+                            <TableColumn fx:id="endpointNameColumn" prefWidth="200.0" text="Name"/>
                             <TableColumn fx:id="environmentColumn" prefWidth="180.0" text="Environment"/>
-                            <TableColumn fx:id="endpointNameColumn" prefWidth="200.0" text="Endpoint"/>
                    <TableColumn fx:id="methodColumn" prefWidth="120.0" text="Method"/>
                             <TableColumn fx:id="urlColumn" visible="false" prefWidth="0" text="URL"/>
                         </columns>
@@ -57,10 +57,10 @@
                     <RowConstraints minHeight="40.0"/>
                 </rowConstraints>
                 <children>
-                            <Label text="Environment:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                            <ComboBox fx:id="environmentComboBox" promptText="Select Environment" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
-                            <Label text="Endpoint:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                            <TextField fx:id="endpointNameField" promptText="Endpoint Name" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                            <Label text="Name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <TextField fx:id="endpointNameField" promptText="Endpoint Name" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+                            <Label text="Environment:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                            <ComboBox fx:id="environmentComboBox" promptText="Select Environment" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
                     <Label text="HTTP Method:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
                     <ComboBox fx:id="methodComboBox" promptText="Select Method" GridPane.rowIndex="2" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
                     <Label text="URL:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>

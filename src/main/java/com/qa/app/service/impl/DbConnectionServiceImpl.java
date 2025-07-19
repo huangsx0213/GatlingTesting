@@ -21,6 +21,7 @@ public class DbConnectionServiceImpl implements IDbConnectionService {
     public List<String> getAllAliases() {
         return dbConnectionDao.findAll().stream()
                 .map(DbConnection::getAlias)
+                .distinct()
                 .collect(Collectors.toList());
     }
 
@@ -35,6 +36,11 @@ public class DbConnectionServiceImpl implements IDbConnectionService {
     }
 
     @Override
+    public DbConnection findByAliasAndEnv(String alias, Integer environmentId) {
+        return dbConnectionDao.getByAliasAndEnv(alias, environmentId);
+    }
+
+    @Override
     public void save(DbConnection dbConnection) {
         if (dbConnection.getId() == null) {
             dbConnectionDao.add(dbConnection);
@@ -45,11 +51,24 @@ public class DbConnectionServiceImpl implements IDbConnectionService {
 
     @Override
     public void addConnection(DbConnection connection) {
+        // Validate unique alias within same environment
+        if (connection.getAlias() != null) {
+            DbConnection exist = dbConnectionDao.getByAliasAndEnv(connection.getAlias(), connection.getEnvironmentId());
+            if (exist != null) {
+                throw new RuntimeException("DbConnection with alias '" + connection.getAlias() + "' already exists in this environment.");
+            }
+        }
         dbConnectionDao.add(connection);
     }
 
     @Override
     public void updateConnection(DbConnection connection) {
+        if (connection.getAlias() != null) {
+            DbConnection exist = dbConnectionDao.getByAliasAndEnv(connection.getAlias(), connection.getEnvironmentId());
+            if (exist != null && !exist.getId().equals(connection.getId())) {
+                throw new RuntimeException("DbConnection with alias '" + connection.getAlias() + "' already exists in this environment.");
+            }
+        }
         dbConnectionDao.update(connection);
     }
 

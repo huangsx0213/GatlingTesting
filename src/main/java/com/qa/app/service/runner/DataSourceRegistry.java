@@ -50,9 +50,10 @@ public class DataSourceRegistry {
         if (cfg == null) {
             throw new IllegalArgumentException("DbConnection configuration cannot be null.");
         }
-        return CACHE.computeIfAbsent(cfg.getAlias(), alias -> {
+        String cacheKey = cfg.getAlias() + "@" + (cfg.getEnvironmentId()==null ? "null" : cfg.getEnvironmentId());
+        return CACHE.computeIfAbsent(cacheKey, k -> {
             if (cfg.getDbType() == null) {
-                throw new IllegalStateException("Database Type is not configured for connection: " + alias);
+                throw new IllegalStateException("Database Type is not configured for connection: " + cfg.getAlias());
             }
             String driverClass = DRIVER_MAP.get(cfg.getDbType().key());
             if (driverClass == null) {

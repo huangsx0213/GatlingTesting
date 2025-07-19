@@ -579,7 +579,11 @@ public class GatlingTestSimulation extends Simulation {
                                     dbInfoForReport.put("column", column);
                                     checkReport.setExpression(new ObjectMapper().writeValueAsString(dbInfoForReport));
 
-                                    DbConnection connConfig = dbConnectionService.findByAlias(alias);
+                                    Integer envIdForConn = com.qa.app.service.EnvironmentContext.getCurrentEnvironmentId();
+                                    DbConnection connConfig = dbConnectionService.findByAliasAndEnv(alias, envIdForConn);
+                                    if (connConfig == null) { // Fallback to env-agnostic for backward compatibility
+                                        connConfig = dbConnectionService.findByAlias(alias);
+                                    }
                                     if (connConfig == null) {
                                         throw new RuntimeException("DB Connection alias not found: " + alias);
                                     }
@@ -2007,14 +2011,12 @@ public class GatlingTestSimulation extends Simulation {
         try {
             EndpointDaoImpl epDao = new EndpointDaoImpl();
             Endpoint ep = null;
-            if (refTest.getEndpointId() > 0) {
-                ep = epDao.getEndpointById(refTest.getEndpointId());
-            }
-            if (ep == null && refTest.getEndpointName() != null) {
-                ep = epDao.getEndpointByName(refTest.getEndpointName());
+            if (refTest.getEndpointName() != null) {
+                Integer envId = com.qa.app.service.EnvironmentContext.getCurrentEnvironmentId();
+                ep = epDao.getEndpointByNameAndEnv(refTest.getEndpointName(), envId);
             }
 
-            // Ensure environment / project matches when both sides有值
+            // Ensure environment / project matches when both sides have a value
             if (ep != null && originEndpoint != null) {
                 if (originEndpoint.getEnvironmentId() != null && ep.getEnvironmentId() != null
                         && !originEndpoint.getEnvironmentId().equals(ep.getEnvironmentId())) {

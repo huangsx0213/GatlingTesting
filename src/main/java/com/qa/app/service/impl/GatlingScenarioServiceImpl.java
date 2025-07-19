@@ -8,6 +8,7 @@ import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IGatlingScenarioService;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IEndpointService;
+import com.qa.app.service.EnvironmentContext;
 
 import java.util.List;
 import java.util.Map;
@@ -211,21 +212,18 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
 
                     java.util.Map<String, Object> map = new java.util.HashMap<>();
                     map.put("test", gt);
-                    // Resolve endpoint – prefer ID when available, otherwise fall back to name
+                    // Resolve endpoint by name and current environment
                     com.qa.app.model.Endpoint endpoint = null;
                     try {
-                        if (gt.getEndpointId() > 0) {
-                            endpoint = endpointService.getEndpointById(gt.getEndpointId());
-                        }
-                        if (endpoint == null) {
-                            endpoint = endpointService.getEndpointByName(gt.getEndpointName());
-                        }
+                        Integer envId = EnvironmentContext.getCurrentEnvironmentId();
+                        endpoint = endpointService.getEndpointByNameAndEnv(gt.getEndpointName(), envId);
+
                     } catch (Exception ex) {
                         throw new ServiceException("Error retrieving endpoint for test: " + gt.getTcid() + ": " + ex.getMessage(), ex);
                     }
 
                     if (endpoint == null) {
-                        throw new ServiceException("Endpoint not found for test: " + gt.getTcid());
+                        throw new ServiceException("Endpoint '" + gt.getEndpointName() + "' not found in current environment for test: " + gt.getTcid());
                     }
 
                     map.put("endpoint", endpoint);

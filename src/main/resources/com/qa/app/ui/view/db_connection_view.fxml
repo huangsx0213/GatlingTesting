@@ -23,8 +23,9 @@
                     <Label text="Connection List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
                     <TableView fx:id="dbConnectionTable" VBox.vgrow="ALWAYS" styleClass="table-view">
                         <columns>
-                            <TableColumn fx:id="aliasColumn" text="Alias" prefWidth="120"/>
-                            <TableColumn fx:id="descriptionColumn" text="Description" prefWidth="250"/>
+                            <TableColumn fx:id="aliasColumn" text="Alias" prefWidth="50"/>
+                            <TableColumn fx:id="environmentColumn" text="Environment" prefWidth="50"/>
+                            <TableColumn fx:id="descriptionColumn" text="Description" prefWidth="100"/>
                         </columns>
                     </TableView>
                 </VBox>

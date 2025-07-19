@@ -47,7 +47,7 @@ public class DBUtil {
                     + " wait_time INTEGER DEFAULT 0,"
                     + " conditions TEXT,"
                     + " descriptions TEXT,"
-                    + " endpoint_id INTEGER,"
+                    + " endpoint_name TEXT,"
                     + " headers_template_id INTEGER,"
                     + " body_template_id INTEGER,"
                     + " endpoint_dynamic_variables TEXT,"
@@ -59,7 +59,6 @@ public class DBUtil {
                     + " last_run_passed BOOLEAN,"
                     + " display_order INT,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
-                    + " FOREIGN KEY(endpoint_id) REFERENCES endpoints(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
                     + " FOREIGN KEY(headers_template_id) REFERENCES headers_templates(id) ON DELETE SET NULL ON UPDATE CASCADE,"
                     + " FOREIGN KEY(body_template_id) REFERENCES body_templates(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
@@ -173,7 +172,7 @@ public class DBUtil {
             // Create db_connections table if it doesn't exist
             String dbConnectionsSql = "CREATE TABLE IF NOT EXISTS db_connections("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                    + " alias TEXT UNIQUE NOT NULL,"
+                    + " alias TEXT NOT NULL,"
                     + " description TEXT,"
                     + " db_type TEXT,"
                     + " host TEXT,"
@@ -187,7 +186,8 @@ public class DBUtil {
                     + " project_id INTEGER,"
                     + " environment_id INTEGER,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
-                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE"
+                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
+                    + " UNIQUE(alias, environment_id)"
                     + ");";
             stmt.execute(dbConnectionsSql);
 

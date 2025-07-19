@@ -55,8 +55,8 @@ public class MainViewModel implements Initializable {
         "Endpoint Management",
         "Headers Template Management",
         "Body Template Management",
-        "Environment Management",
         "DB Connections Mgmt",
+        "Environment Management",
         "Project Management",
         "Variables Management",
         "Application Properties"

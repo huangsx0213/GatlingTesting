@@ -232,7 +232,11 @@ public class GatlingScenarioSimulation extends Simulation {
                         column = checkInfo.getColumn();
                     }
 
-                    DbConnection connConfig = dbConnectionService.findByAlias(alias);
+                    Integer envIdForConn = com.qa.app.service.EnvironmentContext.getCurrentEnvironmentId();
+                    DbConnection connConfig = dbConnectionService.findByAliasAndEnv(alias, envIdForConn);
+                    if (connConfig == null) {
+                        connConfig = dbConnectionService.findByAlias(alias);
+                    }
                     if (connConfig == null) {
                         throw new RuntimeException("DB Connection alias not found: " + alias);
                     }

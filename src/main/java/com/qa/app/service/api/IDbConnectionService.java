@@ -9,6 +9,7 @@ public interface IDbConnectionService {
     List<String> getAllAliases();
     DbConnection findById(Long id);
     DbConnection findByAlias(String alias);
+    DbConnection findByAliasAndEnv(String alias, Integer environmentId);
     void save(DbConnection dbConnection);
     void addConnection(DbConnection connection);
     void updateConnection(DbConnection connection);

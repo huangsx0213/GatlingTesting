@@ -60,6 +60,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
+import com.qa.app.service.EnvironmentContext;
+import com.qa.app.service.runner.GatlingTestRunner;
+import com.qa.app.util.VariableUtil;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import java.util.Set;
+import java.util.Iterator;
 
 public class GatlingTestViewModel implements Initializable, AppConfigChangeListener {
 
@@ -535,8 +542,11 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             }
         });
         endpointColumn.setCellValueFactory(cellData -> {
-            int eid = cellData.getValue().getEndpointId();
-            Endpoint ep = endpointIdMap.get(eid);
+            String name = cellData.getValue().getEndpointName();
+            Endpoint ep = null;
+            for (Endpoint e : endpointList) {
+                if (e.getName().equals(name)) { ep = e; break; }
+            }
             String display = "";
             if (ep != null) {
                 display = ep.getName() + " [ " + ep.getMethod() + " " + ep.getUrl() + " ]";
@@ -877,9 +887,13 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             conditionHandler.deserializeConditions(test.getConditions());
             expResultArea.setText(test.getResponseChecks());
             String display = null;
-            Endpoint epFound = endpointIdMap.get(test.getEndpointId());
-            if (epFound != null) {
-                display = epFound.getName() + " [ " + epFound.getMethod() + " " + epFound.getUrl() + " ]";
+            Endpoint selectedEndpoint = null;
+            for (Endpoint ep : endpointList) {
+                if (ep.getName().equals(test.getEndpointName())) {
+                    selectedEndpoint = ep;
+                    display = ep.getName() + " [ " + ep.getMethod() + " " + ep.getUrl() + " ]";
+                    break;
+                }
             }
             endpointComboBox.setValue(display);
             if (bodyTemplateIdNameMap.containsKey(test.getBodyTemplateId())) {
@@ -912,14 +926,44 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
             // Populate URL dynamic variables based on endpoint URL and saved values
             populateUrlDynamicVariables(display);
-            if(test!=null){
-                Map<String,String> saved = test.getEndpointDynamicVariables();
-                for (DynamicVariable dv : urlDynamicVariables) {
-                    if (saved!=null && saved.containsKey(dv.getKey())) {
-                        dv.setValue(saved.get(dv.getKey()));
-                    }
+
+            // Adapt saved variables to current URL and warn if mismatched
+            Map<String, String> savedVars = test.getEndpointDynamicVariables();
+            Set<String> currentVars = VariableUtil.extractDynamicVars(selectedEndpoint.getUrl());
+            boolean mismatch = false;
+            for (String var : currentVars) {
+                if (!savedVars.containsKey(var)) {
+                    savedVars.put(var, ""); // Add missing with empty value
+                    mismatch = true;
                 }
             }
+            for (Iterator<String> it = savedVars.keySet().iterator(); it.hasNext();) {
+                String var = it.next();
+                if (!currentVars.contains(var)) {
+                    it.remove(); // Remove extra
+                    mismatch = true;
+                }
+            }
+            if (mismatch) {
+                Alert alert = new Alert(AlertType.WARNING);
+                alert.setTitle("Variable Mismatch");
+                alert.setHeaderText("Dynamic variables adjusted for current environment");
+                alert.setContentText("Some variables were added/removed to match the URL in this environment. Please review and save.");
+                // Replace default buttons with English OK
+                ButtonType okBtn = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+                alert.getButtonTypes().setAll(okBtn);
+                // Set window icon
+                Stage s = (Stage) alert.getDialogPane().getScene().getWindow();
+                s.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.png")));
+                alert.showAndWait();
+            }
+
+            // Populate the table with adapted variables
+            urlDynamicVariables.clear();
+            for (Map.Entry<String, String> entry : savedVars.entrySet()) {
+                urlDynamicVariables.add(new DynamicVariable(entry.getKey(), entry.getValue()));
+                    }
+
             updateGeneratedUrl();
 
             updateGeneratedBody();
@@ -948,7 +992,6 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         test.setDescriptions(descriptions);
         test.setConditions(serializeConditions());
         test.setResponseChecks(expResultArea.getText());
-        test.setEndpointId(endpointId);
         // keep name for UI convenience (not persisted)
         test.setEndpointName(endpointName);
         test.setBodyTemplateId(getBodyTemplateIdByName(bodyTemplateComboBox.getSelectionModel().getSelectedItem()));
@@ -1208,61 +1251,49 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     @FXML
     private void handleRunTest() {
         ObservableList<GatlingTest> selectedTests = testTable.getSelectionModel().getSelectedItems();
-        if (selectedTests.isEmpty()) {
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus("Selection Error: Please select at least one test to run.",
-                        MainViewModel.StatusType.ERROR);
-            }
+        if (selectedTests == null || selectedTests.isEmpty()) {
+            mainViewModel.updateStatus("Please select at least one test to run.", MainViewModel.StatusType.ERROR);
             return;
         }
 
-        // Make a stable copy of the selection to avoid UI side-effects
         List<GatlingTest> testsToRun = new ArrayList<>(selectedTests);
-
-        // Persist current form edits back to the focused test (if part of the run set)
-        GatlingTest focused = testTable.getSelectionModel().getSelectedItem();
-        if (focused != null && testsToRun.contains(focused)) {
-            populateTestFromFields(focused);
+        List<Endpoint> endpoints = new ArrayList<>();
+        Integer envId = EnvironmentContext.getCurrentEnvironmentId();
+        for (GatlingTest t : testsToRun) {
+            try {
+                Endpoint ep = endpointService.getEndpointByNameAndEnv(t.getEndpointName(), envId);
+                if (ep == null) {
+                    mainViewModel.updateStatus("Endpoint '" + t.getEndpointName() + "' not found for test " + t.getTcid(), MainViewModel.StatusType.ERROR);
+                    return;
+                }
+                endpoints.add(ep);
+            } catch (Exception e) {
+                mainViewModel.updateStatus("Error finding endpoint: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+                return;
+            }
         }
 
-        // Prepare minimal load profile (single user by default)
-        GatlingLoadParameters params = new GatlingLoadParameters();
-        params.setType(ThreadGroupType.STANDARD);
-        StandardThreadGroup tg = new StandardThreadGroup();
-        tg.setNumThreads(1);
-        tg.setRampUp(0);
-        tg.setLoops(1);
-        tg.setScheduler(false);
-        tg.setDelay(0);
-        params.setStandardThreadGroup(tg);
+        GatlingLoadParameters loadParams = getCurrentLoadParams();
 
-        // Notify UI + disable Run button to prevent duplicate clicks
+        // Update status and disable Run button to prevent duplicate clicks
         if (mainViewModel != null) {
             mainViewModel.updateStatus("Running " + testsToRun.size() + " Gatling test(s)...", MainViewModel.StatusType.INFO);
         }
-        // Disable button
-        runTestButton.setDisable(true);
+        if (runTestButton != null) runTestButton.setDisable(true);
 
-        Runnable onComplete = () -> {
-            // Re-enable Run button and refresh data on JavaFX thread
-            javafx.application.Platform.runLater(() -> {
-                runTestButton.setDisable(false);
-                loadTests();
-                testTable.refresh();
+        Runnable onComplete = () -> Platform.runLater(() -> {
+            if (runTestButton != null) runTestButton.setDisable(false);
+            refresh();
                 if (mainViewModel != null) {
                     mainViewModel.updateStatus("Gatling test(s) completed.", MainViewModel.StatusType.SUCCESS);
                 }
             });
-        };
 
         try {
-            testService.runTests(testsToRun, params, onComplete);
-        } catch (ServiceException ex) {
-            runTestButton.setDisable(false);
-            if (mainViewModel != null) {
-                mainViewModel.updateStatus("Failed to run test(s): " + ex.getMessage(),
-                        MainViewModel.StatusType.ERROR);
-            }
+            testService.runTests(testsToRun, loadParams, onComplete);
+        } catch (ServiceException e) {
+            if (runTestButton != null) runTestButton.setDisable(false);
+            mainViewModel.updateStatus("Failed to run tests: " + e.getMessage(), MainViewModel.StatusType.ERROR);
         }
     }
 
@@ -1609,19 +1640,14 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     }
 
     private void populateUrlDynamicVariables(String endpointDisplay) {
+        if (endpointDisplay == null || endpointDisplay.isEmpty()) return;
+
+        String url = endpointDisplay.substring(endpointDisplay.indexOf("[ ") + 2, endpointDisplay.lastIndexOf(" ]")).split(" ")[1];
+
+        Set<String> vars = VariableUtil.extractDynamicVars(url);
         urlDynamicVariables.clear();
-        if (endpointDisplay == null || endpointDisplay.isBlank()) return;
-        String endpointName = endpointDisplay.split(" \\[")[0].trim();
-        Endpoint ep = endpointList.stream().filter(e -> e.getName().equals(endpointName)).findFirst().orElse(null);
-        if (ep == null || ep.getUrl() == null) return;
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("@\\{([^}]+)\\}");
-        java.util.regex.Matcher matcher = pattern.matcher(ep.getUrl());
-        java.util.Set<String> found = new java.util.LinkedHashSet<>();
-        while (matcher.find()) {
-            found.add(matcher.group(1).trim());
-        }
-        for (String varName : found) {
-            urlDynamicVariables.add(new DynamicVariable(varName, ""));
+        for (String var : vars) {
+            urlDynamicVariables.add(new DynamicVariable(var, ""));
         }
     }
 
@@ -1831,5 +1857,18 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
                 }
             });
         }
+    }
+
+    private GatlingLoadParameters getCurrentLoadParams() {
+        GatlingLoadParameters params = new GatlingLoadParameters();
+        params.setType(ThreadGroupType.STANDARD);
+        StandardThreadGroup tg = new StandardThreadGroup();
+        tg.setNumThreads(1);
+        tg.setRampUp(0);
+        tg.setLoops(1);
+        tg.setScheduler(false);
+        tg.setDelay(0);
+        params.setStandardThreadGroup(tg);
+        return params;
     }
 }
