@@ -47,6 +47,12 @@ public class MainViewModel implements Initializable {
     @FXML
     private Label currentFeatureLabel;
 
+    @FXML
+    private Label currentProjectLabel;
+
+    @FXML
+    private Label currentEnvironmentLabel;
+
     private final ObservableList<String> navItems = FXCollections.observableArrayList(
         "Gatling Test Management",
         "Gatling Scenario Management",
@@ -102,6 +108,7 @@ public class MainViewModel implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         reinitialize();
         loadAndSetCurrentProject();
+        updateEnvironmentLabel();
         AppConfig.addChangeListener(this::onConfigChanged);
         
         // Force refresh the initial tab content
@@ -122,7 +129,10 @@ public class MainViewModel implements Initializable {
     }
 
     private void onConfigChanged() {
-        Platform.runLater(this::loadAndSetCurrentProject);
+        Platform.runLater(() -> {
+            loadAndSetCurrentProject();
+            updateEnvironmentLabel();
+        });
     }
 
     public void reinitialize() {
@@ -448,7 +458,9 @@ public class MainViewModel implements Initializable {
                 Project project = projectService.getProjectByName(currentProjectName);
                 if (project != null) {
                     ProjectContext.setCurrentProject(project);
-                    updateStatus("Current project: " + project.getName(), StatusType.INFO);
+                    if (currentProjectLabel != null) {
+                        currentProjectLabel.setText(project.getName());
+                    }
                 } else {
                     handleNoProject("Project '" + currentProjectName + "' not found.");
                 }
@@ -464,6 +476,9 @@ public class MainViewModel implements Initializable {
     private void handleNoProject(String message) {
         ProjectContext.clearCurrentProject();
         updateStatus(message, StatusType.INFO);
+        if (currentProjectLabel != null) {
+            currentProjectLabel.setText("-");
+        }
     }
 
     public void closeProject() {
@@ -525,5 +540,16 @@ public class MainViewModel implements Initializable {
             contextMenu.getItems().add(closeAllItem);
         }
         tab.setContextMenu(contextMenu);
+    }
+
+    /**
+     * Updates the environment label shown in the banner using the latest value
+     * from {@link com.qa.app.service.EnvironmentContext}.
+     */
+    private void updateEnvironmentLabel() {
+        String envName = com.qa.app.service.EnvironmentContext.getCurrentEnvironmentName();
+        if (currentEnvironmentLabel != null) {
+            currentEnvironmentLabel.setText(envName != null ? envName : "-");
+        }
     }
 }
