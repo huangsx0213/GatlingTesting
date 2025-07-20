@@ -178,11 +178,11 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
         }
 
         try {
-            GatlingTestRunner.executeBatch(executionList, params, endpoints,
+            GatlingTestRunner.executeGatlingTests(executionList, params, endpoints,
                     expanded.origins, expanded.modes, onComplete);
 
         } catch (Exception e) {
-            throw new ServiceException("Failed to run Gatling batch tests: " + e.getMessage(), e);
+            throw new ServiceException("Failed to run Gatling tests: " + e.getMessage(), e);
         }
     }
 

@@ -22,6 +22,7 @@ import com.qa.app.model.HeadersTemplate;
 import com.qa.app.service.api.IDbConnectionService;
 import com.qa.app.service.impl.DbConnectionServiceImpl;
 import com.qa.app.util.OperatorUtil;
+import com.qa.app.model.Operator;
 
 import javax.sql.DataSource;
 import java.io.File;
@@ -446,16 +447,7 @@ public class GatlingTestSimulation extends Simulation {
                                     
                                     checkReport.setActual(actualStatus);
 
-                                    boolean checkPassed;
-                                    switch (currentCheck.getOperator()) {
-                                        case CONTAINS:
-                                            checkPassed = actualStatus.contains(currentCheck.getExpect());
-                                            break;
-                                        case IS:
-                                        default:
-                                            checkPassed = actualStatus.equals(currentCheck.getExpect());
-                                            break;
-                                    }
+                                    boolean checkPassed = evaluateOperator(currentCheck.getOperator(), actualStatus, currentCheck.getExpect());
                                     checkReport.setPassed(checkPassed);
 
                                     if (!checkPassed) {
@@ -502,31 +494,13 @@ public class GatlingTestSimulation extends Simulation {
 
                                 String actualValue;
                                 if (session.contains(saveAsKey)) {
-                                    Object rawValue = session.get(saveAsKey);
-                                    if (rawValue instanceof String) {
-                                        actualValue = (String) rawValue;
-                                    } else if (rawValue instanceof char[]) {
-                                        actualValue = new String((char[]) rawValue);
-                                    } else if (rawValue instanceof String[] arr) {
-                                        actualValue = arr.length > 0 ? arr[0] : "";
-                                    } else {
-                                        actualValue = String.valueOf(rawValue);
-                                    }
+                                    actualValue = convertToString(session.get(saveAsKey));
                                 } else {
                                     actualValue = "Path not found";
                                 }
                                 checkReport.setActual(actualValue);
-                                    
-                                boolean checkPassed;
-                                switch (currentCheck.getOperator()) {
-                                    case CONTAINS:
-                                        checkPassed = actualValue.contains(currentCheck.getExpect());
-                                        break;
-                                    case IS:
-                                    default:
-                                        checkPassed = actualValue.equals(currentCheck.getExpect());
-                                        break;
-                                }
+                                
+                                boolean checkPassed = evaluateOperator(currentCheck.getOperator(), actualValue, currentCheck.getExpect());
                                 checkReport.setPassed(checkPassed);
 
                                 if (!checkPassed) {
@@ -628,7 +602,7 @@ public class GatlingTestSimulation extends Simulation {
                                         }
                                     }
 
-                                    checkPassed = OperatorUtil.compare(actualValue, currentCheck.getOperator(), currentCheck.getExpect());
+                                    checkPassed = evaluateOperator(currentCheck.getOperator(), actualValue, currentCheck.getExpect());
                                     
                                     if (!checkPassed) {
                                         if (!currentCheck.isOptional()) {
@@ -971,31 +945,13 @@ public class GatlingTestSimulation extends Simulation {
                     String saveKey = cr.getActual(); // The key was stored in the actual field
                     String actualValue = "<NOT FOUND>";
                     if (s.contains(saveKey)) {
-                        Object rawValue = s.get(saveKey);
-                        if (rawValue instanceof String) {
-                            actualValue = (String) rawValue;
-                        } else if (rawValue instanceof char[]) {
-                            actualValue = new String((char[]) rawValue);
-                        } else if (rawValue instanceof String[] arr) {
-                            actualValue = arr.length > 0 ? arr[0] : "";
-                        } else {
-                            actualValue = String.valueOf(rawValue);
-                        }
+                        actualValue = convertToString(s.get(saveKey));
                         // Remove the key from session
                         s = s.remove(saveKey);
                     }
                     
                     cr.setActual(actualValue);
-                    boolean passed;
-                    switch (cr.getOperator()) {
-                        case CONTAINS:
-                            passed = actualValue.contains(cr.getExpect());
-                            break;
-                        case IS:
-                        default:
-                            passed = actualValue.equals(cr.getExpect());
-                            break;
-                    }
+                    boolean passed = evaluateOperator(cr.getOperator(), actualValue, cr.getExpect());
                     cr.setPassed(passed);
                     finalChecks.add(cr);
                 }
@@ -1206,35 +1162,12 @@ public class GatlingTestSimulation extends Simulation {
                     String saveKey = cr.getActual(); // The key was stored in the actual field
                     String actualValue = "<NOT FOUND>";
                     if (s.contains(saveKey)) {
-                        Object rawValue = s.get(saveKey);
-                        if (rawValue instanceof String) {
-                            actualValue = (String) rawValue;
-                        } else if (rawValue instanceof char[]) {
-                            actualValue = new String((char[]) rawValue);
-                        } else if (rawValue instanceof String[] arr) {
-                            actualValue = arr.length > 0 ? arr[0] : "";
-                        } else {
-                            actualValue = String.valueOf(rawValue);
-                        }
+                        actualValue = convertToString(s.get(saveKey));
                         s = s.remove(saveKey);
                     }
 
                     cr.setActual(actualValue);
-                    boolean passed;
-                    switch (cr.getOperator()) {
-                        case CONTAINS:
-                            passed = actualValue.contains(cr.getExpect());
-                            break;
-                        case MATCHES:
-                            try {
-                                passed = actualValue.matches(cr.getExpect());
-                            } catch (Exception e) { passed = false; }
-                            break;
-                        case IS:
-                        default:
-                            passed = actualValue.equals(cr.getExpect());
-                            break;
-                    }
+                    boolean passed = evaluateOperator(cr.getOperator(), actualValue, cr.getExpect());
                     cr.setPassed(passed);
                     finalChecks.add(cr);
                 }
@@ -1451,31 +1384,13 @@ public class GatlingTestSimulation extends Simulation {
                     String saveKey = cr.getActual(); // The key was stored in the actual field
                     String actualValue = "<NOT FOUND>";
                     if (s.contains(saveKey)) {
-                        Object rawValue = s.get(saveKey);
-                        if (rawValue instanceof String) {
-                            actualValue = (String) rawValue;
-                        } else if (rawValue instanceof char[]) {
-                            actualValue = new String((char[]) rawValue);
-                        } else if (rawValue instanceof String[] arr) {
-                            actualValue = arr.length > 0 ? arr[0] : "";
-                        } else {
-                            actualValue = String.valueOf(rawValue);
-                        }
+                        actualValue = convertToString(s.get(saveKey));
                         // Remove the key from session
                         s = s.remove(saveKey);
                     }
                     
                     cr.setActual(actualValue);
-                    boolean passed;
-                    switch (cr.getOperator()) {
-                        case CONTAINS:
-                            passed = actualValue.contains(cr.getExpect());
-                            break;
-                        case IS:
-                        default:
-                            passed = actualValue.equals(cr.getExpect());
-                            break;
-                    }
+                    boolean passed = evaluateOperator(cr.getOperator(), actualValue, cr.getExpect());
                     cr.setPassed(passed);
                     finalChecksAfter.add(cr);
                 }
@@ -1686,35 +1601,12 @@ public class GatlingTestSimulation extends Simulation {
                     String saveKey = cr.getActual(); // The key was stored in the actual field
                     String actualValue = "<NOT FOUND>";
                     if (s.contains(saveKey)) {
-                        Object rawValue = s.get(saveKey);
-                        if (rawValue instanceof String) {
-                            actualValue = (String) rawValue;
-                        } else if (rawValue instanceof char[]) {
-                            actualValue = new String((char[]) rawValue);
-                        } else if (rawValue instanceof String[] arr) {
-                            actualValue = arr.length > 0 ? arr[0] : "";
-                        } else {
-                            actualValue = String.valueOf(rawValue);
-                        }
+                        actualValue = convertToString(s.get(saveKey));
                         s = s.remove(saveKey);
                     }
 
                     cr.setActual(actualValue);
-                    boolean passed;
-                    switch (cr.getOperator()) {
-                        case CONTAINS:
-                            passed = actualValue.contains(cr.getExpect());
-                            break;
-                        case MATCHES:
-                            try {
-                                passed = actualValue.matches(cr.getExpect());
-                            } catch (Exception e) { passed = false; }
-                            break;
-                        case IS:
-                        default:
-                            passed = actualValue.equals(cr.getExpect());
-                            break;
-                    }
+                    boolean passed = evaluateOperator(cr.getOperator(), actualValue, cr.getExpect());
                     cr.setPassed(passed);
                     finalChecks.add(cr);
                 }
@@ -1806,28 +1698,7 @@ public class GatlingTestSimulation extends Simulation {
                 
                 boolean passed = false;
                 if (diffVal != null) {
-                    switch (dc.getOperator()) {
-                        case IS -> {
-                            // Compare numeric values when possible
-                            try {
-                                double expectNum = Double.parseDouble(dc.getExpect());
-                                passed = Math.abs(diffVal - expectNum) < 0.0001; // Allow small floating point difference
-                            } catch (NumberFormatException e) {
-                                // Fallback to string comparison
-                                passed = String.valueOf(diffVal).equals(dc.getExpect());
-                            }
-                        }
-                        case CONTAINS -> passed = String.valueOf(diffVal).contains(dc.getExpect());
-                        case MATCHES -> {
-                            try {
-                                passed = String.valueOf(diffVal).matches(dc.getExpect());
-                            } catch (Exception e) {
-                                // Invalid regex
-                                passed = false;
-                            }
-                        }
-                        default -> passed = false;
-                    }
+                    passed = evaluateOperator(dc.getOperator(), actualValue, expectValue);
                 }
                 cr.setPassed(passed);
 
@@ -1852,19 +1723,7 @@ public class GatlingTestSimulation extends Simulation {
                 
                 boolean passed = false;
                 if (preValue != null) {
-                    switch (pc.getOperator()) {
-                        case IS -> passed = preValue.equals(pc.getExpect());
-                        case CONTAINS -> passed = preValue.contains(pc.getExpect());
-                        case MATCHES -> {
-                            try {
-                                passed = preValue.matches(pc.getExpect());
-                            } catch (Exception e) {
-                                // Invalid regex
-                                passed = false;
-                            }
-                        }
-                        default -> passed = false;
-                    }
+                    passed = evaluateOperator(pc.getOperator(), actualValue, pc.getExpect());
                 }
                 cr.setPassed(passed);
 
@@ -1889,19 +1748,7 @@ public class GatlingTestSimulation extends Simulation {
                 
                 boolean passed = false;
                 if (pstValue != null) {
-                    switch (pc.getOperator()) {
-                        case IS -> passed = pstValue.equals(pc.getExpect());
-                        case CONTAINS -> passed = pstValue.contains(pc.getExpect());
-                        case MATCHES -> {
-                            try {
-                                passed = pstValue.matches(pc.getExpect());
-                            } catch (Exception e) {
-                                // Invalid regex
-                                passed = false;
-                            }
-                        }
-                        default -> passed = false;
-                    }
+                    passed = evaluateOperator(pc.getOperator(), actualValue, pc.getExpect());
                 }
                 cr.setPassed(passed);
 
@@ -2092,5 +1939,32 @@ public class GatlingTestSimulation extends Simulation {
                 if (ht != null) t.setHeaders(ht.getContent());
             }
         } catch (Exception ignored) {}
+    }
+
+    private static String convertToString(Object rawValue) {
+        if (rawValue instanceof String) {
+            return (String) rawValue;
+        } else if (rawValue instanceof char[]) {
+            return new String((char[]) rawValue);
+        } else if (rawValue instanceof String[] arr) {
+            return arr.length > 0 ? arr[0] : "";
+        } else {
+            return String.valueOf(rawValue);
+        }
+    }
+
+    private static boolean evaluateOperator(Operator op, String actual, String expect) {
+        return switch (op) {
+            case CONTAINS -> actual.contains(expect);
+            case MATCHES -> {
+                try {
+                    yield actual.matches(expect);
+                } catch (Exception e) {
+                    yield false;
+                }
+            }
+            case IS -> actual.equals(expect);
+            default -> false;
+        };
     }
 } 

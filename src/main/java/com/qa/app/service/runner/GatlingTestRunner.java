@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.LinkedHashMap;
+import java.util.HashMap;
 
 public class GatlingTestRunner {
     /**
@@ -35,79 +36,17 @@ public class GatlingTestRunner {
      */
     private static final String VARIABLES_PREFIX = "TEST_VARIABLES:";
 
-    private static String assembleClasspath() {
-        // Prefer classpath provided by Maven build plugin (read from a file to avoid command line length limits)
-        String classpathFile = System.getProperty("gatling.classpath.file");
-        if (classpathFile != null) {
-            try {
-                String dependencyClasspath = new String(Files.readAllBytes(Paths.get(classpathFile)));
-                String projectClassesPath = Paths.get(System.getProperty("user.dir"), "target", "classes").toString();
-                // Prepend the project's own classes to the classpath
-                return projectClassesPath + java.io.File.pathSeparator + dependencyClasspath;
-            } catch (IOException e) {
-                System.err.println("WARN: Failed to read classpath from " + classpathFile + ", falling back to default.");
-            }
-        }
-
-        // Fallback to original method for other environments (e.g., IDE, fat JAR)
-        String cp = System.getProperty("java.class.path");
-        try {
-            String selfPath = new java.io.File(GatlingTestRunner.class.getProtectionDomain()
-                    .getCodeSource().getLocation().toURI()).getPath();
-            if (!cp.contains(selfPath)) {
-                cp += java.io.File.pathSeparator + selfPath;
-            }
-        } catch (Exception ignored) { }
-        return cp;
-    }
-
     private static List<String> buildGatlingCommand(String testsFilePath, String paramsFilePath, String reportFilePath) throws Exception {
-        String javaHome = System.getProperty("java.home");
-        String javaBin = java.nio.file.Paths.get(javaHome, "bin", "java").toString();
-        String classpath = assembleClasspath();
-        String gatlingMain = "io.gatling.app.Gatling";
-        String simulationClass = GatlingTestSimulation.class.getName();
-        String resultsPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
-
-        URL logbackUrl = GatlingTestRunner.class.getClassLoader().getResource("logback.xml");
-        String logbackPath = null;
-        if (logbackUrl != null) {
-            if ("jar".equals(logbackUrl.getProtocol())) {
-                // Extract logback.xml from JAR to a temporary file
-                try (InputStream inputStream = logbackUrl.openStream()) {
-                    File tempFile = File.createTempFile("logback-", ".xml");
-                    tempFile.deleteOnExit();
-                    Files.copy(inputStream, tempFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                    logbackPath = tempFile.getAbsolutePath();
-                }
-            } else {
-                // Running from file system (e.g., in IDE)
-                logbackPath = new File(logbackUrl.toURI()).getAbsolutePath();
-            }
-        }
-
-        List<String> command = new ArrayList<>();
-        command.add(javaBin);
-        command.add("--add-opens");
-        command.add("java.base/java.lang=ALL-UNNAMED");
-        command.add("-cp");
-        command.add(classpath);
-        if (logbackPath != null) {
-            command.add("-Dlogback.configurationFile=" + logbackPath);
-        }
-        command.add("-Dgatling.tests.file=" + testsFilePath);
-        command.add("-Dgatling.params.file=" + paramsFilePath);
-        command.add("-Dgatling.report.file=" + reportFilePath);
-        command.add(gatlingMain);
-        command.add("-s");
-        command.add(simulationClass);
-        command.add("-rf");
-        command.add(resultsPath);
-        return command;
+        Map<String, String> sysProps = new HashMap<>();
+        sysProps.put("gatling.tests.file", testsFilePath);
+        sysProps.put("gatling.params.file", paramsFilePath);
+        sysProps.put("gatling.report.file", reportFilePath);
+        String resultsPath = Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
+        return GatlingRunnerUtils.buildGatlingCommand(GatlingTestSimulation.class.getName(), sysProps, resultsPath);
     }
 
-    // Async batch execution with completion callback
-    public static void executeBatch(java.util.List<GatlingTest> tests, GatlingLoadParameters params,
+    // Async execution with completion callback
+    public static void executeGatlingTests(java.util.List<GatlingTest> tests, GatlingLoadParameters params,
                                     java.util.List<Endpoint> endpoints,
                                     java.util.List<String> origins,
                                     java.util.List<String> modes,

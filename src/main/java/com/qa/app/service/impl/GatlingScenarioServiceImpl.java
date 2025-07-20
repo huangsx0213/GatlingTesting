@@ -9,9 +9,11 @@ import com.qa.app.service.api.IGatlingScenarioService;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IEndpointService;
 import com.qa.app.service.EnvironmentContext;
+import com.qa.app.service.runner.GatlingRunnerUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -112,22 +114,6 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             scenarioDao.updateOrder(scenarios);
         } catch (Exception e) {
             throw new ServiceException("Database error while updating scenario order: " + e.getMessage(), e);
-        }
-    }
-
-    @Override
-    public void runScenario(int scenarioId) throws ServiceException {
-        try {
-            Scenario sc = scenarioDao.getScenarioById(scenarioId);
-            if (sc == null) throw new ServiceException("Scenario not found");
-
-            // Use runScenarios(List) method even if there is only one element, to follow ScenarioSimulation logic
-            java.util.List<Scenario> list = java.util.Collections.singletonList(sc);
-            runScenarios(list);
-        } catch (ServiceException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ServiceException("Failed to run scenario", e);
         }
     }
 
@@ -244,25 +230,10 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             new com.fasterxml.jackson.databind.ObjectMapper().writeValue(multiFile, runItems);
 
             // ===== 3. 启动 Gatling =====
-            String javaHome = System.getProperty("java.home");
-            String javaBin = java.nio.file.Paths.get(javaHome, "bin", "java").toString();
-            String classpath = assembleClasspath();
-            String gatlingMain = "io.gatling.app.Gatling";
-            String simulationClass = com.qa.app.service.runner.GatlingScenarioSimulation.class.getName();
-            String resultsPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
-
-            java.util.List<String> command = new java.util.ArrayList<>();
-            command.add(javaBin);
-            command.add("--add-opens");
-            command.add("java.base/java.lang=ALL-UNNAMED");
-            command.add("-cp");
-            command.add(classpath);
-            command.add("-Dgatling.multiscenario.file=" + multiFile.getAbsolutePath());
-            command.add(gatlingMain);
-            command.add("-s");
-            command.add(simulationClass);
-            command.add("-rf");
-            command.add(resultsPath);
+            String resultsPath = Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
+            Map<String, String> sysProps = new HashMap<>();
+            sysProps.put("gatling.multiscenario.file", multiFile.getAbsolutePath());
+            List<String> command = GatlingRunnerUtils.buildGatlingCommand(com.qa.app.service.runner.GatlingScenarioSimulation.class.getName(), sysProps, resultsPath);
 
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.inheritIO();
@@ -310,10 +281,6 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
         }
     }
 
-    @Override
-    public void runScenarios(java.util.List<com.qa.app.model.Scenario> scenarios) throws ServiceException {
-        runScenarios(scenarios, null);
-    }
 
     @Override
     public void upsertSchedule(int scenarioId, String cronExpr, boolean enabled) throws ServiceException {
@@ -331,32 +298,6 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
         } catch (Exception e) {
             throw new ServiceException("Failed to load schedule", e);
         }
-    }
-
-    private static String assembleClasspath() {
-        // Prefer classpath provided by Maven build plugin (read from a file to avoid command line length limits)
-        String classpathFile = System.getProperty("gatling.classpath.file");
-        if (classpathFile != null) {
-            try {
-                String dependencyClasspath = new String(Files.readAllBytes(Paths.get(classpathFile)));
-                String projectClassesPath = Paths.get(System.getProperty("user.dir"), "target", "classes").toString();
-                // Prepend the project's own classes to the classpath
-                return projectClassesPath + java.io.File.pathSeparator + dependencyClasspath;
-            } catch (IOException e) {
-                System.err.println("WARN: Failed to read classpath from " + classpathFile + ", falling back to default.");
-            }
-        }
-
-        // Fallback to original method for other environments (e.g., IDE, fat JAR)
-        String cp = System.getProperty("java.class.path");
-        try {
-            String selfPath = new java.io.File(GatlingScenarioServiceImpl.class.getProtectionDomain()
-                    .getCodeSource().getLocation().toURI()).getPath();
-            if (!cp.contains(selfPath)) {
-                cp += java.io.File.pathSeparator + selfPath;
-            }
-        } catch (Exception ignored) { }
-        return cp;
     }
 
     /**
