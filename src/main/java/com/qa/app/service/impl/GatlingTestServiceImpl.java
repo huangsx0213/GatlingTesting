@@ -111,6 +111,10 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
                     throw new ServiceException("Test with TCID '" + test.getTcid() + "' already exists.");
                 }
             }
+            // If the endpoint dynamic variables are not set, use the existing ones
+            if (test.getEndpointDynamicVariables() != null && test.getEndpointDynamicVariables().isEmpty()) {
+                test.setEndpointDynamicVariables(existingTest.getEndpointDynamicVariables());
+            }
             testDao.updateTest(test);
         } catch (SQLException e) {
             throw new ServiceException("Database error while updating test: " + e.getMessage(), e);
