@@ -142,6 +142,7 @@ public class DBUtil {
                     " schedule_json TEXT," +
                     " project_id INTEGER," +
                     " display_order INT," +
+                    " is_functional_test BOOLEAN NOT NULL DEFAULT 0," +
                     " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE" +
                     ");";
             stmt.execute(scenarioSql);

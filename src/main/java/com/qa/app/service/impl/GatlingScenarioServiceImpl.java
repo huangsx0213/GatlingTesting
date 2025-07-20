@@ -14,10 +14,7 @@ import com.qa.app.service.runner.GatlingRunnerUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-
-import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.io.IOException;
 
 public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
 
@@ -76,6 +73,8 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             copy.setDescription(src.getDescription());
             copy.setThreadGroupJson(src.getThreadGroupJson());
             copy.setScheduleJson(src.getScheduleJson());
+            copy.setProjectId(src.getProjectId());
+            copy.setFunctionalTest(src.isFunctionalTest());
             scenarioDao.addScenario(copy);
             List<ScenarioStep> steps = scenarioDao.getStepsByScenarioId(scenarioId);
             for (ScenarioStep step : steps) {
@@ -126,6 +125,19 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
                 } else {
                     javafx.application.Platform.runLater(onComplete);
                 }
+            }
+            return;
+        }
+
+        // -------- Functional Test Shortcut --------
+        if (scenarios.size() == 1 && scenarios.get(0).isFunctionalTest()) {
+            com.qa.app.model.Scenario funcScn = scenarios.get(0);
+            try {
+                com.qa.app.service.runner.FunctionalScenarioRunner.run(funcScn, onComplete);
+            } catch (ServiceException se) {
+                throw se;
+            } catch (Exception ex) {
+                throw new ServiceException("Failed to run functional scenario", ex);
             }
             return;
         }

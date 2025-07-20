@@ -34,6 +34,10 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     @FXML private TableView<GatlingTest> availableTestTable;
     @FXML private TableView<ScenarioStep> scenarioStepTable;
     @FXML private TableView<Scenario> scenarioTable;
+    @FXML private CheckBox functionalTestCheckBox;
+    @FXML private Label functionalHelpIcon;
+
+    private javafx.scene.control.Tooltip functionalTooltip;
 
     @FXML private ComboBox<String> suiteFilterCombo;
     @FXML private TextField tagFilterField;
@@ -52,6 +56,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     @FXML private TableColumn<Scenario, String> scDescCol;
     @FXML private TableColumn<Scenario, String> scTypeCol;
     @FXML private TableColumn<Scenario, Number> scStepCountCol;
+    @FXML private TableColumn<Scenario, String> functionalCol;  // New column for Functional Test flag
 
     @FXML private ComboBox<String> frequencyCombo;
     @FXML private ComboBox<String> threadGroupCombo;
@@ -148,6 +153,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         stepTagsCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTags()));
 
         scNameCol.setCellValueFactory(cell -> cell.getValue().nameProperty());
+        functionalCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().isFunctionalTest() ? "Y" : "N"));
         scDescCol.setCellValueFactory(cell -> cell.getValue().descriptionProperty());
 
         // Type column shows load model type
@@ -213,6 +219,15 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         selectColumn.setCellFactory(javafx.scene.control.cell.CheckBoxTableCell.forTableColumn(selectColumn));
         scenarioTable.getColumns().add(0, selectColumn);
 
+        // Ensure functionalCol is added after scNameCol
+        if (functionalCol != null) {
+            int nameIndex = scenarioTable.getColumns().indexOf(scNameCol);
+            if (nameIndex != -1) {
+                scenarioTable.getColumns().add(nameIndex + 1, functionalCol);
+            }
+            functionalCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().isFunctionalTest() ? "Y" : "N"));
+        }
+
         // 监听表格多选变化以同步 selectionMap
         scenarioTable.getSelectionModel().getSelectedItems().addListener((javafx.collections.ListChangeListener<Scenario>) c -> {
             if (isUpdatingSelection) return;
@@ -235,6 +250,12 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         // 使步骤表格可编辑，以便用户可双击修改等待时间
         if (scenarioStepTable != null) {
             scenarioStepTable.setEditable(true);
+        }
+
+        // --- Tooltip for Functional Test ---
+        functionalTooltip = com.qa.app.util.HelpTooltipManager.getFunctionalTestTooltip();
+        if (functionalHelpIcon != null) {
+            functionalHelpIcon.setOnMouseClicked(e -> toggleTooltip(functionalTooltip, functionalHelpIcon));
         }
     }
 
@@ -425,6 +446,10 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         scenarioDescArea.clear();
         steps.clear();
         scenarioTable.getSelectionModel().clearSelection();
+
+        // reset functional flag
+        if (functionalTestCheckBox != null) functionalTestCheckBox.setSelected(false);
+
         startDatePicker.setValue(null);
         frequencyCombo.getSelectionModel().clearSelection();
         if (threadGroupCombo != null) threadGroupCombo.getSelectionModel().clearSelection();
@@ -464,6 +489,9 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         Scenario sc = new Scenario();
         sc.setName(name);
         sc.setDescription(scenarioDescArea.getText());
+        if (functionalTestCheckBox != null) {
+            sc.setFunctionalTest(functionalTestCheckBox.isSelected());
+        }
         Integer projectId = ProjectContext.getCurrentProjectId();
         if (projectId == null) {
             showError("No project selected!");
@@ -508,6 +536,9 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         }
         selected.setName(name);
         selected.setDescription(scenarioDescArea.getText());
+        if (functionalTestCheckBox != null) {
+            selected.setFunctionalTest(functionalTestCheckBox.isSelected());
+        }
         try {
             com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
             selected.setThreadGroupJson(om.writeValueAsString(buildLoadParameters()));
@@ -569,6 +600,16 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         if (selected == null || selected.isEmpty()) {
             showError("please select at least one scenario");
             return;
+        }
+
+        // Check for mixed functional test states
+        if (selected.size() > 1) {
+            boolean firstFunctional = selected.get(0).isFunctionalTest();
+            boolean hasMixed = selected.stream().anyMatch(sc -> sc.isFunctionalTest() != firstFunctional);
+            if (hasMixed) {
+                showError("Cannot run mixed functional and non-functional scenarios together.");
+                return;  // Cancel run
+            }
         }
 
         // Disable the Run button to prevent duplicate clicks
@@ -662,6 +703,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             scenarioNameField.clear();
             scenarioDescArea.clear();
             steps.clear();
+            if (functionalTestCheckBox != null) functionalTestCheckBox.setSelected(false);
             return;
         }
         scenarioNameField.setText(sc.getName());
@@ -670,6 +712,10 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             steps.setAll(scenarioService.findStepsByScenarioId(sc.getId()));
         } catch (ServiceException e) {
             steps.clear();
+        }
+        // set functional checkbox state
+        if (functionalTestCheckBox != null) {
+            functionalTestCheckBox.setSelected(sc.isFunctionalTest());
         }
         try {
             if(sc.getThreadGroupJson()!=null && !sc.getThreadGroupJson().isBlank()){
@@ -862,5 +908,16 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             }
         }
         isUpdatingSelection = false;
+    }
+
+    // Reuse toggle logic similar to GatlingTestViewModel
+    private void toggleTooltip(javafx.scene.control.Tooltip tooltip, javafx.scene.Node owner) {
+        if (tooltip == null || owner == null) return;
+        if (tooltip.isShowing()) {
+            tooltip.hide();
+        } else {
+            javafx.geometry.Point2D p = owner.localToScreen(owner.getBoundsInLocal().getMaxX(), owner.getBoundsInLocal().getMaxY());
+            tooltip.show(owner, p.getX(), p.getY());
+        }
     }
 } 

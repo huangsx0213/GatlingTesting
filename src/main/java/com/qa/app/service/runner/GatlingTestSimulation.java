@@ -21,7 +21,6 @@ import com.qa.app.model.BodyTemplate;
 import com.qa.app.model.HeadersTemplate;
 import com.qa.app.service.api.IDbConnectionService;
 import com.qa.app.service.impl.DbConnectionServiceImpl;
-import com.qa.app.util.OperatorUtil;
 import com.qa.app.model.Operator;
 
 import javax.sql.DataSource;

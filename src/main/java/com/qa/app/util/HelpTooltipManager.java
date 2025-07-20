@@ -16,6 +16,7 @@ public final class HelpTooltipManager {
 
     private static Tooltip responseCheckTooltip;
     private static Tooltip executionFlowTooltip;
+    private static Tooltip functionalTestTooltip;
 
     private static final String BUILT_IN_VARIABLE_DOC = "Built-in variables usage examples:\n\n" +
             "1. UUID: __UUID\n" +
@@ -66,6 +67,16 @@ public final class HelpTooltipManager {
             executionFlowTooltip = buildExecutionFlowTooltip();
         }
         return executionFlowTooltip;
+    }
+
+    /**
+     * Tooltip explaining Functional Test mode in Scenario.
+     */
+    public static Tooltip getFunctionalTestTooltip() {
+        if (functionalTestTooltip == null) {
+            functionalTestTooltip = buildFunctionalTestTooltip();
+        }
+        return functionalTestTooltip;
     }
 
     /**
@@ -156,6 +167,18 @@ public final class HelpTooltipManager {
                 "• All checks recorded in final report under their respective groups.";
 
         Tooltip t = new Tooltip(text);
+        t.setStyle("-fx-font-size: 14px;");
+        t.setAutoHide(true);
+        return t;
+    }
+
+    private static Tooltip buildFunctionalTestTooltip() {
+        String txt = "Functional Test mode runs the scenario sequentially with a single virtual user.\n\n" +
+                "• Ignores thread-group load model settings.\n" +
+                "• Executes each step's Setup → Main → Teardown chain.\n" +
+                "• Generates JSON report identical to Gatling Test report.\n" +
+                "Use this mode for functional / API regression verification rather than load testing.";
+        Tooltip t = new Tooltip(txt);
         t.setStyle("-fx-font-size: 14px;");
         t.setAutoHide(true);
         return t;

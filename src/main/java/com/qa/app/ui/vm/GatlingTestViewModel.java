@@ -61,7 +61,6 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 import com.qa.app.service.EnvironmentContext;
-import com.qa.app.service.runner.GatlingTestRunner;
 import com.qa.app.util.VariableUtil;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
