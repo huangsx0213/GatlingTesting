@@ -165,8 +165,8 @@ public final class HtmlSummaryReportGenerator {
                         .chevron { width: 10px; height: 10px; border-style: solid; border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform 0.3s ease; }
                         .case-header.open .chevron { transform: rotate(-135deg); }
 
-                        .case-body { padding: 0; max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; background: #fff; }
-                        .case-body.open { padding: 16px; max-height: 5000px; }
+                        .case-body { overflow: hidden; height: 0; padding: 0; transition: height 0.3s ease, padding 0.3s ease; background: #fff; will-change: height; }
+                        .case-body.open { padding: 16px; }
 
                         .request-table { width: 100%%; border-collapse: collapse; font-size: .9rem; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; }
                         .request-table th, .request-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-color); text-align: left; }
@@ -276,34 +276,64 @@ public final class HtmlSummaryReportGenerator {
                         });
                         
                         function setupEventListeners() {
-                            // Case expand/collapse
-                            document.querySelectorAll('.case-header').forEach(header => {
-                                header.addEventListener('click', () => {
-                                    header.classList.toggle('open');
-                                    header.nextElementSibling.classList.toggle('open');
-                                });
-                            });
-                            
-                            // Request expand/collapse
-                            document.querySelectorAll('.request-summary-row').forEach(row => {
-                                row.addEventListener('click', (e) => {
-                                    row.nextElementSibling.style.display = row.nextElementSibling.style.display === 'table-row' ? 'none' : 'table-row';
-                                });
-                            });
+                            const detailsBody = document.querySelector('.details-body');
 
-                            // Copy button
-                            document.querySelectorAll('.copy-btn').forEach(button => {
-                                button.addEventListener('click', (e) => {
+                            // 事件委托：用例展开/收起
+                            detailsBody.addEventListener('click', (e) => {
+                                const header = e.target.closest('.case-header');
+                                if (header) {
+                                    toggleCase(header);
+                                    return;
+                                }
+
+                                const summaryRow = e.target.closest('.request-summary-row');
+                                if (summaryRow) {
+                                    const detailsRow = summaryRow.nextElementSibling;
+                                    detailsRow.style.display = detailsRow.style.display === 'table-row' ? 'none' : 'table-row';
+                                    return;
+                                }
+
+                                const copyBtn = e.target.closest('.copy-btn');
+                                if (copyBtn) {
                                     e.stopPropagation();
-                                    const pre = button.previousElementSibling;
+                                    const pre = copyBtn.previousElementSibling;
                                     navigator.clipboard.writeText(pre.innerText);
-                                    button.innerText = 'Copied!';
-                                    setTimeout(() => { button.innerText = 'Copy'; }, 2000);
-                                });
+                                    copyBtn.innerText = 'Copied!';
+                                    setTimeout(() => { copyBtn.innerText = 'Copy'; }, 2000);
+                                }
                             });
                         }
-                        
+
+                        // 初始化事件绑定
                         document.addEventListener('DOMContentLoaded', setupEventListeners);
+
+                        // 基于 height 的平滑展开/收起
+                        function toggleCase(header, forceExpand = null) {
+                            const body = header.nextElementSibling;
+                            const isOpen = header.classList.contains('open');
+                            const shouldOpen = forceExpand !== null ? forceExpand : !isOpen;
+                            if (shouldOpen === isOpen) return;
+
+                            header.classList.toggle('open', shouldOpen);
+
+                            if (shouldOpen) {
+                                body.style.height = '0';
+                                body.classList.add('open');
+                                const fullHeight = body.scrollHeight + 'px';
+                                requestAnimationFrame(() => { body.style.height = fullHeight; });
+                                body.addEventListener('transitionend', function handler() {
+                                    body.style.height = 'auto';
+                                    body.removeEventListener('transitionend', handler);
+                                });
+                            } else {
+                                body.style.height = body.scrollHeight + 'px';
+                                requestAnimationFrame(() => { body.style.height = '0'; });
+                                body.addEventListener('transitionend', function handler() {
+                                    body.classList.remove('open');
+                                    body.removeEventListener('transitionend', handler);
+                                });
+                            }
+                        }
 
                         function openTab(evt, tabName) {
                             const tabContainer = evt.target.closest('.request-details-row');
@@ -314,16 +344,7 @@ public final class HtmlSummaryReportGenerator {
                         }
 
                         function toggleAll(expand) {
-                            document.querySelectorAll('.case-header').forEach(header => {
-                                const body = header.nextElementSibling;
-                                if (expand && !header.classList.contains('open')) {
-                                    header.classList.add('open');
-                                    body.classList.add('open');
-                                } else if (!expand && header.classList.contains('open')) {
-                                    header.classList.remove('open');
-                                    body.classList.remove('open');
-                                }
-                            });
+                            document.querySelectorAll('.case-header').forEach(header => toggleCase(header, expand));
                         }
                     </script>
                 </body>
