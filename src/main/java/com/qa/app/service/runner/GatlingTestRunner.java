@@ -173,9 +173,9 @@ public class GatlingTestRunner {
             TypeReference<List<Map<String, Object>>> typeRef = new TypeReference<>() {};
             List<Map<String, Object>> reportItems = mapper.readValue(jsonContent, typeRef);
 
-            // Group reports by origin TCID
+            // Group reports by origin TCID and maintain the order in which tests were executed
             Map<String, List<Map<String, Object>>> groupedByOrigin = reportItems.stream()
-                    .collect(Collectors.groupingBy(item -> (String) item.get("origin")));
+            .collect(Collectors.groupingBy(item -> (String) item.get("origin")));
 
             IGatlingTestDao testDao = new GatlingTestDaoImpl();
 
@@ -252,8 +252,19 @@ public class GatlingTestRunner {
                 }
             }
             
-            // Convert to list, maintain order
+            // Convert to list, then sort according to execution order (executedTests list)
             List<FunctionalTestReport> aggregatedReports = new ArrayList<>(reportMap.values());
+
+            if (executedTests != null && !executedTests.isEmpty()) {
+                // Map TCID to its index in execution list for quick lookup
+                java.util.Map<String, Integer> execOrderMap = new java.util.HashMap<>();
+                for (int i = 0; i < executedTests.size(); i++) {
+                    execOrderMap.put(executedTests.get(i).getTcid(), i);
+                }
+
+                aggregatedReports.sort(java.util.Comparator.comparingInt(r ->
+                        execOrderMap.getOrDefault(r.getOriginTcid(), Integer.MAX_VALUE)));
+            }
 
             // Generate an aggregated report
             if (!aggregatedReports.isEmpty()) {
