@@ -1,4 +1,4 @@
-package com.qa.app.service.script;
+package com.qa.app.service.util;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -14,11 +14,12 @@ import javafx.scene.control.TableCell;
 
 import java.net.URL;
 import java.util.*;
-import com.qa.app.util.AppConfig;
+
 import com.qa.app.common.listeners.AppConfigChangeListener;
 import com.qa.app.dao.impl.ProjectDaoImpl;
 import com.qa.app.dao.impl.EnvironmentDaoImpl;
 import com.qa.app.model.Project;
+import com.qa.app.util.AppConfig;
 import com.qa.app.model.Environment;
 
 public class ApplicationPropertiesViewModel implements Initializable, AppConfigChangeListener {

@@ -7,7 +7,7 @@ import com.qa.app.dao.api.IGroovyVariableDao;
 import com.qa.app.dao.impl.GroovyVariableDaoImpl;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IVariableService;
-import com.qa.app.service.script.GroovyScriptEngine;
+import com.qa.app.service.util.GroovyScriptEngine;
 
 import java.io.IOException;
 import java.sql.SQLException;

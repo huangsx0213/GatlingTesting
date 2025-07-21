@@ -15,10 +15,12 @@ import java.io.IOException;
 import java.io.StringWriter;
 import freemarker.core.JSONOutputFormat;
 import java.util.Set;
-import com.qa.app.service.script.VariableGenerator;
+
 import javafx.collections.FXCollections;
 import javafx.scene.control.cell.ComboBoxTableCell;
 import com.qa.app.service.runner.RuntimeTemplateProcessor;
+import com.qa.app.service.util.VariableGenerator;
+
 import javafx.stage.Stage;
 import javafx.scene.image.Image;
 import com.fasterxml.jackson.databind.ObjectMapper;

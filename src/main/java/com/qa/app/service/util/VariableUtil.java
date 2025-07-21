@@ -1,4 +1,4 @@
-package com.qa.app.util;
+package com.qa.app.service.util;
 
 import java.util.HashSet;
 import java.util.Set;

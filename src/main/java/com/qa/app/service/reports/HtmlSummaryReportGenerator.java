@@ -3,9 +3,6 @@ package com.qa.app.service.reports;
 import com.qa.app.model.reports.CaseReport;
 import com.qa.app.model.reports.FunctionalTestReport;
 import com.qa.app.model.reports.ModeGroup;
-import com.qa.app.model.reports.RequestReport;
-import com.qa.app.model.reports.RequestInfo;
-import com.qa.app.model.reports.ResponseInfo;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

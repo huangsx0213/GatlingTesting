@@ -11,7 +11,7 @@ import com.qa.app.dao.impl.EnvironmentDaoImpl;
 import com.qa.app.model.Endpoint;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IEndpointService;
-import com.qa.app.util.VariableUtil;
+import com.qa.app.service.util.VariableUtil;;
 
 public class EndpointServiceImpl implements IEndpointService {
     private final IEndpointDao dao = new EndpointDaoImpl();

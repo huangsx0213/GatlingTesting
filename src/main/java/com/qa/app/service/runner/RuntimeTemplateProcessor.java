@@ -2,7 +2,8 @@ package com.qa.app.service.runner;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.qa.app.service.script.VariableGenerator;
+import com.qa.app.service.util.VariableGenerator;
+
 import freemarker.core.JSONOutputFormat;
 import freemarker.template.Configuration;
 import freemarker.template.Template;

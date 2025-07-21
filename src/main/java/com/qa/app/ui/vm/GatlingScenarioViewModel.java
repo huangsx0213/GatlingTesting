@@ -8,6 +8,8 @@ import com.qa.app.service.api.IGatlingScenarioService;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.impl.GatlingScenarioServiceImpl;
 import com.qa.app.service.impl.GatlingTestServiceImpl;
+import com.qa.app.util.AppConfig;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -22,7 +24,7 @@ import javafx.util.converter.IntegerStringConverter;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
 import javafx.scene.control.Button;
-import com.qa.app.util.AppConfig;
+
 import com.qa.app.common.listeners.AppConfigChangeListener;
 import com.qa.app.service.ProjectContext;
 
@@ -253,7 +255,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         }
 
         // --- Tooltip for Functional Test ---
-        functionalTooltip = com.qa.app.util.HelpTooltipManager.getFunctionalTestTooltip();
+        functionalTooltip = com.qa.app.ui.util.HelpTooltipManager.getFunctionalTestTooltip();
         if (functionalHelpIcon != null) {
             functionalHelpIcon.setOnMouseClicked(e -> toggleTooltip(functionalTooltip, functionalHelpIcon));
         }

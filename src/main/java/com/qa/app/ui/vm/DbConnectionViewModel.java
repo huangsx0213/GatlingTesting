@@ -5,6 +5,8 @@ import com.qa.app.service.ProjectContext;
 import com.qa.app.service.api.IDbConnectionService;
 import com.qa.app.service.impl.DbConnectionServiceImpl;
 import com.qa.app.service.runner.DataSourceRegistry;
+import com.qa.app.util.AppConfig;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -30,7 +32,7 @@ import javax.sql.DataSource;
 import java.net.URL;
 import java.sql.Connection;
 import java.util.ResourceBundle;
-import com.qa.app.util.AppConfig;
+
 import com.qa.app.common.listeners.AppConfigChangeListener;
 
 public class DbConnectionViewModel implements Initializable, AppConfigChangeListener {

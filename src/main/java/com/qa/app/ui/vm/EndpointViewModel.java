@@ -20,8 +20,8 @@ import com.qa.app.service.api.IEndpointService;
 import com.qa.app.service.api.IEnvironmentService;
 import com.qa.app.service.impl.EndpointServiceImpl;
 import com.qa.app.service.impl.EnvironmentServiceImpl;
-import com.qa.app.service.ProjectContext;
 import com.qa.app.util.AppConfig;
+import com.qa.app.service.ProjectContext;
 import com.qa.app.common.listeners.AppConfigChangeListener;
 
 import javafx.beans.property.SimpleStringProperty;

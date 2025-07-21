@@ -4,13 +4,15 @@ import com.qa.app.model.*;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.*;
 import com.qa.app.service.impl.*;
+import com.qa.app.service.util.VariableGenerator;
+import com.qa.app.service.util.VariableUtil;
+import com.qa.app.util.AppConfig;
+import com.qa.app.ui.util.HelpTooltipManager;
 import com.qa.app.ui.vm.gatling.TagHandler;
 import com.qa.app.ui.vm.gatling.TemplateHandler;
 import com.qa.app.ui.vm.gatling.TestCondictionHandler;
-import com.qa.app.util.AppConfig;
-import com.qa.app.util.HelpTooltipManager;
 import com.qa.app.common.listeners.AppConfigChangeListener;
-import com.qa.app.service.script.VariableGenerator;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -61,7 +63,7 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 import com.qa.app.service.EnvironmentContext;
-import com.qa.app.util.VariableUtil;
+
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import java.util.Set;

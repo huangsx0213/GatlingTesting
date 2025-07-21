@@ -1,11 +1,12 @@
-package com.qa.app.util;
+package com.qa.app.ui.util;
 
-import com.qa.app.service.script.VariableGenerator;
 import javafx.scene.control.Tooltip;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import com.qa.app.service.util.VariableGenerator;
 
 /**
  * Centralized factory for reusable help tooltips across the UI.

@@ -125,6 +125,20 @@ public class DBUtil {
                     + ");";
             stmt.execute(groovyVariableSql);
 
+            // Create variable_transform_methods table if it doesn't exist
+            String transformSql = "CREATE TABLE IF NOT EXISTS variable_transform_methods ("
+                    + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + " name TEXT NOT NULL UNIQUE,"
+                    + " description TEXT,"
+                    + " script TEXT NOT NULL,"
+                    + " enabled INTEGER NOT NULL DEFAULT 1,"
+                    + " param_spec TEXT,"
+                    + " sample_usage TEXT,"
+                    + " create_time DATETIME,"
+                    + " update_time DATETIME"
+                    + ");";
+            stmt.execute(transformSql);
+
             // Create project table if it doesn't exist
             String projectSql = "CREATE TABLE IF NOT EXISTS project ("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"

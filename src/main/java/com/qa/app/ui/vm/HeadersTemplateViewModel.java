@@ -20,10 +20,10 @@ import com.qa.app.service.ProjectContext;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IHeadersTemplateService;
 import com.qa.app.service.impl.HeadersTemplateServiceImpl;
+import com.qa.app.util.AppConfig;
 
 import org.yaml.snakeyaml.DumperOptions;
 
-import com.qa.app.util.AppConfig;
 import com.qa.app.common.listeners.AppConfigChangeListener;
 
 public class HeadersTemplateViewModel implements Initializable, AppConfigChangeListener {

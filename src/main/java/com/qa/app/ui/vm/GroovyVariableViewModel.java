@@ -3,8 +3,9 @@ package com.qa.app.ui.vm;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IVariableService;
 import com.qa.app.service.impl.VariableServiceImpl;
-import com.qa.app.service.script.GroovyScriptEngine;
-import com.qa.app.service.script.VariableGenerator;
+import com.qa.app.service.util.GroovyScriptEngine;
+import com.qa.app.service.util.VariableGenerator;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;

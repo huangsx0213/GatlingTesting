@@ -30,6 +30,7 @@ import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IProjectService;
 import com.qa.app.service.impl.ProjectServiceImpl;
 import com.qa.app.util.AppConfig;
+
 import javafx.application.Platform;
 
 public class MainViewModel implements Initializable {
@@ -65,6 +66,7 @@ public class MainViewModel implements Initializable {
         "Environment Management",
         "Project Management",
         "Variables Management",
+        "Variable Transform Management",
         "Application Properties"
     );
     private final Map<String, String> fxmlMapping = new HashMap<>();
@@ -85,7 +87,8 @@ public class MainViewModel implements Initializable {
             "Project Management",
             "Variables Management",
             "DB Connections Mgmt",
-            "Application Properties"
+            "Application Properties",
+            "Variable Transform Management"
     ));
 
     // Enum for status types
@@ -146,6 +149,7 @@ public class MainViewModel implements Initializable {
         fxmlMapping.put("DB Connections Mgmt", "/com/qa/app/ui/view/db_connection_view.fxml");
         fxmlMapping.put("Project Management", "/com/qa/app/ui/view/project_view.fxml");
         fxmlMapping.put("Variables Management", "/com/qa/app/ui/view/groovy_variable_view.fxml");
+        fxmlMapping.put("Variable Transform Management", "/com/qa/app/ui/view/variable_transform_method_view.fxml");
         fxmlMapping.put("Gatling Scenario Management", "/com/qa/app/ui/view/gatling_scenario_view.fxml");
         fxmlMapping.put("Application Properties", "/com/qa/app/ui/view/application_properties_view.fxml");
         fxmlMapping.put("Gatling Test Reports", "/com/qa/app/ui/view/gatling_test_report_view.fxml");
@@ -316,6 +320,8 @@ public class MainViewModel implements Initializable {
                         // currently no setMainViewModel method needed, placeholder for future
                     } else if (controller instanceof DbConnectionViewModel) {
                         ((DbConnectionViewModel) controller).setMainViewModel(this);
+                    } else if (controller instanceof VariableTransformMethodViewModel) {
+                        ((VariableTransformMethodViewModel) controller).setMainViewModel(this);
                     }
                     // let Node find controller
                     contentNode.getProperties().put("controller", controller);
@@ -381,6 +387,8 @@ public class MainViewModel implements Initializable {
             ((GatlingScenarioViewModel) controller).setMainViewModel(this);
         } else if (controller instanceof DbConnectionViewModel) {
             ((DbConnectionViewModel) controller).setMainViewModel(this);
+        } else if (controller instanceof VariableTransformMethodViewModel) {
+            ((VariableTransformMethodViewModel) controller).setMainViewModel(this);
         }
     }
 
@@ -422,6 +430,8 @@ public class MainViewModel implements Initializable {
             ((GatlingInternalReportViewModel) controller).refresh();
         } else if (controller instanceof DbConnectionViewModel) {
             ((DbConnectionViewModel) controller).refresh();
+        } else if (controller instanceof VariableTransformMethodViewModel) {
+            ((VariableTransformMethodViewModel) controller).refresh();
         }
     }
 
