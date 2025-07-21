@@ -66,7 +66,7 @@ public class MainViewModel implements Initializable {
         "Environment Management",
         "Project Management",
         "Variables Management",
-        "Variable Transform Management",
+        "Variable Transform Mgmt",
         "Application Properties"
     );
     private final Map<String, String> fxmlMapping = new HashMap<>();
@@ -88,7 +88,7 @@ public class MainViewModel implements Initializable {
             "Variables Management",
             "DB Connections Mgmt",
             "Application Properties",
-            "Variable Transform Management"
+            "Variable Transform Mgmt"
     ));
 
     // Enum for status types
@@ -149,7 +149,7 @@ public class MainViewModel implements Initializable {
         fxmlMapping.put("DB Connections Mgmt", "/com/qa/app/ui/view/db_connection_view.fxml");
         fxmlMapping.put("Project Management", "/com/qa/app/ui/view/project_view.fxml");
         fxmlMapping.put("Variables Management", "/com/qa/app/ui/view/groovy_variable_view.fxml");
-        fxmlMapping.put("Variable Transform Management", "/com/qa/app/ui/view/variable_transform_method_view.fxml");
+        fxmlMapping.put("Variable Transform Mgmt", "/com/qa/app/ui/view/variable_transform_method_view.fxml");
         fxmlMapping.put("Gatling Scenario Management", "/com/qa/app/ui/view/gatling_scenario_view.fxml");
         fxmlMapping.put("Application Properties", "/com/qa/app/ui/view/application_properties_view.fxml");
         fxmlMapping.put("Gatling Test Reports", "/com/qa/app/ui/view/gatling_test_report_view.fxml");
@@ -168,8 +168,26 @@ public class MainViewModel implements Initializable {
         });
 
         contentTabPane.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null && currentFeatureLabel != null) {
-                currentFeatureLabel.setText(newValue.getText());
+            if (newValue != null) {
+                // Update current feature label
+                if (currentFeatureLabel != null) {
+                    currentFeatureLabel.setText(newValue.getText());
+                }
+
+                // Ensure the newly selected tab reloads its default data just as if it were opened
+                Node contentNode = newValue.getContent();
+                if (contentNode != null) {
+                    refreshTabContent(newValue.getText(), contentNode);
+                }
+
+                // Sync navigation list selection with current tab
+                if (navigationList != null) {
+                    String tabText = newValue.getText();
+                    String currentSelected = navigationList.getSelectionModel().getSelectedItem();
+                    if (currentSelected == null || !currentSelected.equals(tabText)) {
+                        navigationList.getSelectionModel().select(tabText);
+                    }
+                }
             }
         });
 
