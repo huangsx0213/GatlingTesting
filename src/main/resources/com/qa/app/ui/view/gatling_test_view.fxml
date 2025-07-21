@@ -126,7 +126,7 @@
                                                                                 <columns>
                                                                                     <TableColumn fx:id="urlDynamicKeyColumn" prefWidth="150.0" text="Key" />
                                                                                     <TableColumn fx:id="urlDynamicValueColumn" prefWidth="250.0" text="Value" />
-                                                                                    <TableColumn fx:id="urlDynamicActionColumn" prefWidth="60.0" text="Action" />
+                                                                                    <TableColumn fx:id="urlDynamicActionColumn" prefWidth="60.0" text="Action" minWidth="50.0"/>
                                                                                 </columns>
                                                                                 <columnResizePolicy>
                                                                                     <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
@@ -168,7 +168,7 @@
                                                                                 <columns>
                                                                                     <TableColumn fx:id="headersTemplateKeyColumn" prefWidth="150.0" text="Key" />
                                                                                     <TableColumn fx:id="headersTemplateValueColumn" prefWidth="250.0" text="Value" />
-                                                                                    <TableColumn fx:id="headersTemplateActionColumn" prefWidth="60.0" text="Action" />
+                                                                                    <TableColumn fx:id="headersTemplateActionColumn" prefWidth="60.0" text="Action" maxWidth="60.0" minWidth="50.0"/>
                                                                                 </columns>
                                                                                 <columnResizePolicy>
                                                                                     <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
@@ -210,7 +210,7 @@
                                                                                 <columns>
                                                                                     <TableColumn fx:id="bodyDynamicKeyColumn" prefWidth="150.0" text="Key" />
                                                                                     <TableColumn fx:id="bodyDynamicValueColumn" prefWidth="250.0" text="Value" />
-                                                                                    <TableColumn fx:id="bodyDynamicActionColumn" prefWidth="60.0" text="Action" />
+                                                                                    <TableColumn fx:id="bodyDynamicActionColumn" prefWidth="60.0" text="Action" minWidth="50.0"/>
                                                                                 </columns>
                                                                                 <columnResizePolicy>
                                                                                     <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
