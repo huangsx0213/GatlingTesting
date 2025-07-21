@@ -67,6 +67,9 @@ public class ApplicationPropertiesViewModel implements Initializable, AppConfigC
         for (String key : props.stringPropertyNames()) {
             propertyList.add(new PropertyItem(key, props.getProperty(key)));
         }
+        // Refresh combo-box items so that newly added Projects/Environments
+        // are available whenever the tab is (re)opened or reloaded.
+        loadComboBoxOptions();
     }
 
     @FXML

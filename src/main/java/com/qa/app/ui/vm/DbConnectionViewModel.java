@@ -87,6 +87,8 @@ public class DbConnectionViewModel implements Initializable, AppConfigChangeList
     }
 
     public void refresh() {
+        // Reload environment list to ensure newly added environments appear in dropdown
+        loadEnvironments();
         loadConnections();
         
         // 默认选择第一行数据
@@ -184,6 +186,7 @@ public class DbConnectionViewModel implements Initializable, AppConfigChangeList
     @Override
     public void onConfigChanged() {
         loadConnections();
+        loadEnvironments();
     }
 
     private void loadEnvironments() {
