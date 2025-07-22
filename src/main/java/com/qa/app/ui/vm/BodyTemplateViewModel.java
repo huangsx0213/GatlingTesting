@@ -17,6 +17,7 @@ import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.impl.BodyTemplateServiceImpl;
 import com.qa.app.util.AppConfig;
 import com.qa.app.common.listeners.AppConfigChangeListener;
+import com.qa.app.ui.util.ClickableTooltipTableCell;
 import com.qa.app.ui.vm.gatling.TemplateValidator;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Alert.AlertType;
@@ -92,8 +93,8 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
             return row;
         });
         
-        // Truncate long content in the table and add a tooltip
-        setupContentColumnCellFactory();
+        bodyTemplateDescriptionColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
+        bodyTemplateContentColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
     }
     
     @Override
@@ -264,25 +265,6 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
         bodyTemplateTable.getSelectionModel().clearSelection();
     }
     
-    private void setupContentColumnCellFactory() {
-        bodyTemplateContentColumn.setCellFactory(col -> new TableCell<BodyTemplateItem, String>() {
-            private static final int MAX_LENGTH = 200;
-            private final Tooltip tooltip = new Tooltip();
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setTooltip(null);
-                } else {
-                    setText(item.length() > MAX_LENGTH ? item.substring(0, MAX_LENGTH) + "..." : item);
-                    tooltip.setText(item);
-                    setTooltip(tooltip);
-                }
-            }
-        });
-    }
-
     private void showContentInPopup(BodyTemplateItem item) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Body Content Detail");

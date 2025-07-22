@@ -5,6 +5,7 @@ import com.qa.app.service.api.IVariableService;
 import com.qa.app.service.impl.VariableServiceImpl;
 import com.qa.app.service.util.GroovyScriptEngine;
 import com.qa.app.service.util.VariableGenerator;
+import com.qa.app.ui.util.ClickableTooltipTableCell;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -44,6 +45,7 @@ public class GroovyVariableViewModel implements Initializable {
         variablesTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         nameColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getName()));
         descriptionColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getDescription()));
+        descriptionColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
         loadVariables();
     }
 

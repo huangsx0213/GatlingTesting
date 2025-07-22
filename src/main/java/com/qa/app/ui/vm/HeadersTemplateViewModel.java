@@ -20,6 +20,7 @@ import com.qa.app.service.ProjectContext;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IHeadersTemplateService;
 import com.qa.app.service.impl.HeadersTemplateServiceImpl;
+import com.qa.app.ui.util.ClickableTooltipTableCell;
 import com.qa.app.util.AppConfig;
 
 import org.yaml.snakeyaml.DumperOptions;
@@ -107,29 +108,8 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
             return row;
         });
 
-        // add Tooltip and max height, length limit to content column
-        headersTemplateContentColumn.setCellFactory(col -> new TableCell<HeadersTemplateItem, String>() {
-            private static final int MAX_LENGTH = 200;
-            private final Tooltip tooltip = new Tooltip();
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setTooltip(null);
-                } else {
-                    if (item.length() > MAX_LENGTH) {
-                        setText(item.substring(0, MAX_LENGTH) + "...");
-                    } else {
-                        setText(item);
-                    }
-                    tooltip.setText(item);
-                    setTooltip(tooltip);
-                    setWrapText(false);
-                    setPrefHeight(80);
-                }
-            }
-        });
+        headersTemplateDescriptionColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
+        headersTemplateContentColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
     }
 
     @Override

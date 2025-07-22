@@ -92,6 +92,10 @@ public class TemplateHandler {
         valueColumn.setCellValueFactory(new PropertyValueFactory<>("value"));
         varsTable.setItems(variables);
         varsTable.setEditable(true);
+
+        // Fix: Explicitly set the column resize policy to constrained to prevent the extra empty column.
+        varsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+
         // Custom cell factory: keep combobox suggestions & support large text editing via double-click
         valueColumn.setCellFactory(col -> {
             List<String> suggestions = VariableGenerator.getInstance().getVariableDefinitions().stream()

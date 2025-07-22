@@ -5,6 +5,7 @@ import com.qa.app.service.ProjectContext;
 import com.qa.app.service.api.IDbConnectionService;
 import com.qa.app.service.impl.DbConnectionServiceImpl;
 import com.qa.app.service.runner.DataSourceRegistry;
+import com.qa.app.ui.util.ClickableTooltipTableCell;
 import com.qa.app.util.AppConfig;
 
 import javafx.collections.FXCollections;
@@ -107,6 +108,7 @@ public class DbConnectionViewModel implements Initializable, AppConfigChangeList
     private void setupTable() {
         aliasColumn.setCellValueFactory(new PropertyValueFactory<>("alias"));
         descriptionColumn.setCellValueFactory(new PropertyValueFactory<>("description"));
+        descriptionColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
         environmentColumn.setCellValueFactory(cellData -> {
             Integer envId = cellData.getValue().getEnvironmentId();
             String name = "";

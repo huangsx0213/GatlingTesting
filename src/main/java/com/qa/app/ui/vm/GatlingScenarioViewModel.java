@@ -8,6 +8,7 @@ import com.qa.app.service.api.IGatlingScenarioService;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.impl.GatlingScenarioServiceImpl;
 import com.qa.app.service.impl.GatlingTestServiceImpl;
+import com.qa.app.ui.util.ClickableTooltipTableCell;
 import com.qa.app.util.AppConfig;
 
 import javafx.collections.FXCollections;
@@ -140,6 +141,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         suiteCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getSuite()));
         availableTagsCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTags()));
         availableDescCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getDescriptions()));
+        availableDescCol.setCellFactory(param -> new ClickableTooltipTableCell<>());
 
         orderCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().getOrder()));
         stepTcidCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTestTcid()));
@@ -157,6 +159,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         scNameCol.setCellValueFactory(cell -> cell.getValue().nameProperty());
         functionalCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().isFunctionalTest() ? "Y" : "N"));
         scDescCol.setCellValueFactory(cell -> cell.getValue().descriptionProperty());
+        scDescCol.setCellFactory(param -> new ClickableTooltipTableCell<>());
 
         // Type column shows load model type
         scTypeCol.setCellValueFactory(cell -> {

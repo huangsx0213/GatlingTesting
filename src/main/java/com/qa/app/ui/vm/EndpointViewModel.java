@@ -20,6 +20,7 @@ import com.qa.app.service.api.IEndpointService;
 import com.qa.app.service.api.IEnvironmentService;
 import com.qa.app.service.impl.EndpointServiceImpl;
 import com.qa.app.service.impl.EnvironmentServiceImpl;
+import com.qa.app.ui.util.ClickableTooltipTableCell;
 import com.qa.app.util.AppConfig;
 import com.qa.app.service.ProjectContext;
 import com.qa.app.common.listeners.AppConfigChangeListener;
@@ -70,6 +71,7 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
         endpointNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
         methodColumn.setCellValueFactory(cellData -> cellData.getValue().methodProperty());
         urlColumn.setCellValueFactory(cellData -> cellData.getValue().urlProperty());
+        urlColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
         environmentColumn.setCellValueFactory(cellData -> {
             Integer envId = cellData.getValue().getEnvironmentId();
             String envName = "";

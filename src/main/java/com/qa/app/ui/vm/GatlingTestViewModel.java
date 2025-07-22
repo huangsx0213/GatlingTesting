@@ -6,6 +6,7 @@ import com.qa.app.service.api.*;
 import com.qa.app.service.impl.*;
 import com.qa.app.service.util.VariableGenerator;
 import com.qa.app.service.util.VariableUtil;
+import com.qa.app.ui.util.ClickableTooltipTableCell;
 import com.qa.app.util.AppConfig;
 import com.qa.app.ui.util.HelpTooltipManager;
 import com.qa.app.ui.vm.gatling.TagHandler;
@@ -28,6 +29,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.web.HTMLEditor;
 import com.qa.app.model.ResponseCheck;
 import com.qa.app.model.CheckType;
 import com.qa.app.model.Operator;
@@ -80,7 +82,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     @FXML
     private TextField tcidField;
     @FXML
-    private TextArea descriptionsArea;
+    private HTMLEditor descriptionsArea;
     @FXML
     private TableView<ConditionRow> conditionsTable;
     @FXML
@@ -409,12 +411,15 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
                     if (checkComboBox == null) {
                         checkComboBox = new CheckComboBox<>();
                         conditionTcidComboBoxes.add(checkComboBox);
+                        checkComboBox.focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
+                            if (!isNowFocused) {
+                                Platform.runLater(() -> getTableView().getSelectionModel().clearSelection());
+                            }
+                        });
                     }
                     // clear all items and add latest allTcids
                     checkComboBox.getItems().setAll(allTcids);
-                    checkComboBox.setPrefWidth(180);
-                    checkComboBox.setMaxWidth(180);
-                    checkComboBox.setMinWidth(120);
+                    checkComboBox.setMaxWidth(Double.MAX_VALUE);
                     checkComboBox.setStyle("-fx-alignment: CENTER_LEFT;");
                     checkComboBox.getCheckModel().clearChecks();
                     for (String t : row.getTcids()) {
@@ -522,26 +527,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         suiteColumn.setCellValueFactory(new PropertyValueFactory<>("suite"));
         testTcidColumn.setCellValueFactory(new PropertyValueFactory<>("tcid"));
         descriptionsColumn.setCellValueFactory(new PropertyValueFactory<>("descriptions"));
-        descriptionsColumn.setCellFactory(col -> new TableCell<GatlingTest, String>() {
-            private Tooltip tooltip = new Tooltip();
-
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setTooltip(null);
-                } else {
-                    setText(item);
-                    if (item.length() > 20) { // Only show tooltip if text is longer than 20 characters
-                        tooltip.setText(item);
-                        setTooltip(tooltip);
-                    } else {
-                        setTooltip(null);
-                    }
-                }
-            }
-        });
+        descriptionsColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
         endpointColumn.setCellValueFactory(cellData -> {
             String name = cellData.getValue().getEndpointName();
             Endpoint ep = null;
@@ -554,26 +540,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             }
             return new javafx.beans.property.SimpleStringProperty(display);
         });
-        endpointColumn.setCellFactory(col -> new TableCell<GatlingTest, String>() {
-            private Tooltip tooltip = new Tooltip();
-
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setTooltip(null);
-                } else {
-                    setText(item);
-                    if (item.length() > 20) { // 超过20字符显示tooltip
-                        tooltip.setText(item);
-                        setTooltip(tooltip);
-                    } else {
-                        setTooltip(null);
-                    }
-                }
-            }
-        });
+        endpointColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
         tagsColumn.setCellValueFactory(new PropertyValueFactory<>("tags"));
         waitTimeColumn.setCellValueFactory(new PropertyValueFactory<>("waitTime"));
         headersTemplateNameColumn.setCellValueFactory(cellData -> {
@@ -839,7 +806,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         isEnabledCheckBox.setSelected(false);
         suiteComboBox.setValue("");
         tcidField.clear();
-        descriptionsArea.clear();
+        descriptionsArea.setHtmlText("");
         expResultArea.clear();
         saveFieldsArea.clear();
         endpointComboBox.getSelectionModel().clearSelection();
@@ -884,7 +851,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             isEnabledCheckBox.setSelected(test.isEnabled());
             suiteComboBox.setValue(test.getSuite());
             tcidField.setText(test.getTcid());
-            descriptionsArea.setText(test.getDescriptions());
+            descriptionsArea.setHtmlText(test.getDescriptions());
             conditionHandler.deserializeConditions(test.getConditions());
             expResultArea.setText(test.getResponseChecks());
             String display = null;
@@ -977,7 +944,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     private void populateTestFromFields(GatlingTest test) {
         String suite = suiteComboBox.getEditor().getText().trim();
         String tcid = tcidField.getText().trim();
-        String descriptions = descriptionsArea.getText().trim();
+        String descriptions = descriptionsArea.getHtmlText().trim();
         String endpointDisplay = endpointComboBox.getValue();
         String endpointName = endpointDisplay == null ? "" : endpointDisplay.split(" \\[")[0].trim();
 
@@ -1051,7 +1018,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     private void handleAddTest() {
         String suite = suiteComboBox.getEditor().getText().trim();
         String tcid = tcidField.getText().trim();
-        String descriptions = descriptionsArea.getText().trim();
+        String descriptions = descriptionsArea.getHtmlText().trim();
         String endpointDisplay = endpointComboBox.getValue();
         String endpointName = endpointDisplay == null ? "" : endpointDisplay.split(" \\[")[0].trim();
         if (tcid.isEmpty()) {
@@ -1444,6 +1411,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         // Expect column
         checkExpectColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getExpect()));
         checkExpectColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        checkExpectColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
         checkExpectColumn.setOnEditCommit(event -> event.getRowValue().setExpect(event.getNewValue()));
 
         checkSaveAsColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getSaveAs()));
