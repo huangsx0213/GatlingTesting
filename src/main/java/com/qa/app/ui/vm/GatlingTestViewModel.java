@@ -1458,7 +1458,6 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         // Expect column
         checkExpectColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getExpect()));
         checkExpectColumn.setCellFactory(TextFieldTableCell.forTableColumn());
-        checkExpectColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
         checkExpectColumn.setOnEditCommit(event -> event.getRowValue().setExpect(event.getNewValue()));
 
         checkSaveAsColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getSaveAs()));
