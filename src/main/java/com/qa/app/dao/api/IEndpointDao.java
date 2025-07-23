@@ -15,4 +15,7 @@ public interface IEndpointDao {
     Endpoint getEndpointByNameAndEnv(String name, Integer environmentId) throws SQLException;
     List<Endpoint> getAllEndpoints() throws SQLException;
     List<Endpoint> getEndpointsByProjectId(Integer projectId) throws SQLException;
+
+    // Batch update display order
+    void updateOrder(List<Endpoint> endpoints) throws SQLException;
 } 

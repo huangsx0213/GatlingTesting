@@ -56,6 +56,12 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
     @FXML
     private Button validateButton;
 
+    @FXML
+    private Button moveUpButton;
+
+    @FXML
+    private Button moveDownButton;
+
     private final ObservableList<BodyTemplateItem> bodyTemplateList = FXCollections.observableArrayList();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
     private MainViewModel mainViewModel;
@@ -95,6 +101,40 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
         
         bodyTemplateDescriptionColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
         bodyTemplateContentColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
+
+        // Disable move buttons initially if empty
+        boolean disabled = bodyTemplateList.isEmpty();
+        if (moveUpButton != null) moveUpButton.setDisable(disabled);
+        if (moveDownButton != null) moveDownButton.setDisable(disabled);
+    }
+
+    // ============== Move Up / Down ==============
+    @FXML
+    private void handleMoveUp() {
+        BodyTemplateItem selected = bodyTemplateTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        int index = bodyTemplateList.indexOf(selected);
+        if (index > 0) {
+            BodyTemplateItem above = bodyTemplateList.get(index - 1);
+            bodyTemplateList.set(index - 1, selected);
+            bodyTemplateList.set(index, above);
+            bodyTemplateTable.getSelectionModel().select(index - 1);
+        }
+    }
+
+    @FXML
+    private void handleMoveDown() {
+        BodyTemplateItem selected = bodyTemplateTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        int index = bodyTemplateList.indexOf(selected);
+        if (index < bodyTemplateList.size() - 1) {
+            BodyTemplateItem below = bodyTemplateList.get(index + 1);
+            bodyTemplateList.set(index + 1, selected);
+            bodyTemplateList.set(index, below);
+            bodyTemplateTable.getSelectionModel().select(index + 1);
+        }
     }
     
     @Override

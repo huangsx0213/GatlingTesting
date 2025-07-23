@@ -49,6 +49,12 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
     private Button deleteButton;
     @FXML
     private Button clearButton;
+
+    @FXML
+    private Button moveUpButton;
+
+    @FXML
+    private Button moveDownButton;
     @FXML
     private TableView<EndpointItem> endpointTable;
     @FXML
@@ -132,6 +138,63 @@ public class EndpointViewModel implements Initializable, AppConfigChangeListener
         }
         if (!endpointList.isEmpty()) {
             endpointTable.getSelectionModel().selectFirst();
+        }
+
+        // Ensure buttons are disabled if list empty
+        boolean disabled = endpointList.isEmpty();
+        if (moveUpButton != null) moveUpButton.setDisable(disabled);
+        if (moveDownButton != null) moveDownButton.setDisable(disabled);
+    }
+
+    // ================== Move Up / Down ====================
+    @FXML
+    private void handleMoveUp() {
+        EndpointItem selected = endpointTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        int index = endpointList.indexOf(selected);
+        if (index > 0) {
+            EndpointItem above = endpointList.get(index - 1);
+            endpointList.set(index - 1, selected);
+            endpointList.set(index, above);
+
+            updateDisplayOrderAndPersist();
+            endpointTable.getSelectionModel().select(index - 1);
+        }
+    }
+
+    @FXML
+    private void handleMoveDown() {
+        EndpointItem selected = endpointTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        int index = endpointList.indexOf(selected);
+        if (index < endpointList.size() - 1) {
+            EndpointItem below = endpointList.get(index + 1);
+            endpointList.set(index + 1, selected);
+            endpointList.set(index, below);
+
+            updateDisplayOrderAndPersist();
+            endpointTable.getSelectionModel().select(index + 1);
+        }
+    }
+
+    private void updateDisplayOrderAndPersist() {
+        try {
+            // Map EndpointItem to Endpoint and update displayOrder
+            java.util.List<com.qa.app.model.Endpoint> toUpdate = new java.util.ArrayList<>();
+            for (int i = 0; i < endpointList.size(); i++) {
+                EndpointItem item = endpointList.get(i);
+                com.qa.app.model.Endpoint e = new com.qa.app.model.Endpoint();
+                e.setId(item.getId());
+                e.setDisplayOrder(i + 1);
+                toUpdate.add(e);
+            }
+            endpointService.updateOrder(toUpdate);
+        } catch (ServiceException ex) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to update endpoint order: " + ex.getMessage(), MainViewModel.StatusType.ERROR);
+            }
         }
     }
 

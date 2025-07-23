@@ -105,6 +105,7 @@ public class DBUtil {
                     + " url TEXT NOT NULL,"
                     + " environment_id INTEGER,"
                     + " project_id INTEGER,"
+                    + " display_order INT,"
                     + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
                     + " UNIQUE(name, environment_id)"

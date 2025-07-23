@@ -54,8 +54,12 @@ import java.util.Optional;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
+import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.scene.image.Image;
+import javafx.scene.web.WebView;
+import javafx.util.Duration;
+import javafx.animation.PauseTransition;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -527,7 +531,56 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         suiteColumn.setCellValueFactory(new PropertyValueFactory<>("suite"));
         testTcidColumn.setCellValueFactory(new PropertyValueFactory<>("tcid"));
         descriptionsColumn.setCellValueFactory(new PropertyValueFactory<>("descriptions"));
-        descriptionsColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
+        
+        // Custom cell factory for Descriptions column to handle HTML
+        descriptionsColumn.setCellFactory(column -> new TableCell<GatlingTest, String>() {
+            private final Popup htmlPopup = new Popup();
+            private final WebView webView = new WebView();
+            private final PauseTransition showDelay = new PauseTransition(Duration.millis(200));
+            private final PauseTransition hideDelay = new PauseTransition(Duration.millis(200));
+            
+            {
+                webView.setPrefSize(300, 200); // Give popup a default size
+                htmlPopup.getContent().add(webView);
+                
+                // When mouse enters the popup, cancel the hide delay
+                htmlPopup.getScene().getRoot().setOnMouseEntered(e -> hideDelay.stop());
+                // When mouse exits the popup, start the hide delay
+                htmlPopup.getScene().getRoot().setOnMouseExited(e -> hideDelay.playFromStart());
+            }
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                
+                if (empty || item == null) {
+                    setText(null);
+                    setOnMouseEntered(null);
+                    setOnMouseExited(null);
+                } else {
+                    setText(item.replaceAll("<[^>]*>", ""));
+                    
+                    showDelay.setOnFinished(e -> {
+                        webView.getEngine().loadContent(item);
+                        Point2D p = this.localToScreen(0, this.getHeight());
+                        htmlPopup.show(this, p.getX(), p.getY());
+                    });
+                    
+                    hideDelay.setOnFinished(e -> htmlPopup.hide());
+
+                    setOnMouseEntered(e -> {
+                        hideDelay.stop();
+                        showDelay.playFromStart();
+                    });
+                    
+                    setOnMouseExited(e -> {
+                        showDelay.stop();
+                        hideDelay.playFromStart();
+                    });
+                }
+            }
+        });
+
         endpointColumn.setCellValueFactory(cellData -> {
             String name = cellData.getValue().getEndpointName();
             Endpoint ep = null;
@@ -947,12 +1000,6 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         String descriptions = descriptionsArea.getHtmlText().trim();
         String endpointDisplay = endpointComboBox.getValue();
         String endpointName = endpointDisplay == null ? "" : endpointDisplay.split(" \\[")[0].trim();
-
-        // Resolve endpoint ID
-        int endpointId = 0;
-        for (Endpoint ep : endpointList) {
-            if (ep.getName().equals(endpointName)) { endpointId = ep.getId(); break; }
-        }
 
         test.setEnabled(isEnabledCheckBox.isSelected());
         test.setSuite(suite);

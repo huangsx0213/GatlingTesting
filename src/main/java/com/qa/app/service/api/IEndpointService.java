@@ -15,4 +15,6 @@ public interface IEndpointService {
     List<Endpoint> getAllEndpoints() throws ServiceException;
     List<Endpoint> getEndpointsByProjectId(Integer projectId) throws ServiceException;
     String checkVariableConsistency(Endpoint endpoint) throws ServiceException;
+
+    void updateOrder(List<Endpoint> endpoints) throws ServiceException;
 } 

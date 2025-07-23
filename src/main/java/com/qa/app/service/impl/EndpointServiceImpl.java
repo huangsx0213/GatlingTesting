@@ -135,4 +135,14 @@ public class EndpointServiceImpl implements IEndpointService {
             throw new ServiceException(inconsistency.split("\n\n")[0]);
         }
     }
+
+    // Reorder endpoints
+    @Override
+    public void updateOrder(List<Endpoint> endpoints) throws ServiceException {
+        try {
+            dao.updateOrder(endpoints);
+        } catch (SQLException e) {
+            throw new ServiceException("Failed to update endpoint order: " + e.getMessage(), e);
+        }
+    }
 } 

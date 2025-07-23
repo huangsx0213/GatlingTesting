@@ -21,6 +21,10 @@
                 <VBox spacing="15.0" minWidth="0.0">
                     <padding><Insets top="5.0" right="5.0" bottom="5.0" left="5.0"/></padding>
                     <Label text="Connection List" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;" />
+                    <HBox spacing="5.0">
+                        <Button fx:id="moveUpButton" text="Move Up" onAction="#handleMoveUp" />
+                        <Button fx:id="moveDownButton" text="Move Down" onAction="#handleMoveDown" />
+                    </HBox>
                     <TableView fx:id="dbConnectionTable" VBox.vgrow="ALWAYS" styleClass="table-view">
                         <columns>
                             <TableColumn fx:id="aliasColumn" text="Alias" prefWidth="50"/>

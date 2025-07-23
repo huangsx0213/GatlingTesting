@@ -66,6 +66,9 @@ public class DbConnectionViewModel implements Initializable, AppConfigChangeList
     @FXML private Button clearButton;
     @FXML private Button testConnectionButton;
     @FXML private Button duplicateButton;
+    // Move order buttons
+    @FXML private Button moveUpButton;
+    @FXML private Button moveDownButton;
 
     private final IDbConnectionService dbConnectionService = new DbConnectionServiceImpl();
     private final ObservableList<DbConnection> dbConnections = FXCollections.observableArrayList();
@@ -129,6 +132,7 @@ public class DbConnectionViewModel implements Initializable, AppConfigChangeList
                 updateButton.setDisable(false);
                 deleteButton.setDisable(false);
                 duplicateButton.setDisable(false);
+                if (moveUpButton != null) moveUpButton.setDisable(false);
             } else {
                 updateButton.setDisable(true);
                 deleteButton.setDisable(true);
@@ -478,6 +482,31 @@ public class DbConnectionViewModel implements Initializable, AppConfigChangeList
     private void showStatus(String message, MainViewModel.StatusType type) {
         if (mainViewModel != null) {
             mainViewModel.updateStatus(message, type);
+        }
+    }
+
+    // ========= Move Up/Down Handlers =========
+    @FXML
+    private void handleMoveUp() {
+        DbConnection selected = dbConnectionTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+        int idx = dbConnections.indexOf(selected);
+        if (idx > 0) {
+            dbConnections.remove(idx);
+            dbConnections.add(idx - 1, selected);
+            dbConnectionTable.getSelectionModel().select(idx - 1);
+        }
+    }
+
+    @FXML
+    private void handleMoveDown() {
+        DbConnection selected = dbConnectionTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+        int idx = dbConnections.indexOf(selected);
+        if (idx < dbConnections.size() - 1) {
+            dbConnections.remove(idx);
+            dbConnections.add(idx + 1, selected);
+            dbConnectionTable.getSelectionModel().select(idx + 1);
         }
     }
 } 

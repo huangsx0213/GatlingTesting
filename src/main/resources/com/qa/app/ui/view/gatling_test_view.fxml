@@ -195,7 +195,7 @@
                                                 <Tab text="Body">
                                                     <content>
                                                         <VBox spacing="10.0">
-                                                            <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
+                                                            <padding><Insets top="5" left="10" right="10" bottom="5"/></padding>
                                                             <HBox spacing="15.0" alignment="TOP_LEFT" VBox.vgrow="ALWAYS">
                                                                 <children>
                                                                     <VBox spacing="5.0" prefWidth="600.0" VBox.vgrow="ALWAYS">

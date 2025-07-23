@@ -57,6 +57,12 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
     @FXML
     private TableColumn<HeadersTemplateItem, String> headersTemplateContentColumn;
 
+    @FXML
+    private Button moveUpButton;
+
+    @FXML
+    private Button moveDownButton;
+
     private final ObservableList<HeadersTemplateItem> headersTemplateList = FXCollections.observableArrayList();
     private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
     private MainViewModel mainViewModel;
@@ -110,6 +116,10 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
 
         headersTemplateDescriptionColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
         headersTemplateContentColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
+
+        boolean disabled = headersTemplateList.isEmpty();
+        if (moveUpButton != null) moveUpButton.setDisable(disabled);
+        if (moveDownButton != null) moveDownButton.setDisable(disabled);
     }
 
     @Override
@@ -378,5 +388,34 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
         public String getDescription() { return description.get(); }
         public void setDescription(String d) { description.set(d); }
         public javafx.beans.property.StringProperty descriptionProperty() { return description; }
+    }
+
+    // ================= Move Up / Down =================
+    @FXML
+    private void handleMoveUp() {
+        HeadersTemplateItem selected = headersTemplateTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        int idx = headersTemplateList.indexOf(selected);
+        if (idx > 0) {
+            HeadersTemplateItem above = headersTemplateList.get(idx - 1);
+            headersTemplateList.set(idx - 1, selected);
+            headersTemplateList.set(idx, above);
+            headersTemplateTable.getSelectionModel().select(idx - 1);
+        }
+    }
+
+    @FXML
+    private void handleMoveDown() {
+        HeadersTemplateItem selected = headersTemplateTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        int idx = headersTemplateList.indexOf(selected);
+        if (idx < headersTemplateList.size() - 1) {
+            HeadersTemplateItem below = headersTemplateList.get(idx + 1);
+            headersTemplateList.set(idx + 1, selected);
+            headersTemplateList.set(idx, below);
+            headersTemplateTable.getSelectionModel().select(idx + 1);
+        }
     }
 } 
