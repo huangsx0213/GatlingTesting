@@ -531,52 +531,41 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         suiteColumn.setCellValueFactory(new PropertyValueFactory<>("suite"));
         testTcidColumn.setCellValueFactory(new PropertyValueFactory<>("tcid"));
         descriptionsColumn.setCellValueFactory(new PropertyValueFactory<>("descriptions"));
-        
-        // Custom cell factory for Descriptions column to handle HTML
+
+        // PopOver-based implementation to avoid flicker
         descriptionsColumn.setCellFactory(column -> new TableCell<GatlingTest, String>() {
-            private final Popup htmlPopup = new Popup();
-            private final WebView webView = new WebView();
-            private final PauseTransition showDelay = new PauseTransition(Duration.millis(200));
-            private final PauseTransition hideDelay = new PauseTransition(Duration.millis(200));
-            
+            private final org.controlsfx.control.PopOver pop = new org.controlsfx.control.PopOver();
+            private final javafx.scene.web.WebView web = new javafx.scene.web.WebView();
+            private final javafx.animation.PauseTransition showDelay = new javafx.animation.PauseTransition(javafx.util.Duration.millis(200));
+            private final javafx.animation.PauseTransition hideDelay = new javafx.animation.PauseTransition(javafx.util.Duration.millis(200));
+
             {
-                webView.setPrefSize(300, 200); // Give popup a default size
-                htmlPopup.getContent().add(webView);
-                
-                // When mouse enters the popup, cancel the hide delay
-                htmlPopup.getScene().getRoot().setOnMouseEntered(e -> hideDelay.stop());
-                // When mouse exits the popup, start the hide delay
-                htmlPopup.getScene().getRoot().setOnMouseExited(e -> hideDelay.playFromStart());
+                web.setPrefSize(300,200);
+                pop.setContentNode(web);
+                pop.setDetachable(false);
+                pop.setArrowLocation(org.controlsfx.control.PopOver.ArrowLocation.RIGHT_TOP);
+
+                showDelay.setOnFinished(e -> {
+                    if(getItem()!=null){
+                        web.getEngine().loadContent(getItem());
+                        pop.show(this);
+                    }
+                });
+                hideDelay.setOnFinished(e -> pop.hide());
+
+                this.setOnMouseEntered(e -> { hideDelay.stop(); showDelay.playFromStart(); });
+                this.setOnMouseExited(e -> { showDelay.stop(); hideDelay.playFromStart(); });
+                pop.setOnHidden(e -> hideDelay.stop());
             }
 
             @Override
-            protected void updateItem(String item, boolean empty) {
+            protected void updateItem(String item, boolean empty){
                 super.updateItem(item, empty);
-                
-                if (empty || item == null) {
+                if(empty||item==null){
                     setText(null);
-                    setOnMouseEntered(null);
-                    setOnMouseExited(null);
-                } else {
+                    pop.hide();
+                }else{
                     setText(item.replaceAll("<[^>]*>", ""));
-                    
-                    showDelay.setOnFinished(e -> {
-                        webView.getEngine().loadContent(item);
-                        Point2D p = this.localToScreen(0, this.getHeight());
-                        htmlPopup.show(this, p.getX(), p.getY());
-                    });
-                    
-                    hideDelay.setOnFinished(e -> htmlPopup.hide());
-
-                    setOnMouseEntered(e -> {
-                        hideDelay.stop();
-                        showDelay.playFromStart();
-                    });
-                    
-                    setOnMouseExited(e -> {
-                        showDelay.stop();
-                        hideDelay.playFromStart();
-                    });
                 }
             }
         });

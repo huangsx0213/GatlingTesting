@@ -141,7 +141,48 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         suiteCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getSuite()));
         availableTagsCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTags()));
         availableDescCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getDescriptions()));
-        availableDescCol.setCellFactory(param -> new ClickableTooltipTableCell<>());
+        // HTML-aware cell factory (shows plain text, but popups full HTML on hover)
+        availableDescCol.setCellFactory(column -> new TableCell<GatlingTest, String>() {
+            private final org.controlsfx.control.PopOver pop = new org.controlsfx.control.PopOver();
+            private final javafx.scene.web.WebView webView = new javafx.scene.web.WebView();
+            private final javafx.animation.PauseTransition showDelay = new javafx.animation.PauseTransition(javafx.util.Duration.millis(200));
+            private final javafx.animation.PauseTransition hideDelay = new javafx.animation.PauseTransition(javafx.util.Duration.millis(200));
+
+            {
+                webView.setPrefSize(300, 200);
+                pop.setContentNode(webView);
+                pop.setDetachable(false);
+                pop.setArrowLocation(org.controlsfx.control.PopOver.ArrowLocation.LEFT_TOP);
+
+                showDelay.setOnFinished(e -> {
+                    if (getItem() != null) {
+                        webView.getEngine().loadContent(getItem());
+                        pop.show(this);
+                    }
+                });
+                hideDelay.setOnFinished(e -> pop.hide());
+
+                this.setOnMouseEntered(e -> {
+                    hideDelay.stop();
+                    showDelay.playFromStart();
+                });
+                this.setOnMouseExited(e -> {
+                    showDelay.stop();
+                    hideDelay.playFromStart();
+                });
+            }
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    pop.hide();
+                } else {
+                    setText(item.replaceAll("<[^>]*>", ""));
+                }
+            }
+        });
 
         orderCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().getOrder()));
         stepTcidCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTestTcid()));
