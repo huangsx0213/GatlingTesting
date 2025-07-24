@@ -8,9 +8,13 @@ import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IGatlingScenarioService;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.api.IEndpointService;
+import com.qa.app.service.EnvironmentContext;
+import com.qa.app.service.runner.GatlingRunnerUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.nio.file.Paths;
 
 public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
 
@@ -69,6 +73,8 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             copy.setDescription(src.getDescription());
             copy.setThreadGroupJson(src.getThreadGroupJson());
             copy.setScheduleJson(src.getScheduleJson());
+            copy.setProjectId(src.getProjectId());
+            copy.setFunctionalTest(src.isFunctionalTest());
             scenarioDao.addScenario(copy);
             List<ScenarioStep> steps = scenarioDao.getStepsByScenarioId(scenarioId);
             for (ScenarioStep step : steps) {
@@ -111,22 +117,6 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
     }
 
     @Override
-    public void runScenario(int scenarioId) throws ServiceException {
-        try {
-            Scenario sc = scenarioDao.getScenarioById(scenarioId);
-            if (sc == null) throw new ServiceException("Scenario not found");
-
-            // Use runScenarios(List) method even if there is only one element, to follow ScenarioSimulation logic
-            java.util.List<Scenario> list = java.util.Collections.singletonList(sc);
-            runScenarios(list);
-        } catch (ServiceException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ServiceException("Failed to run scenario", e);
-        }
-    }
-
-    @Override
     public void runScenarios(java.util.List<com.qa.app.model.Scenario> scenarios, java.lang.Runnable onComplete) throws ServiceException {
         if (scenarios == null || scenarios.isEmpty()) {
             if (onComplete != null) {
@@ -135,6 +125,19 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
                 } else {
                     javafx.application.Platform.runLater(onComplete);
                 }
+            }
+            return;
+        }
+
+        // -------- Functional Test Shortcut --------
+        if (scenarios.size() == 1 && scenarios.get(0).isFunctionalTest()) {
+            com.qa.app.model.Scenario funcScn = scenarios.get(0);
+            try {
+                com.qa.app.service.runner.FunctionalScenarioRunner.run(funcScn, onComplete);
+            } catch (ServiceException se) {
+                throw se;
+            } catch (Exception ex) {
+                throw new ServiceException("Failed to run functional scenario", ex);
             }
             return;
         }
@@ -207,21 +210,18 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
 
                     java.util.Map<String, Object> map = new java.util.HashMap<>();
                     map.put("test", gt);
-                    // Resolve endpoint – prefer ID when available, otherwise fall back to name
+                    // Resolve endpoint by name and current environment
                     com.qa.app.model.Endpoint endpoint = null;
                     try {
-                        if (gt.getEndpointId() > 0) {
-                            endpoint = endpointService.getEndpointById(gt.getEndpointId());
-                        }
-                        if (endpoint == null) {
-                            endpoint = endpointService.getEndpointByName(gt.getEndpointName());
-                        }
+                        Integer envId = EnvironmentContext.getCurrentEnvironmentId();
+                        endpoint = endpointService.getEndpointByNameAndEnv(gt.getEndpointName(), envId);
+
                     } catch (Exception ex) {
                         throw new ServiceException("Error retrieving endpoint for test: " + gt.getTcid() + ": " + ex.getMessage(), ex);
                     }
 
                     if (endpoint == null) {
-                        throw new ServiceException("Endpoint not found for test: " + gt.getTcid());
+                        throw new ServiceException("Endpoint '" + gt.getEndpointName() + "' not found in current environment for test: " + gt.getTcid());
                     }
 
                     map.put("endpoint", endpoint);
@@ -242,25 +242,10 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             new com.fasterxml.jackson.databind.ObjectMapper().writeValue(multiFile, runItems);
 
             // ===== 3. 启动 Gatling =====
-            String javaHome = System.getProperty("java.home");
-            String javaBin = java.nio.file.Paths.get(javaHome, "bin", "java").toString();
-            String classpath = assembleClasspath();
-            String gatlingMain = "io.gatling.app.Gatling";
-            String simulationClass = com.qa.app.service.runner.GatlingScenarioSimulation.class.getName();
-            String resultsPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
-
-            java.util.List<String> command = new java.util.ArrayList<>();
-            command.add(javaBin);
-            command.add("--add-opens");
-            command.add("java.base/java.lang=ALL-UNNAMED");
-            command.add("-cp");
-            command.add(classpath);
-            command.add("-Dgatling.multiscenario.file=" + multiFile.getAbsolutePath());
-            command.add(gatlingMain);
-            command.add("-s");
-            command.add(simulationClass);
-            command.add("-rf");
-            command.add(resultsPath);
+            String resultsPath = Paths.get(System.getProperty("user.dir"), "target", "gatling").toString();
+            Map<String, String> sysProps = new HashMap<>();
+            sysProps.put("gatling.multiscenario.file", multiFile.getAbsolutePath());
+            List<String> command = GatlingRunnerUtils.buildGatlingCommand(com.qa.app.service.runner.GatlingScenarioSimulation.class.getName(), sysProps, resultsPath);
 
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.inheritIO();
@@ -308,10 +293,6 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
         }
     }
 
-    @Override
-    public void runScenarios(java.util.List<com.qa.app.model.Scenario> scenarios) throws ServiceException {
-        runScenarios(scenarios, null);
-    }
 
     @Override
     public void upsertSchedule(int scenarioId, String cronExpr, boolean enabled) throws ServiceException {
@@ -329,18 +310,6 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
         } catch (Exception e) {
             throw new ServiceException("Failed to load schedule", e);
         }
-    }
-
-    private static String assembleClasspath() {
-        String cp = System.getProperty("java.class.path");
-        try {
-            String selfPath = new java.io.File(GatlingScenarioServiceImpl.class.getProtectionDomain()
-                    .getCodeSource().getLocation().toURI()).getPath();
-            if (!cp.contains(selfPath)) {
-                cp += java.io.File.pathSeparator + selfPath;
-            }
-        } catch (Exception ignored) { }
-        return cp;
     }
 
     /**

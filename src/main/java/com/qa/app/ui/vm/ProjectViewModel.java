@@ -4,6 +4,7 @@ import com.qa.app.model.Project;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IProjectService;
 import com.qa.app.service.impl.ProjectServiceImpl;
+import com.qa.app.ui.util.ClickableTooltipTableCell;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -36,6 +37,7 @@ public class ProjectViewModel implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         projectNameColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getName()));
         projectDescriptionColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getDescription()));
+        projectDescriptionColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
         projectTable.setItems(projectList);
         projectTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         loadProjects();

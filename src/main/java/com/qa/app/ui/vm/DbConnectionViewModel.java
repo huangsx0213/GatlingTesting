@@ -5,6 +5,9 @@ import com.qa.app.service.ProjectContext;
 import com.qa.app.service.api.IDbConnectionService;
 import com.qa.app.service.impl.DbConnectionServiceImpl;
 import com.qa.app.service.runner.DataSourceRegistry;
+import com.qa.app.ui.util.ClickableTooltipTableCell;
+import com.qa.app.util.AppConfig;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -23,17 +26,22 @@ import javafx.scene.control.ComboBox;
 import javafx.util.StringConverter;
 import com.qa.app.model.DbType;
 import javafx.scene.control.Label;
+import javafx.beans.property.SimpleStringProperty;
+import com.qa.app.model.Environment;
 
 import javax.sql.DataSource;
 import java.net.URL;
 import java.sql.Connection;
 import java.util.ResourceBundle;
 
-public class DbConnectionViewModel implements Initializable {
+import com.qa.app.common.listeners.AppConfigChangeListener;
+
+public class DbConnectionViewModel implements Initializable, AppConfigChangeListener {
 
     @FXML private TableView<DbConnection> dbConnectionTable;
     @FXML private TableColumn<DbConnection, String> aliasColumn;
     @FXML private TableColumn<DbConnection, String> descriptionColumn;
+    @FXML private TableColumn<DbConnection, String> environmentColumn;
     
     @FXML private TextField aliasField;
     @FXML private TextArea descriptionArea;
@@ -58,6 +66,9 @@ public class DbConnectionViewModel implements Initializable {
     @FXML private Button clearButton;
     @FXML private Button testConnectionButton;
     @FXML private Button duplicateButton;
+    // Move order buttons
+    @FXML private Button moveUpButton;
+    @FXML private Button moveDownButton;
 
     private final IDbConnectionService dbConnectionService = new DbConnectionServiceImpl();
     private final ObservableList<DbConnection> dbConnections = FXCollections.observableArrayList();
@@ -74,6 +85,7 @@ public class DbConnectionViewModel implements Initializable {
         addFormListeners();
         loadEnvironments();
         refresh(); // Initial load
+        AppConfig.addChangeListener(this);
     }
 
     public void setMainViewModel(MainViewModel mainViewModel) {
@@ -81,6 +93,8 @@ public class DbConnectionViewModel implements Initializable {
     }
 
     public void refresh() {
+        // Reload environment list to ensure newly added environments appear in dropdown
+        loadEnvironments();
         loadConnections();
         
         // 默认选择第一行数据
@@ -97,6 +111,17 @@ public class DbConnectionViewModel implements Initializable {
     private void setupTable() {
         aliasColumn.setCellValueFactory(new PropertyValueFactory<>("alias"));
         descriptionColumn.setCellValueFactory(new PropertyValueFactory<>("description"));
+        descriptionColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
+        environmentColumn.setCellValueFactory(cellData -> {
+            Integer envId = cellData.getValue().getEnvironmentId();
+            String name = "";
+            if (envId != null) {
+                for (Environment e : environments) {
+                    if (e.getId() == envId) { name = e.getName(); break; }
+                }
+            }
+            return new SimpleStringProperty(name);
+        });
         dbConnectionTable.setItems(dbConnections);
         dbConnectionTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         
@@ -107,6 +132,7 @@ public class DbConnectionViewModel implements Initializable {
                 updateButton.setDisable(false);
                 deleteButton.setDisable(false);
                 duplicateButton.setDisable(false);
+                if (moveUpButton != null) moveUpButton.setDisable(false);
             } else {
                 updateButton.setDisable(true);
                 deleteButton.setDisable(true);
@@ -165,6 +191,12 @@ public class DbConnectionViewModel implements Initializable {
         }
     }
 
+    @Override
+    public void onConfigChanged() {
+        loadConnections();
+        loadEnvironments();
+    }
+
     private void loadEnvironments() {
         try {
             environments.setAll(environmentService.findAllEnvironments());
@@ -217,24 +249,19 @@ public class DbConnectionViewModel implements Initializable {
         toggleDbFields(null);
     }
     
-    private DbConnection getConnectionFromForm() {
-        DbConnection connection;
-        if (dbConnectionTable.getSelectionModel().getSelectedItem() != null) {
-            connection = dbConnectionTable.getSelectionModel().getSelectedItem();
-        } else {
-            connection = new DbConnection();
-        }
-
+    private void populateConnectionFromForm(DbConnection connection) {
         if (ProjectContext.getCurrentProjectId() == null) {
             showStatus("Error: No project selected. Please select a project first.", MainViewModel.StatusType.ERROR);
-            return null;
+            throw new IllegalStateException("No project selected.");
         }
 
         connection.setAlias(aliasField.getText());
         connection.setDescription(descriptionArea.getText());
         connection.setDbType(dbTypeCombo.getValue());
         connection.setHost(hostField.getText());
-        try { connection.setPort(Integer.parseInt(portField.getText())); } catch (NumberFormatException ignored) {
+        try {
+            connection.setPort(Integer.parseInt(portField.getText()));
+        } catch (NumberFormatException ignored) {
             connection.setPort(0);
         }
         connection.setDbName(dbNameField.getText());
@@ -247,8 +274,9 @@ public class DbConnectionViewModel implements Initializable {
         connection.setProjectId(ProjectContext.getCurrentProjectId());
         if (environmentCombo.getSelectionModel().getSelectedItem() != null) {
             connection.setEnvironmentId(environmentCombo.getSelectionModel().getSelectedItem().getId());
+        } else {
+            connection.setEnvironmentId(null);
         }
-        return connection;
     }
 
     @FXML
@@ -257,12 +285,20 @@ public class DbConnectionViewModel implements Initializable {
             return;
         }
         
-        DbConnection connection = getConnectionFromForm();
-        if (connection != null && connection.getId() == 0 && !connection.getAlias().isEmpty()) {
+        try {
+            DbConnection connection = new DbConnection();
+            populateConnectionFromForm(connection);
+
+            if (!connection.getAlias().isEmpty()) {
             dbConnectionService.addConnection(connection);
             loadConnections();
             clearForm();
             showStatus("Database connection added successfully.", MainViewModel.StatusType.SUCCESS);
+            }
+        } catch (IllegalStateException e) {
+            // Error already shown by populateConnectionFromForm
+        } catch (Exception e) {
+            showStatus("Failed to add connection: " + e.getMessage(), MainViewModel.StatusType.ERROR);
         }
     }
 
@@ -272,12 +308,19 @@ public class DbConnectionViewModel implements Initializable {
             return;
         }
         
-        DbConnection connection = getConnectionFromForm();
-        if (connection != null && connection.getId() > 0) {
+        DbConnection connection = dbConnectionTable.getSelectionModel().getSelectedItem();
+        if (connection != null) {
+            try {
+                populateConnectionFromForm(connection);
             dbConnectionService.updateConnection(connection);
             loadConnections();
             clearForm();
             showStatus("Database connection updated successfully.", MainViewModel.StatusType.SUCCESS);
+            } catch (IllegalStateException e) {
+                // Error already shown
+            } catch (Exception e) {
+                showStatus("Failed to update connection: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
         }
     }
 
@@ -377,11 +420,17 @@ public class DbConnectionViewModel implements Initializable {
             return;
         }
         
-        DbConnection testConn = getConnectionFromForm();
+        DbConnection testConn = new DbConnection();
+        try {
+            populateConnectionFromForm(testConn);
+        } catch (IllegalStateException e) {
+            return; // Error already shown
+        }
+
         if (testConn != null) {
             try {
                 // Evict from cache to ensure we test with fresh settings from the form
-                DataSourceRegistry.evict(testConn.getAlias());
+                DataSourceRegistry.evict(testConn.getAlias() + "@" + (testConn.getEnvironmentId()==null?"null":testConn.getEnvironmentId()));
 
                 // Create a temporary DataSource for testing
                 DataSource ds = DataSourceRegistry.get(testConn);
@@ -394,7 +443,7 @@ public class DbConnectionViewModel implements Initializable {
             } catch (Exception e) {
                 showStatus("Connection test failed: " + e.getMessage(), MainViewModel.StatusType.ERROR);
                 // Also evict on failure so a bad config isn't cached for next time
-                DataSourceRegistry.evict(testConn.getAlias());
+                DataSourceRegistry.evict(testConn.getAlias() + "@" + (testConn.getEnvironmentId()==null?"null":testConn.getEnvironmentId()));
             }
         }
     }
@@ -433,6 +482,31 @@ public class DbConnectionViewModel implements Initializable {
     private void showStatus(String message, MainViewModel.StatusType type) {
         if (mainViewModel != null) {
             mainViewModel.updateStatus(message, type);
+        }
+    }
+
+    // ========= Move Up/Down Handlers =========
+    @FXML
+    private void handleMoveUp() {
+        DbConnection selected = dbConnectionTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+        int idx = dbConnections.indexOf(selected);
+        if (idx > 0) {
+            dbConnections.remove(idx);
+            dbConnections.add(idx - 1, selected);
+            dbConnectionTable.getSelectionModel().select(idx - 1);
+        }
+    }
+
+    @FXML
+    private void handleMoveDown() {
+        DbConnection selected = dbConnectionTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+        int idx = dbConnections.indexOf(selected);
+        if (idx < dbConnections.size() - 1) {
+            dbConnections.remove(idx);
+            dbConnections.add(idx + 1, selected);
+            dbConnectionTable.getSelectionModel().select(idx + 1);
         }
     }
 } 

@@ -17,6 +17,7 @@ import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.impl.BodyTemplateServiceImpl;
 import com.qa.app.util.AppConfig;
 import com.qa.app.common.listeners.AppConfigChangeListener;
+import com.qa.app.ui.util.ClickableTooltipTableCell;
 import com.qa.app.ui.vm.gatling.TemplateValidator;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Alert.AlertType;
@@ -55,6 +56,12 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
     @FXML
     private Button validateButton;
 
+    @FXML
+    private Button moveUpButton;
+
+    @FXML
+    private Button moveDownButton;
+
     private final ObservableList<BodyTemplateItem> bodyTemplateList = FXCollections.observableArrayList();
     private final IBodyTemplateService bodyTemplateService = new BodyTemplateServiceImpl();
     private MainViewModel mainViewModel;
@@ -92,8 +99,42 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
             return row;
         });
         
-        // Truncate long content in the table and add a tooltip
-        setupContentColumnCellFactory();
+        bodyTemplateDescriptionColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
+        bodyTemplateContentColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
+
+        // Disable move buttons initially if empty
+        boolean disabled = bodyTemplateList.isEmpty();
+        if (moveUpButton != null) moveUpButton.setDisable(disabled);
+        if (moveDownButton != null) moveDownButton.setDisable(disabled);
+    }
+
+    // ============== Move Up / Down ==============
+    @FXML
+    private void handleMoveUp() {
+        BodyTemplateItem selected = bodyTemplateTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        int index = bodyTemplateList.indexOf(selected);
+        if (index > 0) {
+            BodyTemplateItem above = bodyTemplateList.get(index - 1);
+            bodyTemplateList.set(index - 1, selected);
+            bodyTemplateList.set(index, above);
+            bodyTemplateTable.getSelectionModel().select(index - 1);
+        }
+    }
+
+    @FXML
+    private void handleMoveDown() {
+        BodyTemplateItem selected = bodyTemplateTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        int index = bodyTemplateList.indexOf(selected);
+        if (index < bodyTemplateList.size() - 1) {
+            BodyTemplateItem below = bodyTemplateList.get(index + 1);
+            bodyTemplateList.set(index + 1, selected);
+            bodyTemplateList.set(index, below);
+            bodyTemplateTable.getSelectionModel().select(index + 1);
+        }
     }
     
     @Override
@@ -264,25 +305,6 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
         bodyTemplateTable.getSelectionModel().clearSelection();
     }
     
-    private void setupContentColumnCellFactory() {
-        bodyTemplateContentColumn.setCellFactory(col -> new TableCell<BodyTemplateItem, String>() {
-            private static final int MAX_LENGTH = 200;
-            private final Tooltip tooltip = new Tooltip();
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setTooltip(null);
-                } else {
-                    setText(item.length() > MAX_LENGTH ? item.substring(0, MAX_LENGTH) + "..." : item);
-                    tooltip.setText(item);
-                    setTooltip(tooltip);
-                }
-            }
-        });
-    }
-
     private void showContentInPopup(BodyTemplateItem item) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Body Content Detail");
@@ -326,7 +348,7 @@ public class BodyTemplateViewModel implements Initializable, AppConfigChangeList
     private void setDialogIcon(Alert alert) {
         Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
         try {
-            stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
+            stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.png")));
         } catch (Exception e) {
             // ignore
         }

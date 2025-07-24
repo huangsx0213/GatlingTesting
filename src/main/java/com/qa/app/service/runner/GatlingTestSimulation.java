@@ -21,7 +21,8 @@ import com.qa.app.model.BodyTemplate;
 import com.qa.app.model.HeadersTemplate;
 import com.qa.app.service.api.IDbConnectionService;
 import com.qa.app.service.impl.DbConnectionServiceImpl;
-import com.qa.app.util.OperatorUtil;
+import com.qa.app.model.Operator;
+import com.qa.app.util.AppConfig;
 
 import javax.sql.DataSource;
 import java.io.File;
@@ -50,13 +51,27 @@ public class GatlingTestSimulation extends Simulation {
     private final IDbConnectionService dbConnectionService = new DbConnectionServiceImpl();
     private static final String VARIABLES_PREFIX = "TEST_VARIABLES:";
     private static final String CHECK_REPORTS_KEY = "checkReports";
-    private static final List<String> RESPONSE_HEADERS_TO_CAPTURE = java.util.Arrays.asList(
-            "Content-Type",
-            "Set-Cookie",
-            "Location",
-            "Content-Length",
-            "Server"
-    );
+    private static final List<String> RESPONSE_HEADERS_TO_CAPTURE;
+
+    static {
+        String cfg = AppConfig.getProperty("capture.response.headers");
+        List<String> headers;
+        if (cfg != null && !cfg.isBlank()) {
+            headers = java.util.Arrays.stream(cfg.split("\\s*,\\s*"))
+                    .filter(s -> !s.isBlank())
+                    .toList();
+        } else {
+            headers = java.util.Arrays.asList(
+                    "Content-Type",
+                    "Server",
+                    "Location",
+                    "Content-Length",
+                    "Set-Cookie",
+                    "Date"
+            );
+        }
+        RESPONSE_HEADERS_TO_CAPTURE = java.util.Collections.unmodifiableList(headers);
+    }
 
 
     private static class BatchItem {
@@ -314,6 +329,25 @@ public class GatlingTestSimulation extends Simulation {
         GatlingTest test = item.test;
         Endpoint endpoint = item.endpoint;
 
+        // ===================== NEW: Re-resolve endpoint for SETUP / TEARDOWN =====================
+        if (item.getTestMode() == com.qa.app.model.reports.TestMode.SETUP ||
+            item.getTestMode() == com.qa.app.model.reports.TestMode.TEARDOWN) {
+            try {
+                // Re-fetch by name & current environment to ensure we get the correct URL template
+                if (test.getEndpointName() != null && !test.getEndpointName().isBlank()) {
+                    Integer envId = com.qa.app.service.EnvironmentContext.getCurrentEnvironmentId();
+                    EndpointDaoImpl epDao = new EndpointDaoImpl();
+                    Endpoint resolvedEp = epDao.getEndpointByNameAndEnv(test.getEndpointName(), envId);
+                    if (resolvedEp != null) {
+                        endpoint = resolvedEp;
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[WARN] Failed to resolve endpoint for SETUP/TEARDOWN: " + e.getMessage());
+            }
+        }
+        // =========================================================================================
+
         // Build composite key to ensure uniqueness across different origins.
         // For SETUP and TEARDOWN steps that may be shared by multiple main TCIDs,
         // include the origin TCID in the key: origin|tcid|mode. This prevents collisions
@@ -347,6 +381,9 @@ public class GatlingTestSimulation extends Simulation {
         String processedUrl = TestRunContext.processVariableReferences(endpoint.getUrl());
         // Then render user-defined @{var} placeholders
         processedUrl = RuntimeTemplateProcessor.render(processedUrl, test.getEndpointDynamicVariables());
+
+        // Capture the fully resolved URL once for lambdas to avoid non-final variable issue
+        final String resolvedUrl = processedUrl;
 
         switch (method) {
             case "POST":
@@ -424,16 +461,7 @@ public class GatlingTestSimulation extends Simulation {
                                     
                                     checkReport.setActual(actualStatus);
 
-                                    boolean checkPassed;
-                                    switch (currentCheck.getOperator()) {
-                                        case CONTAINS:
-                                            checkPassed = actualStatus.contains(currentCheck.getExpect());
-                                            break;
-                                        case IS:
-                                        default:
-                                            checkPassed = actualStatus.equals(currentCheck.getExpect());
-                                            break;
-                                    }
+                                    boolean checkPassed = evaluateOperator(currentCheck.getOperator(), actualStatus, currentCheck.getExpect());
                                     checkReport.setPassed(checkPassed);
 
                                     if (!checkPassed) {
@@ -480,31 +508,13 @@ public class GatlingTestSimulation extends Simulation {
 
                                 String actualValue;
                                 if (session.contains(saveAsKey)) {
-                                    Object rawValue = session.get(saveAsKey);
-                                    if (rawValue instanceof String) {
-                                        actualValue = (String) rawValue;
-                                    } else if (rawValue instanceof char[]) {
-                                        actualValue = new String((char[]) rawValue);
-                                    } else if (rawValue instanceof String[] arr) {
-                                        actualValue = arr.length > 0 ? arr[0] : "";
-                                    } else {
-                                        actualValue = String.valueOf(rawValue);
-                                    }
+                                    actualValue = convertToString(session.get(saveAsKey));
                                 } else {
                                     actualValue = "Path not found";
                                 }
                                 checkReport.setActual(actualValue);
-                                    
-                                boolean checkPassed;
-                                switch (currentCheck.getOperator()) {
-                                    case CONTAINS:
-                                        checkPassed = actualValue.contains(currentCheck.getExpect());
-                                        break;
-                                    case IS:
-                                    default:
-                                        checkPassed = actualValue.equals(currentCheck.getExpect());
-                                        break;
-                                }
+                                
+                                boolean checkPassed = evaluateOperator(currentCheck.getOperator(), actualValue, currentCheck.getExpect());
                                 checkReport.setPassed(checkPassed);
 
                                 if (!checkPassed) {
@@ -579,7 +589,11 @@ public class GatlingTestSimulation extends Simulation {
                                     dbInfoForReport.put("column", column);
                                     checkReport.setExpression(new ObjectMapper().writeValueAsString(dbInfoForReport));
 
-                                    DbConnection connConfig = dbConnectionService.findByAlias(alias);
+                                    Integer envIdForConn = com.qa.app.service.EnvironmentContext.getCurrentEnvironmentId();
+                                    DbConnection connConfig = dbConnectionService.findByAliasAndEnv(alias, envIdForConn);
+                                    if (connConfig == null) { // Fallback to env-agnostic for backward compatibility
+                                        connConfig = dbConnectionService.findByAlias(alias);
+                                    }
                                     if (connConfig == null) {
                                         throw new RuntimeException("DB Connection alias not found: " + alias);
                                     }
@@ -602,7 +616,7 @@ public class GatlingTestSimulation extends Simulation {
                                         }
                                     }
 
-                                    checkPassed = OperatorUtil.compare(actualValue, currentCheck.getOperator(), currentCheck.getExpect());
+                                    checkPassed = evaluateOperator(currentCheck.getOperator(), actualValue, currentCheck.getExpect());
                                     
                                     if (!checkPassed) {
                                         if (!currentCheck.isOptional()) {
@@ -672,7 +686,7 @@ public class GatlingTestSimulation extends Simulation {
             // 1. Build RequestInfo (with resolved variables)
             RequestInfo requestInfo = new RequestInfo();
             requestInfo.setMethod(method);
-            requestInfo.setUrl(endpoint.getUrl());
+            requestInfo.setUrl(resolvedUrl);
 
             // Re-process templates to get the resolved values for the report
             String finalHeaders = RuntimeTemplateProcessor.render(test.getHeaders(), test.getHeadersDynamicVariables());
@@ -704,7 +718,7 @@ public class GatlingTestSimulation extends Simulation {
                 responseInfo.setSizeBytes((long) session.getInt("sizeBytes"));
             }
             // 由于技术限制，我们无法直接获取所有响应头
-            Map<String, String> capturedHeaders = new HashMap<>();
+            Map<String, String> capturedHeaders = new java.util.LinkedHashMap<>();
             for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
                 String key = "respHeader_" + headerName.replace("-", "_");
                 if (session.contains(key)) {
@@ -798,7 +812,12 @@ public class GatlingTestSimulation extends Simulation {
 
             String refName = test.getTcid() + "." + refTcid + "_PRE";
             String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
-            String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), java.util.Collections.emptyMap());
+            java.util.Map<String,String> dynVars = (refTest != null && refTest.getEndpointDynamicVariables() != null)
+                    ? refTest.getEndpointDynamicVariables()
+                    : java.util.Collections.emptyMap();
+            String refUrl = RuntimeTemplateProcessor.render(
+                    TestRunContext.processVariableReferences(refEndpoint.getUrl()),
+                    dynVars);
 
             HttpRequestActionBuilder refReq;
             switch (refMethod) {
@@ -940,31 +959,13 @@ public class GatlingTestSimulation extends Simulation {
                     String saveKey = cr.getActual(); // The key was stored in the actual field
                     String actualValue = "<NOT FOUND>";
                     if (s.contains(saveKey)) {
-                        Object rawValue = s.get(saveKey);
-                        if (rawValue instanceof String) {
-                            actualValue = (String) rawValue;
-                        } else if (rawValue instanceof char[]) {
-                            actualValue = new String((char[]) rawValue);
-                        } else if (rawValue instanceof String[] arr) {
-                            actualValue = arr.length > 0 ? arr[0] : "";
-                        } else {
-                            actualValue = String.valueOf(rawValue);
-                        }
+                        actualValue = convertToString(s.get(saveKey));
                         // Remove the key from session
                         s = s.remove(saveKey);
                     }
                     
                     cr.setActual(actualValue);
-                    boolean passed;
-                    switch (cr.getOperator()) {
-                        case CONTAINS:
-                            passed = actualValue.contains(cr.getExpect());
-                            break;
-                        case IS:
-                        default:
-                            passed = actualValue.equals(cr.getExpect());
-                            break;
-                    }
+                    boolean passed = evaluateOperator(cr.getOperator(), actualValue, cr.getExpect());
                     cr.setPassed(passed);
                     finalChecks.add(cr);
                 }
@@ -1030,7 +1031,12 @@ public class GatlingTestSimulation extends Simulation {
 
             String refName = test.getTcid() + "." + refTcid + "_PRE_CHECK";
             String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
-            String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), java.util.Collections.emptyMap());
+            java.util.Map<String,String> dynVarsPre = (refTest != null && refTest.getEndpointDynamicVariables() != null)
+                    ? refTest.getEndpointDynamicVariables()
+                    : java.util.Collections.emptyMap();
+            String refUrl = RuntimeTemplateProcessor.render(
+                    TestRunContext.processVariableReferences(refEndpoint.getUrl()),
+                    dynVarsPre);
 
             HttpRequestActionBuilder refReq;
             switch (refMethod) {
@@ -1170,35 +1176,12 @@ public class GatlingTestSimulation extends Simulation {
                     String saveKey = cr.getActual(); // The key was stored in the actual field
                     String actualValue = "<NOT FOUND>";
                     if (s.contains(saveKey)) {
-                        Object rawValue = s.get(saveKey);
-                        if (rawValue instanceof String) {
-                            actualValue = (String) rawValue;
-                        } else if (rawValue instanceof char[]) {
-                            actualValue = new String((char[]) rawValue);
-                        } else if (rawValue instanceof String[] arr) {
-                            actualValue = arr.length > 0 ? arr[0] : "";
-                        } else {
-                            actualValue = String.valueOf(rawValue);
-                        }
+                        actualValue = convertToString(s.get(saveKey));
                         s = s.remove(saveKey);
                     }
 
                     cr.setActual(actualValue);
-                    boolean passed;
-                    switch (cr.getOperator()) {
-                        case CONTAINS:
-                            passed = actualValue.contains(cr.getExpect());
-                            break;
-                        case MATCHES:
-                            try {
-                                passed = actualValue.matches(cr.getExpect());
-                            } catch (Exception e) { passed = false; }
-                            break;
-                        case IS:
-                        default:
-                            passed = actualValue.equals(cr.getExpect());
-                            break;
-                    }
+                    boolean passed = evaluateOperator(cr.getOperator(), actualValue, cr.getExpect());
                     cr.setPassed(passed);
                     finalChecks.add(cr);
                 }
@@ -1270,7 +1253,12 @@ public class GatlingTestSimulation extends Simulation {
 
             String refName = test.getTcid() + "." + refTcid + "_PST";
             String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
-            String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), java.util.Collections.emptyMap());
+            java.util.Map<String,String> dynVarsAfter = (refTestAfter != null && refTestAfter.getEndpointDynamicVariables() != null)
+                    ? refTestAfter.getEndpointDynamicVariables()
+                    : java.util.Collections.emptyMap();
+            String refUrl = RuntimeTemplateProcessor.render(
+                    TestRunContext.processVariableReferences(refEndpoint.getUrl()),
+                    dynVarsAfter);
 
             HttpRequestActionBuilder refReq;
             switch (refMethod) {
@@ -1410,31 +1398,13 @@ public class GatlingTestSimulation extends Simulation {
                     String saveKey = cr.getActual(); // The key was stored in the actual field
                     String actualValue = "<NOT FOUND>";
                     if (s.contains(saveKey)) {
-                        Object rawValue = s.get(saveKey);
-                        if (rawValue instanceof String) {
-                            actualValue = (String) rawValue;
-                        } else if (rawValue instanceof char[]) {
-                            actualValue = new String((char[]) rawValue);
-                        } else if (rawValue instanceof String[] arr) {
-                            actualValue = arr.length > 0 ? arr[0] : "";
-                        } else {
-                            actualValue = String.valueOf(rawValue);
-                        }
+                        actualValue = convertToString(s.get(saveKey));
                         // Remove the key from session
                         s = s.remove(saveKey);
                     }
                     
                     cr.setActual(actualValue);
-                    boolean passed;
-                    switch (cr.getOperator()) {
-                        case CONTAINS:
-                            passed = actualValue.contains(cr.getExpect());
-                            break;
-                        case IS:
-                        default:
-                            passed = actualValue.equals(cr.getExpect());
-                            break;
-                    }
+                    boolean passed = evaluateOperator(cr.getOperator(), actualValue, cr.getExpect());
                     cr.setPassed(passed);
                     finalChecksAfter.add(cr);
                 }
@@ -1500,7 +1470,12 @@ public class GatlingTestSimulation extends Simulation {
 
             String refName = test.getTcid() + "." + refTcid + "_PST_CHECK";
             String refMethod = refEndpoint.getMethod() == null ? "GET" : refEndpoint.getMethod().toUpperCase();
-            String refUrl = RuntimeTemplateProcessor.render(TestRunContext.processVariableReferences(refEndpoint.getUrl()), java.util.Collections.emptyMap());
+            java.util.Map<String,String> dynVarsPst = (refTest != null && refTest.getEndpointDynamicVariables() != null)
+                    ? refTest.getEndpointDynamicVariables()
+                    : java.util.Collections.emptyMap();
+            String refUrl = RuntimeTemplateProcessor.render(
+                    TestRunContext.processVariableReferences(refEndpoint.getUrl()),
+                    dynVarsPst);
 
             HttpRequestActionBuilder refReq;
             switch (refMethod) {
@@ -1640,35 +1615,12 @@ public class GatlingTestSimulation extends Simulation {
                     String saveKey = cr.getActual(); // The key was stored in the actual field
                     String actualValue = "<NOT FOUND>";
                     if (s.contains(saveKey)) {
-                        Object rawValue = s.get(saveKey);
-                        if (rawValue instanceof String) {
-                            actualValue = (String) rawValue;
-                        } else if (rawValue instanceof char[]) {
-                            actualValue = new String((char[]) rawValue);
-                        } else if (rawValue instanceof String[] arr) {
-                            actualValue = arr.length > 0 ? arr[0] : "";
-                        } else {
-                            actualValue = String.valueOf(rawValue);
-                        }
+                        actualValue = convertToString(s.get(saveKey));
                         s = s.remove(saveKey);
                     }
 
                     cr.setActual(actualValue);
-                    boolean passed;
-                    switch (cr.getOperator()) {
-                        case CONTAINS:
-                            passed = actualValue.contains(cr.getExpect());
-                            break;
-                        case MATCHES:
-                            try {
-                                passed = actualValue.matches(cr.getExpect());
-                            } catch (Exception e) { passed = false; }
-                            break;
-                        case IS:
-                        default:
-                            passed = actualValue.equals(cr.getExpect());
-                            break;
-                    }
+                    boolean passed = evaluateOperator(cr.getOperator(), actualValue, cr.getExpect());
                     cr.setPassed(passed);
                     finalChecks.add(cr);
                 }
@@ -1760,28 +1712,7 @@ public class GatlingTestSimulation extends Simulation {
                 
                 boolean passed = false;
                 if (diffVal != null) {
-                    switch (dc.getOperator()) {
-                        case IS -> {
-                            // Compare numeric values when possible
-                            try {
-                                double expectNum = Double.parseDouble(dc.getExpect());
-                                passed = Math.abs(diffVal - expectNum) < 0.0001; // Allow small floating point difference
-                            } catch (NumberFormatException e) {
-                                // Fallback to string comparison
-                                passed = String.valueOf(diffVal).equals(dc.getExpect());
-                            }
-                        }
-                        case CONTAINS -> passed = String.valueOf(diffVal).contains(dc.getExpect());
-                        case MATCHES -> {
-                            try {
-                                passed = String.valueOf(diffVal).matches(dc.getExpect());
-                            } catch (Exception e) {
-                                // Invalid regex
-                                passed = false;
-                            }
-                        }
-                        default -> passed = false;
-                    }
+                    passed = evaluateOperator(dc.getOperator(), actualValue, expectValue);
                 }
                 cr.setPassed(passed);
 
@@ -1806,19 +1737,7 @@ public class GatlingTestSimulation extends Simulation {
                 
                 boolean passed = false;
                 if (preValue != null) {
-                    switch (pc.getOperator()) {
-                        case IS -> passed = preValue.equals(pc.getExpect());
-                        case CONTAINS -> passed = preValue.contains(pc.getExpect());
-                        case MATCHES -> {
-                            try {
-                                passed = preValue.matches(pc.getExpect());
-                            } catch (Exception e) {
-                                // Invalid regex
-                                passed = false;
-                            }
-                        }
-                        default -> passed = false;
-                    }
+                    passed = evaluateOperator(pc.getOperator(), actualValue, pc.getExpect());
                 }
                 cr.setPassed(passed);
 
@@ -1843,19 +1762,7 @@ public class GatlingTestSimulation extends Simulation {
                 
                 boolean passed = false;
                 if (pstValue != null) {
-                    switch (pc.getOperator()) {
-                        case IS -> passed = pstValue.equals(pc.getExpect());
-                        case CONTAINS -> passed = pstValue.contains(pc.getExpect());
-                        case MATCHES -> {
-                            try {
-                                passed = pstValue.matches(pc.getExpect());
-                            } catch (Exception e) {
-                                // Invalid regex
-                                passed = false;
-                            }
-                        }
-                        default -> passed = false;
-                    }
+                    passed = evaluateOperator(pc.getOperator(), actualValue, pc.getExpect());
                 }
                 cr.setPassed(passed);
 
@@ -2007,14 +1914,12 @@ public class GatlingTestSimulation extends Simulation {
         try {
             EndpointDaoImpl epDao = new EndpointDaoImpl();
             Endpoint ep = null;
-            if (refTest.getEndpointId() > 0) {
-                ep = epDao.getEndpointById(refTest.getEndpointId());
-            }
-            if (ep == null && refTest.getEndpointName() != null) {
-                ep = epDao.getEndpointByName(refTest.getEndpointName());
+            if (refTest.getEndpointName() != null) {
+                Integer envId = com.qa.app.service.EnvironmentContext.getCurrentEnvironmentId();
+                ep = epDao.getEndpointByNameAndEnv(refTest.getEndpointName(), envId);
             }
 
-            // Ensure environment / project matches when both sides有值
+            // Ensure environment / project matches when both sides have a value
             if (ep != null && originEndpoint != null) {
                 if (originEndpoint.getEnvironmentId() != null && ep.getEnvironmentId() != null
                         && !originEndpoint.getEnvironmentId().equals(ep.getEnvironmentId())) {
@@ -2048,5 +1953,32 @@ public class GatlingTestSimulation extends Simulation {
                 if (ht != null) t.setHeaders(ht.getContent());
             }
         } catch (Exception ignored) {}
+    }
+
+    private static String convertToString(Object rawValue) {
+        if (rawValue instanceof String) {
+            return (String) rawValue;
+        } else if (rawValue instanceof char[]) {
+            return new String((char[]) rawValue);
+        } else if (rawValue instanceof String[] arr) {
+            return arr.length > 0 ? arr[0] : "";
+        } else {
+            return String.valueOf(rawValue);
+        }
+    }
+
+    private static boolean evaluateOperator(Operator op, String actual, String expect) {
+        return switch (op) {
+            case CONTAINS -> actual.contains(expect);
+            case MATCHES -> {
+                try {
+                    yield actual.matches(expect);
+                } catch (Exception e) {
+                    yield false;
+                }
+            }
+            case IS -> actual.equals(expect);
+            default -> false;
+        };
     }
 } 

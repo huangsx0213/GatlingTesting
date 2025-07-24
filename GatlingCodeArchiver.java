@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
  * and import (restore) code from that HTML.
  *
  * 1. Export (default):
- *    java GatlingCodeArchiver export [<projectDir>.] [<outputHtml> gatling.code.html]
+ *    java GatlingCodeArchiver export [<projectDir>] [<outputHtml>]
  *
  * 2. Import:
  *    java GatlingCodeArchiver import <inputHtml> <targetDir>
@@ -25,26 +25,44 @@ public class GatlingCodeArchiver {
 
     /* ---------- Config ---------- */
     private static final Set<String> TEXT_EXTENSIONS = Set.of(
-            "java", "xml", "properties", "conf", "config", "txt", "fxml", "css", "md", "json", "yml", "yaml");
+            "java", "xml", "properties", "conf", "config", "txt", "fxml", "css", "md", "json", "yml", "yaml","png","js");
     private static final List<String> EXCLUDE_DIRS = List.of(
             ".git", "target", ".idea", "out", "logs", ".cursor", ".vscode");
 
     /* ---------- Entry ---------- */
     public static void main(String[] args) throws Exception {
         if (args.length == 0 || "export".equalsIgnoreCase(args[0])) {
-            Path project = args.length > 1 ? Paths.get(args[1]) : Paths.get(".");
-            Path out = args.length > 2 ? Paths.get(args[2]) : Paths.get("gatling.code.html");
+            // 默认项目目录为当前目录
+            String projectPath = ".";
+            String outputPath = "gatling.code.html";
+            
+            if (args.length > 1) {
+                projectPath = args[1];
+            }
+            if (args.length > 2) {
+                outputPath = args[2];
+            }
+            
+            Path project = Paths.get(projectPath);
+            Path out = Paths.get(outputPath);
             exportHtml(project, out);
         } else if ("import".equalsIgnoreCase(args[0])) {
-            if (args.length < 3) {
-                System.out.println("Usage: import <inputHtml> <targetDir>");
+            if (args.length < 2) {
+                System.out.println("Usage: import <inputHtml> [<targetDir>]");
                 return;
             }
             Path html = Paths.get(args[1]);
-            Path target = Paths.get(args[2]);
+            
+            // 默认目标目录为当前目录下的 import 文件夹
+            String targetPath = "./import";
+            if (args.length > 2) {
+                targetPath = args[2];
+            }
+            
+            Path target = Paths.get(targetPath);
             importFromHtml(html, target);
         } else {
-            System.out.println("Unknown command. Usage:\n  export [projectDir] [outputHtml]\n  import <inputHtml> <targetDir>");
+            System.out.println("Unknown command. Usage:\n  export [projectDir] [outputHtml]\n  import <inputHtml> [targetDir]");
         }
     }
 
@@ -63,14 +81,18 @@ public class GatlingCodeArchiver {
         String packagedText = pkgBuilder.toString();
 
         // Read this class's source (best effort)
-        Path selfSrcPath = root.resolve("GatlingCodeArchiver.java");
+        Path selfSrcPath = root.resolve("src/main/java/com/qa/app/util/GatlingCodeArchiver.java");
         String selfSource = "";
         if (Files.exists(selfSrcPath)) {
             selfSource = Files.readString(selfSrcPath, StandardCharsets.UTF_8);
         } else {
-            Path alt = root.resolve("GatlingCodeArchiver.java");
-            if (Files.exists(alt)) {
-                selfSource = Files.readString(alt, StandardCharsets.UTF_8);
+            // Try alternative paths
+            Path alt1 = root.resolve("GatlingCodeArchiver.java");
+            Path alt2 = root.resolve("src/GatlingCodeArchiver.java");
+            if (Files.exists(alt1)) {
+                selfSource = Files.readString(alt1, StandardCharsets.UTF_8);
+            } else if (Files.exists(alt2)) {
+                selfSource = Files.readString(alt2, StandardCharsets.UTF_8);
             }
         }
 
@@ -153,8 +175,18 @@ public class GatlingCodeArchiver {
 
     /* ---------- HTML template ---------- */
     private static String buildHtml(String packagedText, String archiverSource) {
-        String usage = "java GatlingCodeArchiver.java export . gatling.code.html\n" +
-                       "java GatlingCodeArchiver.java import gatling.code.html restoredDir";
+        String usage = "Export Examples:\n" +
+                       "  java GatlingCodeArchiver.java export\n" +
+                       "  java GatlingCodeArchiver.java export /path/to/project\n" +
+                       "  java GatlingCodeArchiver.java export /path/to/project /path/to/output.html\n" +
+                       "\n" +
+                       "Import Examples:\n" +
+                       "  java GatlingCodeArchiver.java import input.html\n" +
+                       "  java GatlingCodeArchiver.java import input.html /path/to/restored/dir\n" +
+                       "\n" +
+                       "Defaults:\n" +
+                       "  Export: current directory -> gatling.code.html\n" +
+                       "  Import: -> ./import directory";
 
         String safePkg = packagedText.replace("</script>", "<\\/script>");
         String safeSrc = archiverSource.replace("</script>", "<\\/script>");
@@ -208,4 +240,4 @@ public class GatlingCodeArchiver {
                 </html>
                 """.formatted(usage, safePkg, safeSrc);
     }
-} 
+}

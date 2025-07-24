@@ -11,7 +11,17 @@ import com.qa.app.dao.util.DBUtil;
 public class EndpointDaoImpl implements IEndpointDao {
     @Override
     public void addEndpoint(Endpoint endpoint) throws SQLException {
-        String sql = "INSERT INTO endpoints (name, method, url, environment_id, project_id) VALUES (?, ?, ?, ?, ?)";
+        // Determine next display order
+        int nextOrder = 1;
+        try (Connection conn = DBUtil.getConnection();
+             Statement stmt = conn.createStatement()) {
+            ResultSet rs = stmt.executeQuery("SELECT MAX(display_order) FROM endpoints");
+            if (rs.next()) {
+                nextOrder = rs.getInt(1) + 1;
+            }
+        }
+
+        String sql = "INSERT INTO endpoints (name, method, url, environment_id, project_id, display_order) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, endpoint.getName());
@@ -27,6 +37,7 @@ public class EndpointDaoImpl implements IEndpointDao {
             } else {
                 pstmt.setNull(5, java.sql.Types.INTEGER);
             }
+            pstmt.setInt(6, nextOrder);
             pstmt.executeUpdate();
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
@@ -38,7 +49,7 @@ public class EndpointDaoImpl implements IEndpointDao {
 
     @Override
     public void updateEndpoint(Endpoint endpoint) throws SQLException {
-        String sql = "UPDATE endpoints SET name = ?, method = ?, url = ?, environment_id = ?, project_id = ? WHERE id = ?";
+        String sql = "UPDATE endpoints SET name = ?, method = ?, url = ?, environment_id = ?, project_id = ?, display_order = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, endpoint.getName());
@@ -54,7 +65,8 @@ public class EndpointDaoImpl implements IEndpointDao {
             } else {
                 pstmt.setNull(5, java.sql.Types.INTEGER);
             }
-            pstmt.setInt(6, endpoint.getId());
+            pstmt.setInt(6, endpoint.getDisplayOrder());
+            pstmt.setInt(7, endpoint.getId());
             pstmt.executeUpdate();
         }
     }
@@ -99,6 +111,31 @@ public class EndpointDaoImpl implements IEndpointDao {
         return null;
     }
 
+    private Endpoint mapRowToEndpoint(ResultSet rs) throws SQLException {
+        Endpoint endpoint = new Endpoint();
+        endpoint.setId(rs.getInt("id"));
+        endpoint.setName(rs.getString("name"));
+        endpoint.setMethod(rs.getString("method"));
+        endpoint.setUrl(rs.getString("url"));
+        endpoint.setEnvironmentId(rs.getObject("environment_id") == null ? null : rs.getInt("environment_id"));
+        endpoint.setProjectId(rs.getObject("project_id") == null ? null : rs.getInt("project_id"));
+        return endpoint;
+    }
+
+    @Override
+    public List<Endpoint> getEndpointsByName(String name) throws SQLException {
+        String sql = "SELECT * FROM endpoints WHERE name = ?";
+        try (Connection conn = DBUtil.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            ResultSet rs = pstmt.executeQuery();
+            List<Endpoint> endpoints = new ArrayList<>();
+            while (rs.next()) {
+                endpoints.add(mapRowToEndpoint(rs));
+            }
+            return endpoints;
+        }
+    }
+
     @Override
     public Endpoint getEndpointByNameAndEnv(String name, Integer environmentId) throws SQLException {
         String sql = "SELECT * FROM endpoints WHERE name = ? AND environment_id " + (environmentId == null ? "IS NULL" : "= ?") ;
@@ -119,7 +156,7 @@ public class EndpointDaoImpl implements IEndpointDao {
 
     @Override
     public List<Endpoint> getAllEndpoints() throws SQLException {
-        String sql = "SELECT * FROM endpoints ORDER BY id";
+        String sql = "SELECT * FROM endpoints ORDER BY display_order";
         List<Endpoint> list = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection();
              Statement stmt = conn.createStatement();
@@ -132,7 +169,7 @@ public class EndpointDaoImpl implements IEndpointDao {
     }
 
     public List<Endpoint> getEndpointsByProjectId(Integer projectId) throws SQLException {
-        String sql = "SELECT * FROM endpoints WHERE project_id = ? ORDER BY id";
+        String sql = "SELECT * FROM endpoints WHERE project_id = ? ORDER BY display_order";
         List<Endpoint> list = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -147,7 +184,7 @@ public class EndpointDaoImpl implements IEndpointDao {
     }
 
     private Endpoint createFromResultSet(ResultSet rs) throws SQLException {
-        return new Endpoint(
+        Endpoint e = new Endpoint(
                 rs.getInt("id"),
                 rs.getString("name"),
                 rs.getString("method"),
@@ -155,5 +192,23 @@ public class EndpointDaoImpl implements IEndpointDao {
                 rs.getObject("environment_id") == null ? null : rs.getInt("environment_id"),
                 rs.getObject("project_id") == null ? null : rs.getInt("project_id")
         );
+        e.setDisplayOrder(rs.getInt("display_order"));
+        return e;
+    }
+
+    // --- New method to batch update order ---
+    public void updateOrder(List<Endpoint> endpoints) throws SQLException {
+        String sql = "UPDATE endpoints SET display_order = ? WHERE id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            conn.setAutoCommit(false);
+            for (Endpoint e : endpoints) {
+                pstmt.setInt(1, e.getDisplayOrder());
+                pstmt.setInt(2, e.getId());
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+            conn.commit();
+        }
     }
 } 

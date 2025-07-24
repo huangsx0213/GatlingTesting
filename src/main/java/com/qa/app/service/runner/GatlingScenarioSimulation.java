@@ -7,6 +7,7 @@ import com.qa.app.model.threadgroups.*;
 import com.qa.app.service.api.IDbConnectionService;
 import com.qa.app.service.impl.DbConnectionServiceImpl;
 import com.qa.app.util.OperatorUtil;
+
 import io.gatling.javaapi.core.*;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import io.gatling.javaapi.http.HttpRequestActionBuilder;
@@ -232,7 +233,11 @@ public class GatlingScenarioSimulation extends Simulation {
                         column = checkInfo.getColumn();
                     }
 
-                    DbConnection connConfig = dbConnectionService.findByAlias(alias);
+                    Integer envIdForConn = com.qa.app.service.EnvironmentContext.getCurrentEnvironmentId();
+                    DbConnection connConfig = dbConnectionService.findByAliasAndEnv(alias, envIdForConn);
+                    if (connConfig == null) {
+                        connConfig = dbConnectionService.findByAlias(alias);
+                    }
                     if (connConfig == null) {
                         throw new RuntimeException("DB Connection alias not found: " + alias);
                     }

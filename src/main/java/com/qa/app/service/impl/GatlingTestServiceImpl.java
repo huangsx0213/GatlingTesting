@@ -16,6 +16,7 @@ import com.qa.app.model.BodyTemplate;
 import com.qa.app.model.HeadersTemplate;
 import com.qa.app.service.api.IBodyTemplateService;
 import com.qa.app.service.api.IHeadersTemplateService;
+import com.qa.app.service.EnvironmentContext;
 
 public class GatlingTestServiceImpl implements IGatlingTestService {
 
@@ -46,9 +47,8 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
     }
 
     private void validateTestBasicFields(GatlingTest test) throws ServiceException {
-        boolean endpointInfoMissing = (test.getEndpointId() <= 0) && isBlank(test.getEndpointName());
-        if (test == null || isBlank(test.getTcid()) || isBlank(test.getSuite()) || endpointInfoMissing) {
-            throw new ServiceException("Test validation failed: TCID, Suite, and Endpoint (ID or Name) are required.");
+        if (test == null || isBlank(test.getTcid()) || isBlank(test.getSuite()) || isBlank(test.getEndpointName())) {
+            throw new ServiceException("Test validation failed: TCID, Suite, and Endpoint Name are required.");
         }
     }
 
@@ -98,8 +98,8 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
             if (test == null || test.getId() <= 0 ||
                 test.getTcid() == null || test.getTcid().trim().isEmpty() ||
                 test.getSuite() == null || test.getSuite().trim().isEmpty() ||
-                (test.getEndpointId() <= 0 && (test.getEndpointName() == null || test.getEndpointName().trim().isEmpty()))) {
-                throw new ServiceException("Test validation failed: ID, TCID, Suite, and Endpoint (ID or Name) are required.");
+                (test.getEndpointName() == null || test.getEndpointName().trim().isEmpty())) {
+                throw new ServiceException("Test validation failed: ID, TCID, Suite, and Endpoint Name are required.");
             }
             GatlingTest existingTest = testDao.getTestById(test.getId());
             if (existingTest == null) {
@@ -110,6 +110,10 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
                 if (testWithSameTcid != null && testWithSameTcid.getId() != test.getId()) {
                     throw new ServiceException("Test with TCID '" + test.getTcid() + "' already exists.");
                 }
+            }
+            // If the endpoint dynamic variables are not set, use the existing ones
+            if (test.getEndpointDynamicVariables() != null && test.getEndpointDynamicVariables().isEmpty()) {
+                test.setEndpointDynamicVariables(existingTest.getEndpointDynamicVariables());
             }
             testDao.updateTest(test);
         } catch (SQLException e) {
@@ -163,29 +167,26 @@ public class GatlingTestServiceImpl implements IGatlingTestService {
 
             Endpoint endpoint = null;
             try {
-                if (test.getEndpointId() > 0) {
-                    endpoint = endpointService.getEndpointById(test.getEndpointId());
-                }
-                if (endpoint == null) {
-                    endpoint = endpointService.getEndpointByName(test.getEndpointName());
-                }
+                Integer envId = EnvironmentContext.getCurrentEnvironmentId();
+                endpoint = endpointService.getEndpointByNameAndEnv(test.getEndpointName(), envId);
+
             } catch (Exception ex) {
                 throw new ServiceException("Error retrieving endpoint for test: " + test.getTcid() + ": " + ex.getMessage(), ex);
             }
 
             if (endpoint == null) {
-                throw new ServiceException("Endpoint not found for test: " + test.getTcid());
+                throw new ServiceException("Endpoint '" + test.getEndpointName() + "' not found in current environment for test: " + test.getTcid());
             }
 
             endpoints.add(endpoint);
         }
 
         try {
-            GatlingTestRunner.executeBatch(executionList, params, endpoints,
+            GatlingTestRunner.executeGatlingTests(executionList, params, endpoints,
                     expanded.origins, expanded.modes, onComplete);
 
         } catch (Exception e) {
-            throw new ServiceException("Failed to run Gatling batch tests: " + e.getMessage(), e);
+            throw new ServiceException("Failed to run Gatling tests: " + e.getMessage(), e);
         }
     }
 

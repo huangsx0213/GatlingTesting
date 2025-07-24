@@ -1,9 +1,9 @@
-package com.qa.app.service.script;
+package com.qa.app.service.util;
 
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IVariableService;
 import com.qa.app.service.impl.VariableServiceImpl;
-import com.qa.app.util.HelpTooltipManager;
+import com.qa.app.ui.util.HelpTooltipManager;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -280,4 +280,4 @@ public class VariableGenerator {
     public void setCustomVariables(List<GroovyScriptEngine> customVariables) {
         this.customVariables = customVariables;
     }
-}
+} 

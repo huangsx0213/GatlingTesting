@@ -95,6 +95,24 @@ public class DbConnectionDaoImpl implements IDbConnectionDao {
     }
 
     @Override
+    public DbConnection getByAliasAndEnv(String alias, Integer environmentId) {
+        String sql = "SELECT * FROM db_connections WHERE alias = ? AND environment_id " + (environmentId == null ? "IS NULL" : "= ?");
+        try (Connection conn = DBUtil.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, alias);
+            if (environmentId != null) {
+                pstmt.setInt(2, environmentId);
+            }
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return mapRowToDbConnection(rs);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
+    @Override
     public List<DbConnection> findAll() {
         List<DbConnection> connections = new ArrayList<>();
         String sql = "SELECT * FROM db_connections";

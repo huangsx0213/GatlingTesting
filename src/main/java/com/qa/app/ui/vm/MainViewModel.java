@@ -30,6 +30,7 @@ import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IProjectService;
 import com.qa.app.service.impl.ProjectServiceImpl;
 import com.qa.app.util.AppConfig;
+
 import javafx.application.Platform;
 
 public class MainViewModel implements Initializable {
@@ -47,6 +48,12 @@ public class MainViewModel implements Initializable {
     @FXML
     private Label currentFeatureLabel;
 
+    @FXML
+    private Label currentProjectLabel;
+
+    @FXML
+    private Label currentEnvironmentLabel;
+
     private final ObservableList<String> navItems = FXCollections.observableArrayList(
         "Gatling Test Management",
         "Gatling Scenario Management",
@@ -55,10 +62,11 @@ public class MainViewModel implements Initializable {
         "Endpoint Management",
         "Headers Template Management",
         "Body Template Management",
-        "Environment Management",
         "DB Connections Mgmt",
+        "Environment Management",
         "Project Management",
         "Variables Management",
+        "Variable Transform Mgmt",
         "Application Properties"
     );
     private final Map<String, String> fxmlMapping = new HashMap<>();
@@ -79,7 +87,8 @@ public class MainViewModel implements Initializable {
             "Project Management",
             "Variables Management",
             "DB Connections Mgmt",
-            "Application Properties"
+            "Application Properties",
+            "Variable Transform Mgmt"
     ));
 
     // Enum for status types
@@ -102,6 +111,7 @@ public class MainViewModel implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         reinitialize();
         loadAndSetCurrentProject();
+        updateEnvironmentLabel();
         AppConfig.addChangeListener(this::onConfigChanged);
         
         // Force refresh the initial tab content
@@ -122,7 +132,10 @@ public class MainViewModel implements Initializable {
     }
 
     private void onConfigChanged() {
-        Platform.runLater(this::loadAndSetCurrentProject);
+        Platform.runLater(() -> {
+            loadAndSetCurrentProject();
+            updateEnvironmentLabel();
+        });
     }
 
     public void reinitialize() {
@@ -136,6 +149,7 @@ public class MainViewModel implements Initializable {
         fxmlMapping.put("DB Connections Mgmt", "/com/qa/app/ui/view/db_connection_view.fxml");
         fxmlMapping.put("Project Management", "/com/qa/app/ui/view/project_view.fxml");
         fxmlMapping.put("Variables Management", "/com/qa/app/ui/view/groovy_variable_view.fxml");
+        fxmlMapping.put("Variable Transform Mgmt", "/com/qa/app/ui/view/variable_transform_method_view.fxml");
         fxmlMapping.put("Gatling Scenario Management", "/com/qa/app/ui/view/gatling_scenario_view.fxml");
         fxmlMapping.put("Application Properties", "/com/qa/app/ui/view/application_properties_view.fxml");
         fxmlMapping.put("Gatling Test Reports", "/com/qa/app/ui/view/gatling_test_report_view.fxml");
@@ -154,8 +168,26 @@ public class MainViewModel implements Initializable {
         });
 
         contentTabPane.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null && currentFeatureLabel != null) {
-                currentFeatureLabel.setText(newValue.getText());
+            if (newValue != null) {
+                // Update current feature label
+                if (currentFeatureLabel != null) {
+                    currentFeatureLabel.setText(newValue.getText());
+                }
+
+                // Ensure the newly selected tab reloads its default data just as if it were opened
+                Node contentNode = newValue.getContent();
+                if (contentNode != null) {
+                    refreshTabContent(newValue.getText(), contentNode);
+                }
+
+                // Sync navigation list selection with current tab
+                if (navigationList != null) {
+                    String tabText = newValue.getText();
+                    String currentSelected = navigationList.getSelectionModel().getSelectedItem();
+                    if (currentSelected == null || !currentSelected.equals(tabText)) {
+                        navigationList.getSelectionModel().select(tabText);
+                    }
+                }
             }
         });
 
@@ -306,6 +338,8 @@ public class MainViewModel implements Initializable {
                         // currently no setMainViewModel method needed, placeholder for future
                     } else if (controller instanceof DbConnectionViewModel) {
                         ((DbConnectionViewModel) controller).setMainViewModel(this);
+                    } else if (controller instanceof VariableTransformMethodViewModel) {
+                        ((VariableTransformMethodViewModel) controller).setMainViewModel(this);
                     }
                     // let Node find controller
                     contentNode.getProperties().put("controller", controller);
@@ -371,6 +405,8 @@ public class MainViewModel implements Initializable {
             ((GatlingScenarioViewModel) controller).setMainViewModel(this);
         } else if (controller instanceof DbConnectionViewModel) {
             ((DbConnectionViewModel) controller).setMainViewModel(this);
+        } else if (controller instanceof VariableTransformMethodViewModel) {
+            ((VariableTransformMethodViewModel) controller).setMainViewModel(this);
         }
     }
 
@@ -412,6 +448,8 @@ public class MainViewModel implements Initializable {
             ((GatlingInternalReportViewModel) controller).refresh();
         } else if (controller instanceof DbConnectionViewModel) {
             ((DbConnectionViewModel) controller).refresh();
+        } else if (controller instanceof VariableTransformMethodViewModel) {
+            ((VariableTransformMethodViewModel) controller).refresh();
         }
     }
 
@@ -448,7 +486,9 @@ public class MainViewModel implements Initializable {
                 Project project = projectService.getProjectByName(currentProjectName);
                 if (project != null) {
                     ProjectContext.setCurrentProject(project);
-                    updateStatus("Current project: " + project.getName(), StatusType.INFO);
+                    if (currentProjectLabel != null) {
+                        currentProjectLabel.setText(project.getName());
+                    }
                 } else {
                     handleNoProject("Project '" + currentProjectName + "' not found.");
                 }
@@ -464,6 +504,9 @@ public class MainViewModel implements Initializable {
     private void handleNoProject(String message) {
         ProjectContext.clearCurrentProject();
         updateStatus(message, StatusType.INFO);
+        if (currentProjectLabel != null) {
+            currentProjectLabel.setText("-");
+        }
     }
 
     public void closeProject() {
@@ -525,5 +568,16 @@ public class MainViewModel implements Initializable {
             contextMenu.getItems().add(closeAllItem);
         }
         tab.setContextMenu(contextMenu);
+    }
+
+    /**
+     * Updates the environment label shown in the banner using the latest value
+     * from {@link com.qa.app.service.EnvironmentContext}.
+     */
+    private void updateEnvironmentLabel() {
+        String envName = com.qa.app.service.EnvironmentContext.getCurrentEnvironmentName();
+        if (currentEnvironmentLabel != null) {
+            currentEnvironmentLabel.setText(envName != null ? envName : "-");
+        }
     }
 }

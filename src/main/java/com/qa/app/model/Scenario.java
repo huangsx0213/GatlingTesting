@@ -15,6 +15,9 @@ public class Scenario {
     private final IntegerProperty projectId = new SimpleIntegerProperty();
     private int displayOrder;
 
+    // Flag: run as functional (single-user) test instead of performance scenario
+    private final javafx.beans.property.BooleanProperty functionalTest = new javafx.beans.property.SimpleBooleanProperty(false);
+
     public Scenario() {}
 
     public Scenario(String name, String description) {
@@ -53,6 +56,19 @@ public class Scenario {
 
     public void setDisplayOrder(int displayOrder) {
         this.displayOrder = displayOrder;
+    }
+
+    // ---------------- Functional Test Flag -----------------
+    public boolean isFunctionalTest() {
+        return functionalTest.get();
+    }
+
+    public void setFunctionalTest(boolean functional) {
+        this.functionalTest.set(functional);
+    }
+
+    public javafx.beans.property.BooleanProperty functionalTestProperty() {
+        return functionalTest;
     }
 
     @Override

@@ -13,7 +13,7 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
 
     @Override
     public void addScenario(Scenario scenario) throws SQLException {
-        String sql = "INSERT INTO scenario(name, desc, thread_group_json, schedule_json, project_id, display_order) VALUES(?,?,?,?,?,?)";
+        String sql = "INSERT INTO scenario(name, desc, thread_group_json, schedule_json, project_id, display_order, is_functional_test) VALUES(?,?,?,?,?,?,?)";
         try (Connection conn = DBUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
@@ -35,6 +35,7 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
                     ps.setString(4, scenario.getScheduleJson());
                     ps.setInt(5, scenario.getProjectId());
                     ps.setInt(6, scenario.getDisplayOrder());
+                    ps.setBoolean(7, scenario.isFunctionalTest());
                     ps.executeUpdate();
                     try (ResultSet rs = ps.getGeneratedKeys()) {
                         if (rs.next()) scenario.setId(rs.getInt(1));
@@ -50,7 +51,7 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
 
     @Override
     public void updateScenario(Scenario scenario) throws SQLException {
-        String sql = "UPDATE scenario SET name=?, desc=?, thread_group_json=?, schedule_json=?, project_id=?, display_order=? WHERE id=?";
+        String sql = "UPDATE scenario SET name=?, desc=?, thread_group_json=?, schedule_json=?, project_id=?, display_order=?, is_functional_test=? WHERE id=?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, scenario.getName());
@@ -59,7 +60,8 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
             ps.setString(4, scenario.getScheduleJson());
             ps.setInt(5, scenario.getProjectId());
             ps.setInt(6, scenario.getDisplayOrder());
-            ps.setInt(7, scenario.getId());
+            ps.setBoolean(7, scenario.isFunctionalTest());
+            ps.setInt(8, scenario.getId());
             ps.executeUpdate();
         }
     }
@@ -144,6 +146,12 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
         sc.setScheduleJson(rs.getString("schedule_json"));
         sc.setProjectId(rs.getInt("project_id"));
         sc.setDisplayOrder(rs.getInt("display_order"));
+        try {
+            boolean func = rs.getBoolean("is_functional_test");
+            sc.setFunctionalTest(func);
+        } catch (SQLException ignored) {
+            // Column might not exist on legacy DB, default false
+        }
         return sc;
     }
 

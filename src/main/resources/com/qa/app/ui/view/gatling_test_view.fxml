@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.web.HTMLEditor?>
 <?import javafx.scene.text.Font?>
 <?import javafx.collections.FXCollections?>
 
@@ -15,7 +16,7 @@
                 <Separator />
 
                 <!-- Form Section (no ScrollPane) -->
-                <VBox spacing="10.0" VBox.vgrow="ALWAYS">
+                <VBox spacing="10.0">
                     <children>
                         <TabPane fx:id="testManagementTabPane" VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
                             <tabs>
@@ -23,7 +24,7 @@
                                 <Tab text="Basic Information">
                                     <content>
                                         <VBox spacing="10.0">
-                                            <padding><Insets top="15" left="10" right="10" bottom="15"/></padding>
+                                            <padding><Insets top="5" left="10" right="10" bottom="5"/></padding>
                                             <!-- First Row: Is Run, Test Suite, Test Case ID, Tags, Wait Time -->
                                             <HBox spacing="15.0" alignment="CENTER_LEFT">
                                                 <children>
@@ -67,16 +68,19 @@
                                             <!-- Second Row: Test Conditions and Test Descriptions -->
                                             <HBox spacing="15.0" alignment="TOP_LEFT">
                                                 <children>
-                                                    <VBox spacing="5.0" minWidth="350.0" maxWidth="350.0" VBox.vgrow="ALWAYS">
+                                                    <VBox spacing="5.0" prefWidth="500.0" VBox.vgrow="ALWAYS">
                                                         <children>
                                                             <Label text="Test Conditions:" style="-fx-font-weight: bold;" />
                                                             <HBox spacing="5.0">
                                                                 <children>
-                                                                    <TableView fx:id="conditionsTable" VBox.vgrow="ALWAYS" editable="true" styleClass="table-view">
+                                                                    <TableView fx:id="conditionsTable" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" editable="true" styleClass="table-view">
                                                                         <columns>
-                                                                            <TableColumn fx:id="prefixColumn" text="Prefix" prefWidth="110.0" />
-                                                                            <TableColumn fx:id="conditionTcidColumn" text="TCID" prefWidth="200.0" />
+                                                                            <TableColumn fx:id="prefixColumn" text="Prefix" maxWidth="120.0" />
+                                                                            <TableColumn fx:id="conditionTcidColumn" text="TCID" />
                                                                         </columns>
+                                                                        <columnResizePolicy>
+                                                                            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS" />
+                                                                        </columnResizePolicy>
                                                                     </TableView>
                                                                     <VBox spacing="5.0" alignment="TOP_CENTER">
                                                                         <children>
@@ -91,7 +95,7 @@
                                                     <VBox spacing="5.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                                                         <children>
                                                             <Label text="Test Descriptions:" style="-fx-font-weight: bold;" />
-                                                            <TextArea fx:id="descriptionsArea" promptText="Describe test purpose and expected behavior" VBox.vgrow="ALWAYS" />
+                                                            <HTMLEditor fx:id="descriptionsArea" prefHeight="250.0" VBox.vgrow="ALWAYS" />
                                                         </children>
                                                     </VBox>
                                                 </children>
@@ -109,7 +113,7 @@
                                                 <Tab text="Endpoint">
                                                     <content>
                                                         <VBox spacing="10.0">
-                                                            <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
+                                                            <padding><Insets top="5" left="10" right="10" bottom="5"/></padding>
                                                             <VBox spacing="5.0" HBox.hgrow="ALWAYS">
                                                                 <children>
                                                                     <Label text="Endpoint:" style="-fx-font-weight: bold;" />
@@ -117,16 +121,16 @@
                                                                 </children>
                                                             </VBox>
                                                             <!-- New URL Variable Section -->
-                                                            <HBox spacing="15.0" alignment="TOP_LEFT">
+                                                            <HBox spacing="15.0" alignment="TOP_LEFT" VBox.vgrow="ALWAYS">
                                                                 <children>
-                                                                    <VBox spacing="5.0" prefWidth="400.0" VBox.vgrow="ALWAYS">
+                                                                    <VBox spacing="5.0" prefWidth="600.0" VBox.vgrow="ALWAYS">
                                                                         <children>
                                                                             <Label text="URL User Defined Variables:" style="-fx-font-weight: bold;" />
                                                                             <TableView fx:id="urlDynamicVarsTable" VBox.vgrow="ALWAYS" styleClass="table-view">
                                                                                 <columns>
                                                                                     <TableColumn fx:id="urlDynamicKeyColumn" prefWidth="150.0" text="Key" />
                                                                                     <TableColumn fx:id="urlDynamicValueColumn" prefWidth="250.0" text="Value" />
-                                                                                    <TableColumn fx:id="urlDynamicActionColumn" prefWidth="60.0" text="Action" />
+                                                                                    <TableColumn fx:id="urlDynamicActionColumn" prefWidth="60.0" text="Action" minWidth="50.0"/>
                                                                                 </columns>
                                                                                 <columnResizePolicy>
                                                                                     <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
@@ -149,10 +153,10 @@
                                                 <Tab text="Headers">
                                                     <content>
                                                         <VBox spacing="10.0">
-                                                            <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
+                                                            <padding><Insets top="5" left="10" right="10" bottom="5"/></padding>
                                                             <HBox spacing="15.0" alignment="TOP_LEFT">
                                                                 <children>
-                                                                    <VBox spacing="5.0" prefWidth="400.0" VBox.vgrow="ALWAYS">
+                                                                    <VBox spacing="5.0" prefWidth="600.0" VBox.vgrow="ALWAYS">
                                                                         <children>
                                                                             <Label text="Headers Template:" style="-fx-font-weight: bold;" />
                                                                             <ComboBox fx:id="headersTemplateComboBox" promptText="Select headers template" />
@@ -168,7 +172,7 @@
                                                                                 <columns>
                                                                                     <TableColumn fx:id="headersTemplateKeyColumn" prefWidth="150.0" text="Key" />
                                                                                     <TableColumn fx:id="headersTemplateValueColumn" prefWidth="250.0" text="Value" />
-                                                                                    <TableColumn fx:id="headersTemplateActionColumn" prefWidth="60.0" text="Action" />
+                                                                                    <TableColumn fx:id="headersTemplateActionColumn" prefWidth="60.0" text="Action" minWidth="50.0"/>
                                                                                 </columns>
                                                                                 <columnResizePolicy>
                                                                                     <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
@@ -191,10 +195,10 @@
                                                 <Tab text="Body">
                                                     <content>
                                                         <VBox spacing="10.0">
-                                                            <padding><Insets top="6" left="6" right="6" bottom="6"/></padding>
-                                                            <HBox spacing="15.0" alignment="TOP_LEFT">
+                                                            <padding><Insets top="5" left="10" right="10" bottom="5"/></padding>
+                                                            <HBox spacing="15.0" alignment="TOP_LEFT" VBox.vgrow="ALWAYS">
                                                                 <children>
-                                                                    <VBox spacing="5.0" prefWidth="400.0" VBox.vgrow="ALWAYS">
+                                                                    <VBox spacing="5.0" prefWidth="600.0" VBox.vgrow="ALWAYS">
                                                                         <children>
                                                                             <Label text="Body Template:" style="-fx-font-weight: bold;" />
                                                                             <ComboBox fx:id="bodyTemplateComboBox" promptText="Select body template" />
@@ -210,7 +214,7 @@
                                                                                 <columns>
                                                                                     <TableColumn fx:id="bodyDynamicKeyColumn" prefWidth="150.0" text="Key" />
                                                                                     <TableColumn fx:id="bodyDynamicValueColumn" prefWidth="250.0" text="Value" />
-                                                                                    <TableColumn fx:id="bodyDynamicActionColumn" prefWidth="60.0" text="Action" />
+                                                                                    <TableColumn fx:id="bodyDynamicActionColumn" prefWidth="60.0" text="Action" minWidth="50.0"/>
                                                                                 </columns>
                                                                                 <columnResizePolicy>
                                                                                     <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
@@ -238,7 +242,7 @@
                                 <Tab text="Response Configuration">
                                     <content>
                                         <VBox spacing="10.0">
-                                            <padding><Insets top="15" left="10" right="10" bottom="15"/></padding>
+                                            <padding><Insets top="5" left="10" right="10" bottom="5"/></padding>
                                             <HBox spacing="5" alignment="CENTER_LEFT">
                                                 <Label text="Response Checks:" style="-fx-font-weight: bold;" />
                                                 <Label fx:id="responseHelpIcon" text="?" style="-fx-font-weight: bold; -fx-text-fill: blue; -fx-cursor: hand;">
@@ -296,9 +300,8 @@
                 </VBox>
                 
                 <!-- Action Buttons Section -->
-                <VBox spacing="10.0">
+                <VBox spacing="5.0">
                     <children>
-                        <Separator />
                         <HBox alignment="CENTER_LEFT" spacing="15.0">
                             <children>
                         <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAddTest" text="Add" />
@@ -314,9 +317,6 @@
                             <font><Font name="System Bold" size="14.0" /></font>
                         </Label>
                             </children>
-                            <padding>
-                                <Insets bottom="10.0" top="10.0" />
-                            </padding>
                         </HBox>
                     </children>
                 </VBox>

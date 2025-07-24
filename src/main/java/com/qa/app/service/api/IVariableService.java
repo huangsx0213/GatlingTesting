@@ -1,7 +1,7 @@
 package com.qa.app.service.api;
 
 import com.qa.app.service.ServiceException;
-import com.qa.app.service.script.GroovyScriptEngine;
+import com.qa.app.service.util.GroovyScriptEngine;
 
 import java.util.List;
 

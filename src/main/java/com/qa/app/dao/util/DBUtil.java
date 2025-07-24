@@ -47,7 +47,7 @@ public class DBUtil {
                     + " wait_time INTEGER DEFAULT 0,"
                     + " conditions TEXT,"
                     + " descriptions TEXT,"
-                    + " endpoint_id INTEGER,"
+                    + " endpoint_name TEXT,"
                     + " headers_template_id INTEGER,"
                     + " body_template_id INTEGER,"
                     + " endpoint_dynamic_variables TEXT,"
@@ -59,7 +59,6 @@ public class DBUtil {
                     + " last_run_passed BOOLEAN,"
                     + " display_order INT,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
-                    + " FOREIGN KEY(endpoint_id) REFERENCES endpoints(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
                     + " FOREIGN KEY(headers_template_id) REFERENCES headers_templates(id) ON DELETE SET NULL ON UPDATE CASCADE,"
                     + " FOREIGN KEY(body_template_id) REFERENCES body_templates(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
@@ -82,6 +81,7 @@ public class DBUtil {
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + " name TEXT NOT NULL UNIQUE,"
                     + " content TEXT NOT NULL,"
+                    + " description TEXT,"
                     + " project_id INTEGER,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE"
                     + ");";
@@ -105,6 +105,7 @@ public class DBUtil {
                     + " url TEXT NOT NULL,"
                     + " environment_id INTEGER,"
                     + " project_id INTEGER,"
+                    + " display_order INT,"
                     + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
                     + " UNIQUE(name, environment_id)"
@@ -125,6 +126,20 @@ public class DBUtil {
                     + ");";
             stmt.execute(groovyVariableSql);
 
+            // Create variable_transform_methods table if it doesn't exist
+            String transformSql = "CREATE TABLE IF NOT EXISTS variable_transform_methods ("
+                    + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + " name TEXT NOT NULL UNIQUE,"
+                    + " description TEXT,"
+                    + " script TEXT NOT NULL,"
+                    + " enabled INTEGER NOT NULL DEFAULT 1,"
+                    + " param_spec TEXT,"
+                    + " sample_usage TEXT,"
+                    + " create_time DATETIME,"
+                    + " update_time DATETIME"
+                    + ");";
+            stmt.execute(transformSql);
+
             // Create project table if it doesn't exist
             String projectSql = "CREATE TABLE IF NOT EXISTS project ("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -142,6 +157,7 @@ public class DBUtil {
                     " schedule_json TEXT," +
                     " project_id INTEGER," +
                     " display_order INT," +
+                    " is_functional_test BOOLEAN NOT NULL DEFAULT 0," +
                     " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE" +
                     ");";
             stmt.execute(scenarioSql);
@@ -172,7 +188,7 @@ public class DBUtil {
             // Create db_connections table if it doesn't exist
             String dbConnectionsSql = "CREATE TABLE IF NOT EXISTS db_connections("
                     + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                    + " alias TEXT UNIQUE NOT NULL,"
+                    + " alias TEXT NOT NULL,"
                     + " description TEXT,"
                     + " db_type TEXT,"
                     + " host TEXT,"
@@ -186,7 +202,8 @@ public class DBUtil {
                     + " project_id INTEGER,"
                     + " environment_id INTEGER,"
                     + " FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE SET NULL ON UPDATE CASCADE,"
-                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE"
+                    + " FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE RESTRICT ON UPDATE CASCADE,"
+                    + " UNIQUE(alias, environment_id)"
                     + ");";
             stmt.execute(dbConnectionsSql);
 

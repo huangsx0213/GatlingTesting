@@ -13,7 +13,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <javafx.version>21.0.1</javafx.version> <!-- Or a newer stable version -->
         <sqlite.jdbc.version>3.36.0.3</sqlite.jdbc.version> <!-- Or a newer stable version -->
-        <gatling.version>3.14.3</gatling.version>
+        <gatling.version>3.13.5</gatling.version>
         <scala.version>2.13.12</scala.version>
     </properties>
 
@@ -45,6 +45,11 @@
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
             <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-web</artifactId>
+        <version>${javafx.version}</version>
         </dependency>
 
         <!-- SQLite JDBC Driver -->

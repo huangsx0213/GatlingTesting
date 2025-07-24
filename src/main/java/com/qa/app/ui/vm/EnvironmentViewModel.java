@@ -3,6 +3,7 @@ package com.qa.app.ui.vm;
 import com.qa.app.model.Environment;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.impl.EnvironmentServiceImpl;
+import com.qa.app.ui.util.ClickableTooltipTableCell;
 import com.qa.app.util.AppConfig;
 import com.qa.app.common.listeners.AppConfigChangeListener;
 import javafx.collections.FXCollections;
@@ -42,6 +43,7 @@ public class EnvironmentViewModel implements Initializable, AppConfigChangeListe
     public void initialize() {
         environmentNameColumn.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
         environmentDescriptionColumn.setCellValueFactory(cellData -> cellData.getValue().descriptionProperty());
+        environmentDescriptionColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
         environmentTable.setItems(environmentList);
         environmentTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         loadEnvironments();

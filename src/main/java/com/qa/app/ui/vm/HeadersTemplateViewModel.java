@@ -20,10 +20,11 @@ import com.qa.app.service.ProjectContext;
 import com.qa.app.service.ServiceException;
 import com.qa.app.service.api.IHeadersTemplateService;
 import com.qa.app.service.impl.HeadersTemplateServiceImpl;
+import com.qa.app.ui.util.ClickableTooltipTableCell;
+import com.qa.app.util.AppConfig;
 
 import org.yaml.snakeyaml.DumperOptions;
 
-import com.qa.app.util.AppConfig;
 import com.qa.app.common.listeners.AppConfigChangeListener;
 
 public class HeadersTemplateViewModel implements Initializable, AppConfigChangeListener {
@@ -55,6 +56,12 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
     private TableColumn<HeadersTemplateItem, String> headersTemplateDescriptionColumn;
     @FXML
     private TableColumn<HeadersTemplateItem, String> headersTemplateContentColumn;
+
+    @FXML
+    private Button moveUpButton;
+
+    @FXML
+    private Button moveDownButton;
 
     private final ObservableList<HeadersTemplateItem> headersTemplateList = FXCollections.observableArrayList();
     private final IHeadersTemplateService headersTemplateService = new HeadersTemplateServiceImpl();
@@ -95,7 +102,7 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
                     // set icon
                     Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
                     try {
-                        stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.ico")));
+                        stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.png")));
                     } catch (Exception e) {
                         // ignore
                     }
@@ -107,29 +114,12 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
             return row;
         });
 
-        // add Tooltip and max height, length limit to content column
-        headersTemplateContentColumn.setCellFactory(col -> new TableCell<HeadersTemplateItem, String>() {
-            private static final int MAX_LENGTH = 200;
-            private final Tooltip tooltip = new Tooltip();
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setTooltip(null);
-                } else {
-                    if (item.length() > MAX_LENGTH) {
-                        setText(item.substring(0, MAX_LENGTH) + "...");
-                    } else {
-                        setText(item);
-                    }
-                    tooltip.setText(item);
-                    setTooltip(tooltip);
-                    setWrapText(false);
-                    setPrefHeight(80);
-                }
-            }
-        });
+        headersTemplateDescriptionColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
+        headersTemplateContentColumn.setCellFactory(param -> new ClickableTooltipTableCell<>());
+
+        boolean disabled = headersTemplateList.isEmpty();
+        if (moveUpButton != null) moveUpButton.setDisable(disabled);
+        if (moveDownButton != null) moveDownButton.setDisable(disabled);
     }
 
     @Override
@@ -398,5 +388,34 @@ public class HeadersTemplateViewModel implements Initializable, AppConfigChangeL
         public String getDescription() { return description.get(); }
         public void setDescription(String d) { description.set(d); }
         public javafx.beans.property.StringProperty descriptionProperty() { return description; }
+    }
+
+    // ================= Move Up / Down =================
+    @FXML
+    private void handleMoveUp() {
+        HeadersTemplateItem selected = headersTemplateTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        int idx = headersTemplateList.indexOf(selected);
+        if (idx > 0) {
+            HeadersTemplateItem above = headersTemplateList.get(idx - 1);
+            headersTemplateList.set(idx - 1, selected);
+            headersTemplateList.set(idx, above);
+            headersTemplateTable.getSelectionModel().select(idx - 1);
+        }
+    }
+
+    @FXML
+    private void handleMoveDown() {
+        HeadersTemplateItem selected = headersTemplateTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        int idx = headersTemplateList.indexOf(selected);
+        if (idx < headersTemplateList.size() - 1) {
+            HeadersTemplateItem below = headersTemplateList.get(idx + 1);
+            headersTemplateList.set(idx + 1, selected);
+            headersTemplateList.set(idx, below);
+            headersTemplateTable.getSelectionModel().select(idx + 1);
+        }
     }
 } 
