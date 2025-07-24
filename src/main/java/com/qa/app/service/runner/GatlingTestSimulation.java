@@ -22,6 +22,7 @@ import com.qa.app.model.HeadersTemplate;
 import com.qa.app.service.api.IDbConnectionService;
 import com.qa.app.service.impl.DbConnectionServiceImpl;
 import com.qa.app.model.Operator;
+import com.qa.app.util.AppConfig;
 
 import javax.sql.DataSource;
 import java.io.File;
@@ -50,13 +51,27 @@ public class GatlingTestSimulation extends Simulation {
     private final IDbConnectionService dbConnectionService = new DbConnectionServiceImpl();
     private static final String VARIABLES_PREFIX = "TEST_VARIABLES:";
     private static final String CHECK_REPORTS_KEY = "checkReports";
-    private static final List<String> RESPONSE_HEADERS_TO_CAPTURE = java.util.Arrays.asList(
-            "Content-Type",
-            "Set-Cookie",
-            "Location",
-            "Content-Length",
-            "Server"
-    );
+    private static final List<String> RESPONSE_HEADERS_TO_CAPTURE;
+
+    static {
+        String cfg = AppConfig.getProperty("capture.response.headers");
+        List<String> headers;
+        if (cfg != null && !cfg.isBlank()) {
+            headers = java.util.Arrays.stream(cfg.split("\\s*,\\s*"))
+                    .filter(s -> !s.isBlank())
+                    .toList();
+        } else {
+            headers = java.util.Arrays.asList(
+                    "Content-Type",
+                    "Server",
+                    "Location",
+                    "Content-Length",
+                    "Set-Cookie",
+                    "Date"
+            );
+        }
+        RESPONSE_HEADERS_TO_CAPTURE = java.util.Collections.unmodifiableList(headers);
+    }
 
 
     private static class BatchItem {
@@ -703,7 +718,7 @@ public class GatlingTestSimulation extends Simulation {
                 responseInfo.setSizeBytes((long) session.getInt("sizeBytes"));
             }
             // 由于技术限制，我们无法直接获取所有响应头
-            Map<String, String> capturedHeaders = new HashMap<>();
+            Map<String, String> capturedHeaders = new java.util.LinkedHashMap<>();
             for (String headerName : RESPONSE_HEADERS_TO_CAPTURE) {
                 String key = "respHeader_" + headerName.replace("-", "_");
                 if (session.contains(key)) {
