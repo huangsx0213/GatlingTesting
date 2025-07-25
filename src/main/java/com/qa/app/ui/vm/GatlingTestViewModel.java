@@ -1716,7 +1716,16 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
     private void setupResponseCheckHelpTooltip() {
         responseCheckTooltip = HelpTooltipManager.getResponseCheckTooltip();
-        // responseHelpIcon has been removed; use button instead.
+
+        // Attach handler to the dedicated help button (if present)
+        if (responseHelpButton != null) {
+            responseHelpButton.setOnAction(e -> handleResponseHelpClick());
+        }
+
+        // Also attach handler to the label icon so either control can open the tooltip
+        if (responseHelpIcon != null) {
+            responseHelpIcon.setOnMouseClicked(e -> handleResponseHelpClick());
+        }
     }
 
     private void setupRunHelpTooltip() {
