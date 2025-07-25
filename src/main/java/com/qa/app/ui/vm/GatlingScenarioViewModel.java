@@ -544,6 +544,9 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             return;
         }
         sc.setProjectId(projectId);
+        // Set displayOrder to max + 1
+        int maxOrder = scenarios.stream().mapToInt(Scenario::getDisplayOrder).max().orElse(0);
+        sc.setDisplayOrder(maxOrder + 1);
         try {
             com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
             sc.setThreadGroupJson(om.writeValueAsString(buildLoadParameters()));
@@ -553,7 +556,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             scenarioService.createScenario(sc, new ArrayList<>(steps));
             // save scheduler cron after id generated
             saveSchedulerToDb(sc.getId());
-            scenarios.add(0, sc);
+            scenarios.add(sc); // add to end
             javafx.beans.property.BooleanProperty selProp = new javafx.beans.property.SimpleBooleanProperty(false);
             selProp.addListener((obs, wasSel, isSel) -> {
                 if (isUpdatingSelection) return;
@@ -607,7 +610,10 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         if (sel == null) return;
         try {
             Scenario dup = scenarioService.duplicateScenario(sel.getId());
-            scenarios.add(0, dup);
+            // Set displayOrder to max + 1
+            int maxOrder = scenarios.stream().mapToInt(Scenario::getDisplayOrder).max().orElse(0);
+            dup.setDisplayOrder(maxOrder + 1);
+            scenarios.add(dup); // add to end
             javafx.beans.property.BooleanProperty dupSel = new javafx.beans.property.SimpleBooleanProperty(false);
             dupSel.addListener((obs, wasSel, isSel) -> {
                 if (isUpdatingSelection) return;

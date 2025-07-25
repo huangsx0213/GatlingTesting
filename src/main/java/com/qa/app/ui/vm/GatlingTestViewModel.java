@@ -1066,7 +1066,9 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         }
         GatlingTest newTest = new GatlingTest(suite, tcid, descriptions, endpointName, ProjectContext.getCurrentProjectId());
         populateTestFromFields(newTest);
-
+        // Set displayOrder to max + 1
+        int maxOrder = testList.stream().mapToInt(GatlingTest::getDisplayOrder).max().orElse(0);
+        newTest.setDisplayOrder(maxOrder + 1);
         try {
             testService.createTest(newTest);
 
@@ -1087,7 +1089,8 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Test added successfully.", MainViewModel.StatusType.SUCCESS);
             }
-            refreshAll();
+            // Use filter refresh to preserve filters
+            handleFilterTests(null);
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to add test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
@@ -1122,7 +1125,8 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Test updated successfully.", MainViewModel.StatusType.SUCCESS);
             }
-             refreshAll();
+            // Use filter refresh to preserve filters
+            handleFilterTests(null);
         } catch (ServiceException e) {
              if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to update test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
@@ -1143,17 +1147,16 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         try {
             // Create a new test object as a copy
             GatlingTest duplicate = new GatlingTest(selectedTest);
-            
+            // Set displayOrder to max + 1
+            int maxOrder = testList.stream().mapToInt(GatlingTest::getDisplayOrder).max().orElse(0);
+            duplicate.setDisplayOrder(maxOrder + 1);
             // Add it to the database
             testService.createTest(duplicate);
-            
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Test " + selectedTest.getTcid() + " duplicated successfully as " + duplicate.getTcid(), MainViewModel.StatusType.SUCCESS);
             }
-
-            // Refresh the view
-            refreshAll();
-
+            // Use filter refresh to preserve filters
+            handleFilterTests(null);
         } catch (ServiceException e) {
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Error duplicating test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
