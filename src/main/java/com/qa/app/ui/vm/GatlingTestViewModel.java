@@ -1567,7 +1567,20 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
                 ok = ok && suite.equals(t.getSuite());
             }
             if (ok && tagKw != null && !tagKw.isBlank()) {
-                ok = t.getTags() != null && t.getTags().contains(tagKw);
+                if (t.getTags() == null) {
+                    ok = false;
+                } else {
+                    String[] tokens = tagKw.split("[,\n\r\t ]+");
+                    boolean anyMatch = false;
+                    for (String token : tokens) {
+                        String trimmed = token.trim();
+                        if (!trimmed.isEmpty() && t.getTags().contains(trimmed)) {
+                            anyMatch = true;
+                            break;
+                        }
+                    }
+                    ok = anyMatch;
+                }
             }
             if (ok && enabledOpt != null && !"All".equals(enabledOpt)) {
                 if ("Enabled".equals(enabledOpt)) {
