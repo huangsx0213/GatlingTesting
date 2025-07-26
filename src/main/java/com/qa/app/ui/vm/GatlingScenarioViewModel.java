@@ -25,6 +25,8 @@ import javafx.util.converter.IntegerStringConverter;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
 import javafx.scene.control.Button;
+import javafx.scene.web.HTMLEditor;
+import javafx.scene.control.Tab;
 
 import com.qa.app.common.listeners.AppConfigChangeListener;
 import com.qa.app.service.ProjectContext;
@@ -33,12 +35,16 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
 
     // -------------- FXML components --------------
     @FXML private TextField scenarioNameField;
-    @FXML private TextArea scenarioDescArea;
+    @FXML private HTMLEditor scenarioDescArea;
     @FXML private TableView<GatlingTest> availableTestTable;
     @FXML private TableView<ScenarioStep> scenarioStepTable;
     @FXML private TableView<Scenario> scenarioTable;
     @FXML private CheckBox functionalTestCheckBox;
     @FXML private Label functionalHelpIcon;
+
+    @FXML private TabPane scenarioTabPane;
+    // Tab reference for default selection
+    @FXML private Tab scenarioStepsTab;
 
     private javafx.scene.control.Tooltip functionalTooltip;
 
@@ -200,7 +206,47 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         scNameCol.setCellValueFactory(cell -> cell.getValue().nameProperty());
         functionalCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().isFunctionalTest() ? "Y" : "N"));
         scDescCol.setCellValueFactory(cell -> cell.getValue().descriptionProperty());
-        scDescCol.setCellFactory(param -> new ClickableTooltipTableCell<>());
+        scDescCol.setCellFactory(column -> new TableCell<Scenario, String>() {
+            private final org.controlsfx.control.PopOver pop = new org.controlsfx.control.PopOver();
+            private final javafx.scene.web.WebView webView = new javafx.scene.web.WebView();
+            private final javafx.animation.PauseTransition showDelay = new javafx.animation.PauseTransition(javafx.util.Duration.millis(200));
+            private final javafx.animation.PauseTransition hideDelay = new javafx.animation.PauseTransition(javafx.util.Duration.millis(200));
+
+            {
+                webView.setPrefSize(300, 200);
+                pop.setContentNode(webView);
+                pop.setDetachable(false);
+                pop.setArrowLocation(org.controlsfx.control.PopOver.ArrowLocation.RIGHT_TOP);
+
+                showDelay.setOnFinished(e -> {
+                    if (getItem() != null) {
+                        webView.getEngine().loadContent(getItem());
+                        pop.show(this);
+                    }
+                });
+                hideDelay.setOnFinished(e -> pop.hide());
+
+                this.setOnMouseEntered(e -> {
+                    hideDelay.stop();
+                    showDelay.playFromStart();
+                });
+                this.setOnMouseExited(e -> {
+                    showDelay.stop();
+                    hideDelay.playFromStart();
+                });
+            }
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    pop.hide();
+                } else {
+                    setText(item.replaceAll("<[^>]*>", ""));
+                }
+            }
+        });
 
         // Type column shows load model type
         scTypeCol.setCellValueFactory(cell -> {
@@ -302,6 +348,13 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         functionalTooltip = com.qa.app.ui.util.HelpTooltipManager.getFunctionalTestTooltip();
         if (functionalHelpIcon != null) {
             functionalHelpIcon.setOnMouseClicked(e -> toggleTooltip(functionalTooltip, functionalHelpIcon));
+        }
+
+        // Select Scenario Steps tab by default
+        if (scenarioStepsTab != null) {
+            javafx.application.Platform.runLater(() -> {
+                scenarioTabPane.getSelectionModel().select(scenarioStepsTab);
+            });
         }
     }
 
@@ -489,7 +542,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
 
     private void clearScenarioForm() {
         scenarioNameField.clear();
-        scenarioDescArea.clear();
+        scenarioDescArea.setHtmlText("");
         steps.clear();
         scenarioTable.getSelectionModel().clearSelection();
 
@@ -534,7 +587,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         }
         Scenario sc = new Scenario();
         sc.setName(name);
-        sc.setDescription(scenarioDescArea.getText());
+        sc.setDescription(scenarioDescArea.getHtmlText());
         if (functionalTestCheckBox != null) {
             sc.setFunctionalTest(functionalTestCheckBox.isSelected());
         }
@@ -584,7 +637,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             return;
         }
         selected.setName(name);
-        selected.setDescription(scenarioDescArea.getText());
+        selected.setDescription(scenarioDescArea.getHtmlText());
         if (functionalTestCheckBox != null) {
             selected.setFunctionalTest(functionalTestCheckBox.isSelected());
         }
@@ -753,13 +806,13 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     private void showScenarioDetails(Scenario sc) {
         if (sc == null) {
             scenarioNameField.clear();
-            scenarioDescArea.clear();
+            scenarioDescArea.setHtmlText("");
             steps.clear();
             if (functionalTestCheckBox != null) functionalTestCheckBox.setSelected(false);
             return;
         }
         scenarioNameField.setText(sc.getName());
-        scenarioDescArea.setText(sc.getDescription());
+        scenarioDescArea.setHtmlText(sc.getDescription());
         try {
             steps.setAll(scenarioService.findStepsByScenarioId(sc.getId()));
         } catch (ServiceException e) {
