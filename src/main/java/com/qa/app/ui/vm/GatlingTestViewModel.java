@@ -50,16 +50,14 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.ComboBox;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+
 import java.util.Optional;
+
 import javafx.scene.control.ButtonBar;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
-import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.scene.image.Image;
-import javafx.scene.web.WebView;
-import javafx.util.Duration;
-import javafx.animation.PauseTransition;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -68,10 +66,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
+
 import com.qa.app.service.EnvironmentContext;
 
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+
 import java.util.Set;
 import java.util.Iterator;
 
@@ -197,9 +197,12 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     @FXML
     private TableColumn<ResponseCheck, String> checkSaveAsColumn;
 
-    @FXML private ComboBox<String> suiteFilterCombo; // Filter dropdown
-    @FXML private TextField tagFilterField;          // Tag keyword filter field
-    @FXML private ComboBox<String> enabledFilterCombo; // Enabled status filter
+    @FXML
+    private ComboBox<String> suiteFilterCombo; // Filter dropdown
+    @FXML
+    private TextField tagFilterField;          // Tag keyword filter field
+    @FXML
+    private ComboBox<String> enabledFilterCombo; // Enabled status filter
 
     @FXML
     private TableView<DynamicVariable> urlDynamicVarsTable;
@@ -254,7 +257,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     private final CheckBox selectAllCheckBox = new CheckBox();
 
     private boolean isUpdatingSelection = false;
-    
+
     private Tooltip variableTooltip;
 
     private Tooltip responseCheckTooltip;
@@ -299,7 +302,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             enabledFilterCombo.setItems(FXCollections.observableArrayList("All", "Enabled", "Disabled"));
             enabledFilterCombo.setValue("All");
         }
-        
+
         loadEndpoints();
         loadAllTcids();
         loadTests();
@@ -309,11 +312,11 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
         if (viewReportButton != null) {
             viewReportButton.disableProperty().bind(
-                testTable.getSelectionModel().selectedItemProperty().isNull()
-                .or(Bindings.createBooleanBinding(() -> {
-                    GatlingTest selected = testTable.getSelectionModel().getSelectedItem();
-                    return selected == null || selected.getReportPath() == null || selected.getReportPath().isEmpty();
-                }, testTable.getSelectionModel().selectedItemProperty()))
+                    testTable.getSelectionModel().selectedItemProperty().isNull()
+                            .or(Bindings.createBooleanBinding(() -> {
+                                GatlingTest selected = testTable.getSelectionModel().getSelectedItem();
+                                return selected == null || selected.getReportPath() == null || selected.getReportPath().isEmpty();
+                            }, testTable.getSelectionModel().selectedItemProperty()))
             );
         }
 
@@ -540,31 +543,37 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             private final javafx.animation.PauseTransition hideDelay = new javafx.animation.PauseTransition(javafx.util.Duration.millis(200));
 
             {
-                web.setPrefSize(300,200);
+                web.setPrefSize(300, 200);
                 pop.setContentNode(web);
                 pop.setDetachable(false);
                 pop.setArrowLocation(org.controlsfx.control.PopOver.ArrowLocation.RIGHT_TOP);
 
                 showDelay.setOnFinished(e -> {
-                    if(getItem()!=null){
+                    if (getItem() != null) {
                         web.getEngine().loadContent(getItem());
                         pop.show(this);
                     }
                 });
                 hideDelay.setOnFinished(e -> pop.hide());
 
-                this.setOnMouseEntered(e -> { hideDelay.stop(); showDelay.playFromStart(); });
-                this.setOnMouseExited(e -> { showDelay.stop(); hideDelay.playFromStart(); });
+                this.setOnMouseEntered(e -> {
+                    hideDelay.stop();
+                    showDelay.playFromStart();
+                });
+                this.setOnMouseExited(e -> {
+                    showDelay.stop();
+                    hideDelay.playFromStart();
+                });
                 pop.setOnHidden(e -> hideDelay.stop());
             }
 
             @Override
-            protected void updateItem(String item, boolean empty){
+            protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if(empty||item==null){
+                if (empty || item == null) {
                     setText(null);
                     pop.hide();
-                }else{
+                } else {
                     setText(item.replaceAll("<[^>]*>", ""));
                 }
             }
@@ -574,7 +583,10 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             String name = cellData.getValue().getEndpointName();
             Endpoint ep = null;
             for (Endpoint e : endpointList) {
-                if (e.getName().equals(name)) { ep = e; break; }
+                if (e.getName().equals(name)) {
+                    ep = e;
+                    break;
+                }
             }
             String display = "";
             if (ep != null) {
@@ -705,6 +717,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             public String toString(String display) {
                 return display == null ? "" : display;
             }
+
             @Override
             public String fromString(String s) {
                 return s;
@@ -925,11 +938,13 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
             // Load response checks from test.responseChecks JSON list
             responseChecks.clear();
-            if(test.getResponseChecks()!=null && !test.getResponseChecks().isEmpty()){
-                try{
-                    java.util.List<ResponseCheck> list = mapper.readValue(test.getResponseChecks(), new com.fasterxml.jackson.core.type.TypeReference<java.util.List<ResponseCheck>>(){});
+            if (test.getResponseChecks() != null && !test.getResponseChecks().isEmpty()) {
+                try {
+                    java.util.List<ResponseCheck> list = mapper.readValue(test.getResponseChecks(), new com.fasterxml.jackson.core.type.TypeReference<java.util.List<ResponseCheck>>() {
+                    });
                     responseChecks.addAll(list);
-                }catch(Exception ignored){}
+                } catch (Exception ignored) {
+                }
             }
             // Ensure default status row
             ensureDefaultStatusCheck();
@@ -947,7 +962,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
                     mismatch = true;
                 }
             }
-            for (Iterator<String> it = savedVars.keySet().iterator(); it.hasNext();) {
+            for (Iterator<String> it = savedVars.keySet().iterator(); it.hasNext(); ) {
                 String var = it.next();
                 if (!currentVars.contains(var)) {
                     it.remove(); // Remove extra
@@ -972,7 +987,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             urlDynamicVariables.clear();
             for (Map.Entry<String, String> entry : savedVars.entrySet()) {
                 urlDynamicVariables.add(new DynamicVariable(entry.getKey(), entry.getValue()));
-                    }
+            }
 
             updateGeneratedUrl();
 
@@ -1011,7 +1026,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         Map<String, String> headersVars = new HashMap<>();
         headersTemplateVariables.forEach(dv -> headersVars.put(dv.getKey(), dv.getValue()));
         test.setHeadersDynamicVariables(headersVars);
-        
+
         Map<String, String> urlVars = new HashMap<>();
         urlDynamicVariables.forEach(dv -> urlVars.put(dv.getKey(), dv.getValue()));
         test.setEndpointDynamicVariables(urlVars);
@@ -1034,10 +1049,10 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         test.setProjectId(ProjectContext.getCurrentProjectId());
 
         // Serialize response checks to JSON
-        try{
+        try {
             String json = mapper.writeValueAsString(responseChecks);
             test.setResponseChecks(json);
-        }catch(Exception e){
+        } catch (Exception e) {
             test.setResponseChecks(null);
         }
 
@@ -1110,7 +1125,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         }
         String tcid = tcidField.getText().trim();
         if (tcid.isEmpty()) {
-             if (mainViewModel != null) {
+            if (mainViewModel != null) {
                 mainViewModel.updateStatus("Input Error: TCID is required.",
                         MainViewModel.StatusType.ERROR);
             }
@@ -1128,7 +1143,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             // Use filter refresh to preserve filters
             handleFilterTests(null);
         } catch (ServiceException e) {
-             if (mainViewModel != null) {
+            if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to update test: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
         }
@@ -1215,7 +1230,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             GatlingTest aboveTest = testList.get(index - 1);
             testList.set(index - 1, selectedTest);
             testList.set(index, aboveTest);
-            
+
             updateDisplayOrderAndPersist();
             testTable.getSelectionModel().select(index - 1);
         }
@@ -1289,12 +1304,11 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         if (runTestButton != null) runTestButton.setDisable(true);
 
         Runnable onComplete = () -> Platform.runLater(() -> {
-            if (runTestButton != null) runTestButton.setDisable(false);
-            refresh();
-                if (mainViewModel != null) {
-                    mainViewModel.updateStatus("Gatling test(s) completed.", MainViewModel.StatusType.SUCCESS);
-                }
-            });
+            handleFilterTests(null);
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Gatling test(s) completed.", MainViewModel.StatusType.SUCCESS);
+            }
+        });
 
         try {
             testService.runTests(testsToRun, loadParams, onComplete);
@@ -1416,10 +1430,10 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         }
     }
 
-    private void setupResponseChecksTable(){
+    private void setupResponseChecksTable() {
         // Allow multiple selections
         responseChecksTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        if(responseChecksTable==null) return;
+        if (responseChecksTable == null) return;
         responseChecksTable.setItems(responseChecks);
         responseChecksTable.setFixedCellSize(Region.USE_COMPUTED_SIZE); // Make row height dynamic
 
@@ -1487,7 +1501,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         try {
             dbAliasComboBox.setItems(FXCollections.observableArrayList(dbConnectionService.getAllAliases()));
         } catch (Exception e) {
-            if(mainViewModel != null) {
+            if (mainViewModel != null) {
                 mainViewModel.updateStatus("Failed to load DB aliases: " + e.getMessage(), MainViewModel.StatusType.ERROR);
             }
         }
@@ -1536,10 +1550,10 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         });
     }
 
-    private void ensureDefaultStatusCheck(){
-        if(responseChecks.stream().noneMatch(rc -> rc.getType()==CheckType.STATUS)){
+    private void ensureDefaultStatusCheck() {
+        if (responseChecks.stream().noneMatch(rc -> rc.getType() == CheckType.STATUS)) {
             String defaultStatus = "200";
-            responseChecks.add(0,new ResponseCheck(CheckType.STATUS,"", Operator.IS, defaultStatus, null));
+            responseChecks.add(0, new ResponseCheck(CheckType.STATUS, "", Operator.IS, defaultStatus, null));
         }
     }
 
@@ -1615,8 +1629,8 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         // Value column with ComboBox suggestions (reuse VariableGenerator rules)
         urlDynamicValueColumn.setCellFactory(col -> {
             List<String> suggestions = VariableGenerator.getInstance().getVariableDefinitions().stream()
-                .map(def -> def.get("format"))
-                .collect(Collectors.toList());
+                    .map(def -> def.get("format"))
+                    .collect(Collectors.toList());
             ComboBoxTableCell<DynamicVariable, String> cell = new ComboBoxTableCell<>(
                     new DefaultStringConverter(),
                     FXCollections.observableArrayList(suggestions));
@@ -1633,6 +1647,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             urlDynamicActionColumn.setSortable(false);
             urlDynamicActionColumn.setCellFactory(col -> new TableCell<>() {
                 private final Button editBtn = new Button("Edit");
+
                 {
                     editBtn.setStyle("-fx-background-color: transparent; -fx-border-color: transparent; -fx-cursor: hand;");
                     editBtn.setMaxWidth(Double.MAX_VALUE);
@@ -1645,6 +1660,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
                         }
                     });
                 }
+
                 @Override
                 protected void updateItem(Void item, boolean empty) {
                     super.updateItem(item, empty);
@@ -1764,8 +1780,8 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
                 responseCheckTooltip.hide();
             } else {
                 Point2D p = responseHelpButton.localToScreen(
-                    responseHelpButton.getBoundsInLocal().getMaxX(),
-                    responseHelpButton.getBoundsInLocal().getMinY()
+                        responseHelpButton.getBoundsInLocal().getMaxX(),
+                        responseHelpButton.getBoundsInLocal().getMinY()
                 );
                 responseCheckTooltip.show(responseHelpButton, p.getX(), p.getY());
             }
@@ -1857,8 +1873,8 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
                 ResponseCheck check = (ResponseCheck) getTableRow().getItem();
                 if (check.getType() == CheckType.DB) {
                     String summary = String.format("Alias: %s, Col: %s",
-                        check.getDbAlias() != null ? check.getDbAlias() : "N/A",
-                        check.getDbColumn() != null ? check.getDbColumn() : "N/A"
+                            check.getDbAlias() != null ? check.getDbAlias() : "N/A",
+                            check.getDbColumn() != null ? check.getDbColumn() : "N/A"
                     );
                     dbSummaryLabel.setText(summary);
                     String sql = check.getDbSql();

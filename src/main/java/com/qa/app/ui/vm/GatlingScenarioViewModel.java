@@ -8,7 +8,6 @@ import com.qa.app.service.api.IGatlingScenarioService;
 import com.qa.app.service.api.IGatlingTestService;
 import com.qa.app.service.impl.GatlingScenarioServiceImpl;
 import com.qa.app.service.impl.GatlingTestServiceImpl;
-import com.qa.app.ui.util.ClickableTooltipTableCell;
 import com.qa.app.util.AppConfig;
 
 import javafx.collections.FXCollections;
