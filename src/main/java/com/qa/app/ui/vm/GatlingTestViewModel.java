@@ -854,6 +854,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         updateGeneratedBody();
         updateGeneratedHeaders();
         loadAllSuites();
+        handleFilterTests(null);
     }
 
     private void clearFields() {
@@ -1559,7 +1560,16 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
 
     private void updateSuiteFilterOptions() {
         if (suiteFilterCombo == null) return;
-        List<String> suites = testList.stream()
+        List<GatlingTest> allTests = new ArrayList<>();
+        try {
+            allTests = testService.findAllTests();
+        } catch (Exception e) {
+            if (mainViewModel != null) {
+                mainViewModel.updateStatus("Failed to load tests: " + e.getMessage(), MainViewModel.StatusType.ERROR);
+            }
+            return;
+        }
+        List<String> suites = allTests.stream()
                 .map(GatlingTest::getSuite)
                 .filter(s -> s != null && !s.isBlank())
                 .distinct()
