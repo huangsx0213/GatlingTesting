@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.qa.app.ui.vm.StepOverrideEditorViewModel"
+      spacing="10" prefWidth="1600" prefHeight="800">
+    <padding>
+        <Insets top="15" right="15" bottom="15" left="15"/>
+    </padding>
+
+    <Label fx:id="titleLabel" style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Edit Overrides for Step: ICIB"/>
+
+    <TabPane VBox.vgrow="ALWAYS" fx:id="tabPane">
+        <tabs>
+            <Tab text="Headers Override" closable="false">
+                <!-- Use GridPane for a responsive left-right layout, similar to the Body tab -->
+                <GridPane hgap="10" VBox.vgrow="ALWAYS">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                        <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                    </columnConstraints>
+                    <rowConstraints>
+                        <RowConstraints vgrow="ALWAYS"/>
+                    </rowConstraints>
+                    <!-- Left side: Table for editing header overrides -->
+                    <VBox spacing="10" GridPane.columnIndex="0" VBox.vgrow="ALWAYS">
+                        <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+                        <Label fx:id="headerTemplateLabel" text="Header Template: " style="-fx-font-size: 12px; -fx-text-fill: #555;"/>
+                        <TableView fx:id="headersTable" editable="true" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="headerNameCol" text="Header Name" prefWidth="180" editable="false"/>
+                                <TableColumn fx:id="headerOriginalValueCol" text="Original Value" prefWidth="240" editable="false"/>
+                                <TableColumn fx:id="headerOverrideValueCol" text="Override Value" prefWidth="240" editable="true"/>
+                                <!-- Action column for large text Edit -->
+                                <TableColumn fx:id="headerActionCol" text="Edit" prefWidth="50" minWidth="50" editable="false"/>
+                            </columns>
+                            <columnResizePolicy>
+                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                            </columnResizePolicy>
+                        </TableView>
+                    </VBox>
+                    <!-- Right side: Text area for rendered preview -->
+                    <VBox spacing="10" GridPane.columnIndex="1" alignment="TOP_LEFT" VBox.vgrow="ALWAYS">
+                        <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+                        <Label text="Headers Preview (Rendered)" style="-fx-font-size: 12px; -fx-text-fill: #555;"/>
+                        <TextArea fx:id="headersPreviewArea" editable="false" wrapText="true" prefRowCount="12" VBox.vgrow="ALWAYS"/>
+                    </VBox>
+                </GridPane>
+            </Tab>
+            <Tab text="Body Override" closable="false">
+                <!-- Use GridPane with percentage-based columns for responsive layout -->
+                <GridPane hgap="10" VBox.vgrow="ALWAYS">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                        <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                    </columnConstraints>
+                    <rowConstraints>
+                        <RowConstraints vgrow="ALWAYS"/>
+                    </rowConstraints>
+
+                    <!-- Left side (variables table) 60% -->
+                    <VBox spacing="10" GridPane.columnIndex="0" VBox.vgrow="ALWAYS">
+                        <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+                        <Label fx:id="bodyTemplateLabel" text="Body Template: " style="-fx-font-size: 12px; -fx-text-fill: #555;"/>
+                        <TableView fx:id="bodyVariablesTable" editable="true" VBox.vgrow="ALWAYS" minHeight="320">
+                            <columns>
+                                <TableColumn fx:id="bodyVarNameCol" text="Variable Name" prefWidth="180" editable="false"/>
+                                <TableColumn fx:id="bodyVarOriginalValueCol" text="Original Value" prefWidth="240" editable="false"/>
+                                <TableColumn fx:id="bodyVarOverrideValueCol" text="Override Value" prefWidth="240" editable="true"/>
+                                <!-- Action column for large text Edit (wider) -->
+                                <TableColumn fx:id="bodyActionCol" text="Edit" prefWidth="50" minWidth="50" editable="false"/>
+                            </columns>
+                            <columnResizePolicy>
+                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                            </columnResizePolicy>
+                        </TableView>
+                    </VBox>
+
+                    <!-- Right side (rendered preview) -->
+                    <VBox spacing="10" GridPane.columnIndex="1" alignment="TOP_LEFT" VBox.vgrow="ALWAYS">
+                        <Label text="Body Preview (Rendered)" style="-fx-font-size: 12px; -fx-text-fill: #555;"/>
+                        <TextArea fx:id="bodyPreviewArea" editable="false" wrapText="true" prefRowCount="20" VBox.vgrow="ALWAYS"/>
+                    </VBox>
+                </GridPane>
+            </Tab>
+
+            <Tab text="Response Checks Override" closable="false">
+                <VBox spacing="10" VBox.vgrow="ALWAYS">
+                    <Label text="Step-level Response Checks (Overrides)" style="-fx-font-size: 12px; -fx-text-fill: #555;"/>
+                    <TableView fx:id="responseChecksTable" editable="true" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="checkTypeColumn" text="Type" prefWidth="100"/>
+                            <TableColumn fx:id="checkExpressionColumn" text="Expression" prefWidth="280"/>
+                            <TableColumn fx:id="checkOperatorColumn" text="Operator" prefWidth="120"/>
+                            <TableColumn fx:id="checkExpectColumn" text="Expect" prefWidth="220"/>
+                            <TableColumn fx:id="checkSaveAsColumn" text="Save As" prefWidth="140"/>
+                        </columns>
+                        <columnResizePolicy>
+                            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                        </columnResizePolicy>
+                    </TableView>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Button text="Add" onAction="#handleAddResponseCheckOverride"/>
+                        <Button text="Remove" onAction="#handleRemoveResponseCheckOverride"/>
+                        <Button text="Copy" onAction="#handleCopyResponseCheckOverride"/>
+                        <Button text="Paste" onAction="#handlePasteResponseCheckOverride"/>
+                    </HBox>
+                </VBox>
+            </Tab>
+        </tabs>
+    </TabPane>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Apply All Changes" onAction="#handleApply"/>
+        <Button text="Revert Unsaved" onAction="#handleRevert"/>
+        <Button text="Cancel" onAction="#handleCancel"/>
+    </HBox>
+
+</VBox>

@@ -4,12 +4,15 @@ import com.qa.app.dao.api.IGatlingScenarioDao;
 import com.qa.app.dao.util.DBUtil;
 import com.qa.app.model.Scenario;
 import com.qa.app.model.ScenarioStep;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
+
+    private static final ObjectMapper STEP_MAPPER = new ObjectMapper();
 
     @Override
     public void addScenario(Scenario scenario) throws SQLException {
@@ -167,7 +170,8 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
 
     @Override
     public void addStep(int scenarioId, ScenarioStep step) throws SQLException {
-        String sql = "INSERT INTO scenario_step(scenario_id, order_index, test_tcid, wait_time, tags) VALUES(?,?,?,?,?)";
+        String sql = "INSERT INTO scenario_step(scenario_id, order_index, test_tcid, wait_time, tags, body_var_overrides, header_var_overrides, response_check_overrides) VALUES(?,?,?,?,?,?,?,?)";
+
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, scenarioId);
@@ -175,13 +179,30 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
             ps.setString(3, step.getTestTcid());
             ps.setInt(4, step.getWaitTime());
             ps.setString(5, step.getTags());
+            ps.setString(6, mapToJson(step.getBodyVariableOverrides()));
+            ps.setString(7, mapToJson(step.getHeadersVariableOverrides()));
+            ps.setString(8, listToJson(step.getResponseCheckOverrides()));
             ps.executeUpdate();
         }
     }
 
     @Override
+    public void updateStep(int scenarioId, ScenarioStep step) throws SQLException {
+        String sql = "UPDATE scenario_step SET test_tcid=?, wait_time=?, tags=?, body_var_overrides=?, header_var_overrides=?, response_check_overrides=? WHERE scenario_id=? AND order_index=?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, step.getTestTcid());
+            ps.setInt(2, step.getWaitTime());
+            ps.setString(3, step.getTags());
+            ps.setString(4, mapToJson(step.getBodyVariableOverrides()));
+            ps.setString(5, mapToJson(step.getHeadersVariableOverrides()));
+            ps.setString(6, listToJson(step.getResponseCheckOverrides()));
+            ps.setInt(7, scenarioId);
+            ps.setInt(8, step.getOrder());
+            ps.executeUpdate();}}
+    @Override
     public List<ScenarioStep> getStepsByScenarioId(int scenarioId) throws SQLException {
-        String sql = "SELECT order_index, test_tcid, wait_time, tags FROM scenario_step WHERE scenario_id=? ORDER BY order_index ASC";
+        String sql = "SELECT order_index, test_tcid, wait_time, tags, body_var_overrides, header_var_overrides, response_check_overrides FROM scenario_step WHERE scenario_id=? ORDER BY order_index ASC";
         List<ScenarioStep> steps = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -193,13 +214,55 @@ public class GatlingScenarioDaoImpl implements IGatlingScenarioDao {
                     step.setTestTcid(rs.getString("test_tcid"));
                     step.setWaitTime(rs.getInt("wait_time"));
                     step.setTags(rs.getString("tags"));
-                    steps.add(step);
+                    step.setBodyVariableOverrides(jsonToMap(rs.getString("body_var_overrides")));
+                    step.setHeadersVariableOverrides(jsonToMap(rs.getString("header_var_overrides")));
+                    step.setResponseCheckOverrides(jsonToCheckList(rs.getString("response_check_overrides")));
+                    steps.add(step);    
                 }
             }
         }
         return steps;
     }
 
+    private String mapToJson(java.util.Map<String, String> map) {
+        if (map == null || map.isEmpty())
+            return null;
+        try {
+            return STEP_MAPPER.writeValueAsString(map);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private java.util.Map<String, String> jsonToMap(String json) {
+        if (json == null || json.isBlank())
+            return null;
+        try {
+            return STEP_MAPPER.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String listToJson(java.util.List<com.qa.app.model.ResponseCheck> list) {
+        if (list == null || list.isEmpty())
+            return null;
+        try {
+            return STEP_MAPPER.writeValueAsString(list);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private java.util.List<com.qa.app.model.ResponseCheck> jsonToCheckList(String json) {
+        if (json == null || json.isBlank())
+            return null;
+        try {
+            return STEP_MAPPER.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<java.util.List<com.qa.app.model.ResponseCheck>>() {});
+        } catch (Exception e) {
+            return null;
+        }
+    }
     @Override
     public void upsertSchedule(int scenarioId, String cronExpr, boolean enabled) throws SQLException {
         String sql = "INSERT INTO scenario_schedule(scenario_id, cron_expr, enabled) VALUES(?,?,?) " +

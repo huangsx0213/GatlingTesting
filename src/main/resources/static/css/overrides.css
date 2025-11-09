@@ -1,0 +1,7 @@
+/* Minimal override styles: only highlight modified rows */
+.override-modified {     -fx-background-color: rgba(241,196,15,0.20);     background-color: rgba(241,196,15,0.20); }
+.table-row-cell.override-modified:filled:selected {     -fx-background-color: #f1c40f;     background-color: #f1c40f;     -fx-text-fill: black; }
+
+/* Ensure text fields inherit color */
+.table-row-cell:filled:selected .table-cell {     -fx-text-fill: inherit; }
+.table-row-cell:filled:selected .text-field {     -fx-text-fill: inherit; }

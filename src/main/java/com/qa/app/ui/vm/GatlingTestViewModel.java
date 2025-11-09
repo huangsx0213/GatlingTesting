@@ -13,6 +13,7 @@ import com.qa.app.ui.vm.gatling.TagHandler;
 import com.qa.app.ui.vm.gatling.TemplateHandler;
 import com.qa.app.ui.vm.gatling.TestCondictionHandler;
 import com.qa.app.common.listeners.AppConfigChangeListener;
+import com.qa.app.ui.util.DialogHelper;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -1309,6 +1310,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
             if (mainViewModel != null) {
                 mainViewModel.updateStatus("Gatling test(s) completed.", MainViewModel.StatusType.SUCCESS);
             }
+            if (runTestButton != null) runTestButton.setDisable(false);
         });
 
         try {
@@ -1487,6 +1489,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         stage.getIcons().add(
                 new Image(getClass().getResourceAsStream("/static/icon/favicon.png")));
 
+        dialog.initOwner(responseChecksTable.getScene().getWindow());
         // Set the button types.
         ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
         ButtonType cancelButtonType = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
@@ -1663,7 +1666,7 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
                     editBtn.setMaxWidth(Double.MAX_VALUE);
                     editBtn.setOnAction(evt -> {
                         DynamicVariable var = getTableView().getItems().get(getIndex());
-                        String edited = showLargeTextEditDialog(var.getKey(), var.getValue());
+                        String edited = showLargeTextEditDialog(var.getKey(), var.getValue(),editBtn);
                         if (edited != null) {
                             var.setValue(edited);
                             updateGeneratedUrl();
@@ -1720,9 +1723,14 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
     }
 
     // Helper method (copied from TemplateHandler)
-    private String showLargeTextEditDialog(String key, String initialValue) {
+    private String showLargeTextEditDialog(String key, String initialValue, Node owner) {
         Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Edit Value - " + key);
+
+        if (owner != null && owner.getScene() != null && owner.getScene().getWindow() != null) {
+            dialog.initOwner(owner.getScene().getWindow());
+        }
+
         ButtonType okButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
         ButtonType cancelButtonType = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
         dialog.getDialogPane().getButtonTypes().addAll(okButtonType, cancelButtonType);
@@ -1731,6 +1739,9 @@ public class GatlingTestViewModel implements Initializable, AppConfigChangeListe
         textArea.setPrefSize(400, 300);
         dialog.getDialogPane().setContent(textArea);
         dialog.setResizable(true);
+
+        DialogHelper.centerDialogOnOwner(testTable.getScene().getWindow(),(Stage) dialog.getDialogPane().getScene().getWindow());
+
         dialog.setResultConverter(btn -> btn == okButtonType ? textArea.getText() : null);
         java.util.Optional<String> result = dialog.showAndWait();
         return result.orElse(null);

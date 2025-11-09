@@ -19,6 +19,7 @@ public interface IGatlingScenarioDao {
     void deleteStepsByScenarioId(int scenarioId) throws SQLException;
     void addStep(int scenarioId, ScenarioStep step) throws SQLException;
     List<ScenarioStep> getStepsByScenarioId(int scenarioId) throws SQLException;
+    void updateStep(int scenarioId, ScenarioStep step) throws SQLException;
 
     // Schedule
     void upsertSchedule(int scenarioId, String cronExpr, boolean enabled) throws SQLException;

@@ -93,6 +93,24 @@ public class GatlingTestSimulation extends Simulation {
         }
     }
 
+    public static class DbCheckInfo {
+        private String alias;
+        private String sql;
+        private String column;
+
+        public String getAlias() {
+            return alias;
+        }
+
+        public String getSql() {
+            return sql;
+        }
+
+        public String getColumn() {
+            return column;
+        }
+    }
+
     {
         // Clear results at the beginning of a simulation run.
         lastRunResults.clear();
@@ -576,7 +594,7 @@ public class GatlingTestSimulation extends Simulation {
                                         column = currentCheck.getDbColumn();
                                     } else {
                                         // Backward compatibility for old format stored in the expression field
-                                        GatlingScenarioSimulation.DbCheckInfo checkInfo = new ObjectMapper().readValue(currentCheck.getExpression(), GatlingScenarioSimulation.DbCheckInfo.class);
+                                        DbCheckInfo checkInfo = new ObjectMapper().readValue(currentCheck.getExpression(), DbCheckInfo.class);
                                         alias = checkInfo.getAlias();
                                         sql = checkInfo.getSql();
                                         column = checkInfo.getColumn();

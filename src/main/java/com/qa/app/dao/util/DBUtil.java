@@ -170,6 +170,9 @@ public class DBUtil {
                     " test_tcid TEXT NOT NULL," +
                     " wait_time INTEGER DEFAULT 0," +
                     " tags TEXT," +
+                    " body_var_overrides TEXT," +
+                    " header_var_overrides TEXT," +
+                    " response_check_overrides TEXT," +
                     " FOREIGN KEY(scenario_id) REFERENCES scenario(id) ON DELETE CASCADE ON UPDATE CASCADE" +
                     ");";
             stmt.execute(stepSql);

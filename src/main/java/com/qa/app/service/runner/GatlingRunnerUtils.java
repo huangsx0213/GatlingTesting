@@ -98,4 +98,22 @@ public class GatlingRunnerUtils {
         command.add(resultsPath);
         return command;
     }
+    public static String mapToJson(Map<String, String> map) {
+        if (map == null) return "{}";
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(map);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return "{}";
+        }
+    }
+    
+    public static Map<String, String> jsonToMap(String json) {
+        if (json == null || json.isBlank()) return new java.util.HashMap<>();
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return new java.util.HashMap<>();
+        }
+    }
+    
 } 

@@ -122,6 +122,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     @FXML private Button runScenarioButton;
     @FXML private Button moveScenarioUpButton;
     @FXML private Button moveScenarioDownButton;
+    @FXML private TableColumn<ScenarioStep, String> overriddenCol;
 
     public void setMainViewModel(MainViewModel vm) {
         this.mainViewModel = vm;
@@ -355,6 +356,32 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
                 scenarioTabPane.getSelectionModel().select(scenarioStepsTab);
             });
         }
+        if (overriddenCol != null) {
+            overriddenCol.setCellValueFactory(cell -> {
+                ScenarioStep s = cell.getValue();
+                String mark = (s != null && s.hasAnyOverrides()) ? "Y" : "";
+                return new javafx.beans.property.SimpleStringProperty(mark);
+            });
+        
+            overriddenCol.setCellFactory(col -> new TableCell<>() {
+                @Override
+                protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty) {
+                        setText(null);
+                        setStyle("");
+                    } else {
+                        setText(item);
+                        if (item != null && !item.isBlank()) {
+                            setStyle("-fx-font-weight: bold; -fx-text-fill: #259955ff;");
+                        } else {
+                            setStyle("");
+                        }
+                    }
+                }
+            });
+        }
+        
     }
 
     @Override
@@ -1024,4 +1051,52 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             tooltip.show(owner, p.getX(), p.getY());
         }
     }
-} 
+    @FXML private void handleEditStepOverrides() {
+        ScenarioStep sel = scenarioStepTable.getSelectionModel().getSelectedItem();
+        if (sel == null) { showError("select a step first"); return; }
+        // 获取当前场景
+        Scenario currentScenario = scenarioTable.getSelectionModel().getSelectedItem();
+        if (currentScenario == null) { showError("select a scenario first"); return; }
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/qa/app/ui/view/step_override_editor.fxml"));
+            javafx.scene.Parent root = loader.load();
+            StepOverrideEditorViewModel ctrl = loader.getController();
+            javafx.stage.Stage dialog = new javafx.stage.Stage();
+            dialog.setTitle("Edit Overrides - " + sel.getTestTcid());
+            dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            
+            if (scenarioStepTable.getScene() != null && scenarioStepTable.getScene().getWindow() != null) {
+                dialog.initOwner(scenarioStepTable.getScene().getWindow());
+            }
+            dialog.setScene(new javafx.scene.Scene(root));
+            ctrl.setDialogStage(dialog);
+            ctrl.setStep(sel); // controller will populate tables
+            dialog.showAndWait();
+            if (ctrl != null && ctrl.isSaved()) {
+                // 持久化单步覆盖修改
+                try {
+                    scenarioService.updateStep(currentScenario.getId(), sel);
+                } catch (ServiceException se) {
+                    showError("persist overrides failed: " + se.getMessage());
+                }
+                scenarioStepTable.refresh();
+                showInfo("Overrides updated for step " + sel.getTestTcid());
+            }
+        } catch (Exception ex) {
+            showError("open editor failed: " + ex.getMessage());
+        }
+    }
+
+    @FXML private void handleClearStepOverrides() {
+        var selected = scenarioStepTable.getSelectionModel().getSelectedItems();
+        if (selected == null || selected.isEmpty()) { showError("select step(s) first"); return; }
+        for (ScenarioStep s : selected) { s.clearOverrides(); }
+        scenarioStepTable.refresh();
+        showInfo("Overrides cleared for " + selected.size() + " step(s)");
+    }
+
+    /** 检查是否含有覆盖标记，可用于表格自定义渲染渲染 */
+    private boolean stepHasOverrides(ScenarioStep step) {
+        return step != null && step.hasAnyOverrides();
+    }
+}

@@ -18,4 +18,5 @@ public interface IGatlingScenarioService {
                       java.lang.Runnable onComplete) throws ServiceException;
     void upsertSchedule(int scenarioId, String cronExpr, boolean enabled) throws ServiceException;
     com.qa.app.model.ScenarioSchedule getSchedule(int scenarioId) throws ServiceException;
+    void updateStep(int scenarioId, ScenarioStep step) throws ServiceException;
 } 

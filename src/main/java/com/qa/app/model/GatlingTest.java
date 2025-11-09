@@ -76,9 +76,9 @@ public class GatlingTest {
      */
     public GatlingTest(GatlingTest other) {
         // Do not copy ID to allow for new insertion
-        this.isEnabled.set(false); // Default to disabled
+        this.isEnabled.set(other.isEnabled()); 
         this.suite.set(other.getSuite());
-        this.tcid.set(other.getTcid() + "_copy");
+        this.tcid.set(other.getTcid());
         this.descriptions.set(other.getDescriptions());
         this.conditions.set(other.getConditions());
         this.responseChecks.set(other.getResponseChecks());
@@ -125,11 +125,47 @@ public class GatlingTest {
     public void setResponseChecks(String responseChecks) { this.responseChecks.set(responseChecks); }
     public StringProperty responseChecksProperty() { return responseChecks; }
 
-    /* Deprecated
-    public int getEndpointId() { return endpointId.get(); }
-    public void setEndpointId(int endpointId) { this.endpointId.set(endpointId); }
-    public IntegerProperty endpointIdProperty() { return endpointId; }
-    */
+    public void setResponseChecksFromList(java.util.List<ResponseCheck> checks) {
+        try {
+            this.responseChecks.set(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(checks));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            System.err.println("Failed to serialize response checks: " + e.getMessage());
+            // Or handle more gracefully
+        }
+    }
+    
+    public String getVariables() {
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(this.dynamicVariables);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return "{}";
+        }
+    }
+    
+    public String getHeadersVariables() {
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(this.headersDynamicVariables);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return "{}";
+        }
+    }
+    
+    public void setVariables(String json) {
+        try {
+            this.dynamicVariables = new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            // ignore
+        }
+    }
+    
+    public void setHeadersVariables(String json) {
+        try {
+            this.headersDynamicVariables = new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            // ignore
+        }
+    }
+    
 
     public String getHeaders() { return headers.get(); }
     public void setHeaders(String headers) { this.headers.set(headers); }

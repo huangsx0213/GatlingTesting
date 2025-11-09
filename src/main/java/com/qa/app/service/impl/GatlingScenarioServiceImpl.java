@@ -163,29 +163,34 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
                     if (mainTest == null) {
                         throw new ServiceException("Test not found for tcid: " + step.getTestTcid());
                     }
-                    mainTest.setWaitTime(step.getWaitTime());
-
+                    
+                    GatlingTest testToRun = new GatlingTest(mainTest);
+                    testToRun.setTcid("Step" + step.getOrder()+"_"+ mainTest.getTcid());
+                    testToRun.setWaitTime(step.getWaitTime());
                     Map<String, List<String>> condMap = parseConditionString(mainTest.getConditions());
+
+                    enrichTemplates(testToRun);
+                    testToRun = applyStepOverrides(testToRun, step);
 
                     // 1) Add Setup tests
                     List<String> setups = condMap.getOrDefault("Setup", java.util.Collections.emptyList());
                     for (String tcid : setups) {
                         GatlingTest setupTest = testService.findTestByTcid(tcid);
                         if (setupTest == null) {
-                            throw new ServiceException("Setup test not found: " + tcid + " (required by " + mainTest.getTcid() + ")");
+                            throw new ServiceException("Setup test not found: " + tcid + " (required by " + testToRun.getTcid() + ")");
                         }
                         allTestsWithDeps.add(setupTest);
                     }
 
                     // 2) Add Main test
-                    allTestsWithDeps.add(mainTest);
+                    allTestsWithDeps.add(testToRun);
 
                     // 3) Add Teardown tests
                     List<String> teardowns = condMap.getOrDefault("Teardown", java.util.Collections.emptyList());
                     for (String tcid : teardowns) {
                         GatlingTest teardownTest = testService.findTestByTcid(tcid);
                         if (teardownTest == null) {
-                            throw new ServiceException("Teardown test not found: " + tcid + " (required by " + mainTest.getTcid() + ")");
+                            throw new ServiceException("Teardown test not found: " + tcid + " (required by " + testToRun.getTcid() + ")");
                         }
                         allTestsWithDeps.add(teardownTest);
                     }
@@ -194,19 +199,7 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
                 java.util.List<java.util.Map<String, Object>> batchItems = new java.util.ArrayList<>();
                 for (GatlingTest gt : allTestsWithDeps) {
                     // enrich templates (same logic as GatlingTestServiceImpl)
-                    try {
-                        if ((gt.getBody() == null || gt.getBody().isEmpty()) && gt.getBodyTemplateId() > 0) {
-                            com.qa.app.model.BodyTemplate bt = new com.qa.app.service.impl.BodyTemplateServiceImpl().findBodyTemplateById(gt.getBodyTemplateId());
-                            if (bt != null) gt.setBody(bt.getContent());
-                        }
-                    } catch (Exception ignored) { }
-
-                    try {
-                        if ((gt.getHeaders() == null || gt.getHeaders().isEmpty()) && gt.getHeadersTemplateId() > 0) {
-                            com.qa.app.model.HeadersTemplate ht = new com.qa.app.service.impl.HeadersTemplateServiceImpl().getHeadersTemplateById(gt.getHeadersTemplateId());
-                            if (ht != null) gt.setHeaders(ht.getContent());
-                        }
-                    } catch (Exception ignored) { }
+                    enrichTemplates(gt);
 
                     java.util.Map<String, Object> map = new java.util.HashMap<>();
                     map.put("test", gt);
@@ -312,6 +305,50 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
         }
     }
 
+    private void enrichTemplates(GatlingTest gt) {
+        try {
+            if ((gt.getBody() == null || gt.getBody().isEmpty()) && gt.getBodyTemplateId() > 0) {
+                com.qa.app.model.BodyTemplate bt = new com.qa.app.service.impl.BodyTemplateServiceImpl().findBodyTemplateById(gt.getBodyTemplateId());
+                if (bt != null) gt.setBody(bt.getContent());
+            }
+        } catch (Exception ignored) {}
+    
+        try {
+            if ((gt.getHeaders() == null || gt.getHeaders().isEmpty()) && gt.getHeadersTemplateId() > 0) {
+                com.qa.app.model.HeadersTemplate ht = new com.qa.app.service.impl.HeadersTemplateServiceImpl().getHeadersTemplateById(gt.getHeadersTemplateId());
+                if (ht != null) gt.setHeaders(ht.getContent());
+            }
+        } catch (Exception ignored) {}
+    }
+    
+    private GatlingTest applyStepOverrides(GatlingTest test, ScenarioStep step) {
+        if (test == null || step == null || !step.hasAnyOverrides()) {
+            return test;
+        }
+    
+        // 1. Body Variables Override
+        if (step.getBodyVariableOverrides() != null && !step.getBodyVariableOverrides().isEmpty()) {
+            Map<String, String> baseBodyVars = GatlingRunnerUtils.jsonToMap(test.getVariables());
+            Map<String, String> mergedBodyVars = step.mergeBody(baseBodyVars);
+            test.setVariables(GatlingRunnerUtils.mapToJson(mergedBodyVars));
+        }
+    
+        // 2. Headers Variables Override
+        if (step.getHeadersVariableOverrides() != null && !step.getHeadersVariableOverrides().isEmpty()) {
+            Map<String, String> baseHeaderVars = GatlingRunnerUtils.jsonToMap(test.getHeadersVariables());
+            Map<String, String> mergedHeaderVars = step.mergeHeaders(baseHeaderVars);
+            test.setHeadersVariables(GatlingRunnerUtils.mapToJson(mergedHeaderVars));
+        }
+    
+        // 3. Response Checks Override
+        if (step.getResponseCheckOverrides() != null && !step.getResponseCheckOverrides().isEmpty()) {
+            test.setResponseChecksFromList(step.getResponseCheckOverrides());
+        }
+    
+        return test;
+    }
+
+    
     /**
      * Parse the Condition string, e.g. "[Setup]TC001,TC002;[Teardown]TC003" -> Map
      * Copied from GatlingTestServiceImpl for standalone use.
@@ -332,5 +369,13 @@ public class GatlingScenarioServiceImpl implements IGatlingScenarioService {
             map.put(prefix, tcids);
         }
         return map;
+    }
+    @Override
+    public void updateStep(int scenarioId, ScenarioStep step) throws ServiceException {
+        try {
+            scenarioDao.updateStep(scenarioId, step);
+        } catch (Exception e) {
+            throw new ServiceException("Failed to update step", e);
+        }
     }
 } 
