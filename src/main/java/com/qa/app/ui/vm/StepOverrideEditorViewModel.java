@@ -22,11 +22,8 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
-import javafx.event.ActionEvent;
-import javafx.scene.Node;
 import javafx.scene.control.ButtonBar.ButtonData;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
@@ -142,7 +139,13 @@ public class StepOverrideEditorViewModel {
                     editBtn.setMaxWidth(Double.MAX_VALUE);
                     editBtn.setOnAction(evt -> {
                         VariableOverrideRow row = getTableView().getItems().get(getIndex());
-                        String edited = showLargeTextEditDialog(row.getName(), row.getOverrideValue(), editBtn);
+                        String edited = DialogHelper.showLargeTextEditor(
+                                "Edit Override - " + row.getName(),
+                                row.getOverrideValue(),
+                                editBtn,
+                                true,
+                                500,
+                                360);
                         if (edited != null) {
                             row.setOverrideValue(edited);
                             refreshEverything();
@@ -736,51 +739,6 @@ public class StepOverrideEditorViewModel {
                     commitEdit(textField.getText());
             });
         }
-    }
-
-    // Large text / JSON edit dialog adapted from TemplateHandler
-    private String showLargeTextEditDialog(String key, String initialValue, Node owner) {
-        Dialog<String> dialog = new Dialog<>();
-        dialog.setTitle("Edit Override - " + key);
-        if (owner != null && owner.getScene() != null && owner.getScene().getWindow() != null) {
-            dialog.initOwner(owner.getScene().getWindow());
-        }
-
-        ButtonType okButtonType = new ButtonType("OK", ButtonData.OK_DONE);
-        ButtonType cancelButtonType = new ButtonType("Cancel", ButtonData.CANCEL_CLOSE);
-        ButtonType formatJsonButtonType = new ButtonType("Format JSON", ButtonData.RIGHT);
-        dialog.getDialogPane().getButtonTypes().addAll(okButtonType, cancelButtonType, formatJsonButtonType);
-        TextArea textArea = new TextArea(initialValue);
-        textArea.setWrapText(true);
-        textArea.setPrefSize(500, 360);
-        dialog.getDialogPane().setContent(textArea);
-        dialog.setResizable(true);
-
-        final Button formatJsonButton = (Button) dialog.getDialogPane().lookupButton(formatJsonButtonType);
-        formatJsonButton.addEventFilter(ActionEvent.ACTION, evt -> {
-            try {
-                Object json = mapper.readValue(textArea.getText(), Object.class);
-                String formatted = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json);
-                textArea.setText(formatted);
-            } catch (JsonProcessingException e) {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("JSON Format Error");
-                alert.setHeaderText("Invalid JSON");
-                alert.setContentText("The text could not be formatted as JSON. Please check the syntax.");
-                alert.showAndWait();
-            }
-            evt.consume();
-        });
-
-        dialog.setResultConverter(btn -> btn == okButtonType ? textArea.getText() : null);
-        Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
-        try {
-            stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.png")));
-        } catch (Exception ignored) {
-        }
-        DialogHelper.centerDialogOnOwner(stage.getOwner(), stage);
-        Optional<String> result = dialog.showAndWait();
-        return result.orElse(null);
     }
 
 }

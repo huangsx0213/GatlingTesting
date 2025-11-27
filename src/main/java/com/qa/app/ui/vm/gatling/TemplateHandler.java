@@ -22,14 +22,8 @@ import com.qa.app.service.runner.RuntimeTemplateProcessor;
 import com.qa.app.service.util.VariableGenerator;
 import com.qa.app.ui.util.DialogHelper;
 
-import javafx.stage.Stage;
-import javafx.scene.image.Image;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Button;
-import javafx.scene.control.Alert;
-import javafx.event.ActionEvent;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -148,7 +142,11 @@ public class TemplateHandler {
                     editBtn.setMaxWidth(Double.MAX_VALUE);
                     editBtn.setOnAction(evt -> {
                         DynamicVariable var = getTableView().getItems().get(getIndex());
-                        String edited = showLargeTextEditDialog(var.getKey(), var.getValue(), editBtn);
+                        String edited = DialogHelper.showLargeTextEditor(
+                                "Edit Value - " + var.getKey(),
+                                var.getValue(),
+                                editBtn,
+                                true);
                         if (edited != null) {
                             var.setValue(edited);
                             TemplateHandler.this.updateGenerated();
@@ -270,56 +268,4 @@ public class TemplateHandler {
         return content.replaceAll("@\\{([^}]+)\\}", "[=$1]");
     }
 
-    /**
-     * Opens a resizable dialog with a TextArea for editing long / JSON values.
-     * Returns the user input when OK is pressed, or null when cancelled.
-     */
-    private String showLargeTextEditDialog(String key, String initialValue, javafx.scene.Node owner) {
-        Dialog<String> dialog = new Dialog<>();
-        dialog.setTitle("Edit Value - " + key);
-
-        if (owner != null && owner.getScene() != null && owner.getScene().getWindow() != null) {
-            dialog.initOwner(owner.getScene().getWindow());
-        }
-        
-        ButtonType okButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
-        ButtonType cancelButtonType = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
-        ButtonType formatJsonButtonType = new ButtonType("Format JSON", ButtonBar.ButtonData.RIGHT);
-
-        dialog.getDialogPane().getButtonTypes().addAll(okButtonType, cancelButtonType, formatJsonButtonType);
-
-        TextArea textArea = new TextArea(initialValue);
-        textArea.setWrapText(true);
-        textArea.setPrefSize(400, 300);
-        dialog.getDialogPane().setContent(textArea);
-        dialog.setResizable(true);
-
-        // Add action for the Format JSON button without closing the dialog
-        final Button formatJsonButton = (Button) dialog.getDialogPane().lookupButton(formatJsonButtonType);
-        formatJsonButton.addEventFilter(ActionEvent.ACTION, event -> {
-            try {
-                Object json = mapper.readValue(textArea.getText(), Object.class);
-                String formattedJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json);
-                textArea.setText(formattedJson);
-            } catch (JsonProcessingException e) {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("JSON Format Error");
-                alert.setHeaderText("Invalid JSON");
-                alert.setContentText("The text could not be formatted as JSON. Please check the syntax.");
-                alert.showAndWait();
-            }
-            event.consume();
-        });
-
-        dialog.setResultConverter(btn -> btn == okButtonType ? textArea.getText() : null);
-
-        // Set Icon
-        Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
-        stage.getIcons().add(new Image(getClass().getResourceAsStream("/static/icon/favicon.png")));
-
-        DialogHelper.centerDialogOnOwner(stage.getOwner(), stage);
-
-        java.util.Optional<String> result = dialog.showAndWait();
-        return result.orElse(null);
-    }
-} 
+}

@@ -1,5 +1,6 @@
 <configuration>
 
+    <!-- ===== Console Appender ===== -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%-5level] %-35.35logger{35} - %msg%n%rEx</pattern>
@@ -7,12 +8,32 @@
         <immediateFlush>true</immediateFlush>
     </appender>
 
+    <!-- ===== File Appender ===== -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/app.log</file>
+
+        <!-- Log rolling strategy: split by file size, max 10MB per file -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>15</maxHistory> <!-- Keep for 15 days -->
+            <totalSizeCap>2GB</totalSizeCap>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] %-35.35logger{35} - %msg%n%rEx</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ===== Custom Loggers ===== -->
     <logger name="com.qa.app" level="INFO" />
     <logger name="io.gatling" level="INFO" />
     <logger name="io.gatling.http" level="TRACE" />
 
+    <!-- ===== Root Logger ===== -->
     <root level="INFO">
         <appender-ref ref="CONSOLE" />
+        <appender-ref ref="FILE" />
     </root>
 
-</configuration> 
+</configuration>

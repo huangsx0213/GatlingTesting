@@ -29,53 +29,84 @@ import javafx.scene.control.Tab;
 
 import com.qa.app.common.listeners.AppConfigChangeListener;
 import com.qa.app.service.ProjectContext;
+import com.qa.app.ui.vm.gatling.GatlingLoadModelHandler;
+import com.qa.app.ui.vm.gatling.GatlingScenarioStepHandler;
 
 public class GatlingScenarioViewModel implements AppConfigChangeListener {
 
     // -------------- FXML components --------------
-    @FXML private TextField scenarioNameField;
-    @FXML private HTMLEditor scenarioDescArea;
-    @FXML private TableView<GatlingTest> availableTestTable;
-    @FXML private TableView<ScenarioStep> scenarioStepTable;
-    @FXML private TableView<Scenario> scenarioTable;
-    @FXML private CheckBox functionalTestCheckBox;
-    @FXML private Label functionalHelpIcon;
+    @FXML
+    private TextField scenarioNameField;
+    @FXML
+    private HTMLEditor scenarioDescArea;
+    @FXML
+    private TableView<GatlingTest> availableTestTable;
+    @FXML
+    private TableView<ScenarioStep> scenarioStepTable;
+    @FXML
+    private TableView<Scenario> scenarioTable;
+    @FXML
+    private CheckBox functionalTestCheckBox;
+    @FXML
+    private Label functionalHelpIcon;
 
-    @FXML private TabPane scenarioTabPane;
+    @FXML
+    private TabPane scenarioTabPane;
     // Tab reference for default selection
-    @FXML private Tab scenarioStepsTab;
+    @FXML
+    private Tab scenarioStepsTab;
 
     private javafx.scene.control.Tooltip functionalTooltip;
 
-    @FXML private ComboBox<String> suiteFilterCombo;
-    @FXML private TextField tagFilterField;
+    @FXML
+    private ComboBox<String> suiteFilterCombo;
+    @FXML
+    private TextField tagFilterField;
 
-    @FXML private TableColumn<GatlingTest, String> tcidCol;
-    @FXML private TableColumn<GatlingTest, String> suiteCol;
-    @FXML private TableColumn<GatlingTest, String> availableTagsCol;
-    @FXML private TableColumn<GatlingTest, String> availableDescCol;
+    @FXML
+    private TableColumn<GatlingTest, String> tcidCol;
+    @FXML
+    private TableColumn<GatlingTest, String> suiteCol;
+    @FXML
+    private TableColumn<GatlingTest, String> availableTagsCol;
+    @FXML
+    private TableColumn<GatlingTest, String> availableDescCol;
 
-    @FXML private TableColumn<ScenarioStep, Number> orderCol;
-    @FXML private TableColumn<ScenarioStep, String> stepTcidCol;
-    @FXML private TableColumn<ScenarioStep, Integer> waitCol;
-    @FXML private TableColumn<ScenarioStep, String> stepTagsCol;
+    @FXML
+    private TableColumn<ScenarioStep, Number> orderCol;
+    @FXML
+    private TableColumn<ScenarioStep, String> stepTcidCol;
+    @FXML
+    private TableColumn<ScenarioStep, Integer> waitCol;
+    @FXML
+    private TableColumn<ScenarioStep, String> stepTagsCol;
 
-    @FXML private TableColumn<Scenario, String> scNameCol;
-    @FXML private TableColumn<Scenario, String> scDescCol;
-    @FXML private TableColumn<Scenario, String> scTypeCol;
-    @FXML private TableColumn<Scenario, Number> scStepCountCol;
-    @FXML private TableColumn<Scenario, String> functionalCol;  // New column for Functional Test flag
+    @FXML
+    private TableColumn<Scenario, String> scNameCol;
+    @FXML
+    private TableColumn<Scenario, String> scDescCol;
+    @FXML
+    private TableColumn<Scenario, String> scTypeCol;
+    @FXML
+    private TableColumn<Scenario, Number> scStepCountCol;
+    @FXML
+    private TableColumn<Scenario, String> functionalCol;
 
-    @FXML private ComboBox<String> frequencyCombo;
-    @FXML private ComboBox<String> threadGroupCombo;
-    @FXML private DatePicker startDatePicker;
-    @FXML private Spinner<Integer> hourSpinner;
-    @FXML private Spinner<Integer> minuteSpinner;
-    @FXML private Spinner<Integer> secondSpinner;
+    @FXML
+    private ComboBox<String> frequencyCombo;
+    @FXML
+    private ComboBox<String> threadGroupCombo;
+    @FXML
+    private DatePicker startDatePicker;
+    @FXML
+    private Spinner<Integer> hourSpinner;
+    @FXML
+    private Spinner<Integer> minuteSpinner;
+    @FXML
+    private Spinner<Integer> secondSpinner;
 
     // ----------------- data -------------------
     private final ObservableList<GatlingTest> availableTests = FXCollections.observableArrayList();
-    private final ObservableList<ScenarioStep> steps = FXCollections.observableArrayList();
     private final ObservableList<Scenario> scenarios = FXCollections.observableArrayList();
 
     private final IGatlingTestService testService = new GatlingTestServiceImpl();
@@ -84,45 +115,75 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     // for MainViewModel to inject reference
     private MainViewModel mainViewModel;
 
+    // Helpers
+    private GatlingLoadModelHandler loadModelHandler;
+    private GatlingScenarioStepHandler stepHandler;
+
     // ------------ Load Model Pane Controls -------------
-    @FXML private TabPane loadModelTabPane;
-    @FXML private Tab standardLoadTab;
-    @FXML private Spinner<Integer> standardNumThreadsSpinner;
-    @FXML private Spinner<Integer> standardRampUpSpinner;
-    @FXML private Spinner<Integer> standardLoopsSpinner;
-    @FXML private CheckBox standardSchedulerCheckBox;
-    @FXML private Spinner<Integer> standardDurationSpinner;
-    @FXML private Spinner<Integer> standardDelaySpinner;
+    @FXML
+    private TabPane loadModelTabPane;
+    @FXML
+    private Tab standardLoadTab;
+    @FXML
+    private Spinner<Integer> standardNumThreadsSpinner;
+    @FXML
+    private Spinner<Integer> standardRampUpSpinner;
+    @FXML
+    private Spinner<Integer> standardLoopsSpinner;
+    @FXML
+    private CheckBox standardSchedulerCheckBox;
+    @FXML
+    private Spinner<Integer> standardDurationSpinner;
+    @FXML
+    private Spinner<Integer> standardDelaySpinner;
 
-    @FXML private Tab steppingLoadTab;
-    @FXML private Spinner<Integer> steppingNumThreadsSpinner;
-    @FXML private Spinner<Integer> steppingInitialDelaySpinner;
-    @FXML private Spinner<Integer> steppingStartUsersSpinner;
-    @FXML private Spinner<Integer> steppingIncrementUsersSpinner;
-    @FXML private Spinner<Integer> steppingIncrementTimeSpinner;
-    @FXML private Spinner<Integer> steppingHoldLoadSpinner;
+    @FXML
+    private Tab steppingLoadTab;
+    @FXML
+    private Spinner<Integer> steppingNumThreadsSpinner;
+    @FXML
+    private Spinner<Integer> steppingInitialDelaySpinner;
+    @FXML
+    private Spinner<Integer> steppingStartUsersSpinner;
+    @FXML
+    private Spinner<Integer> steppingIncrementUsersSpinner;
+    @FXML
+    private Spinner<Integer> steppingIncrementTimeSpinner;
+    @FXML
+    private Spinner<Integer> steppingHoldLoadSpinner;
 
-    @FXML private Tab ultimateTab;
-    @FXML private TableView<com.qa.app.model.threadgroups.UltimateThreadGroupStep> ultimateStepsTable;
-    @FXML private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateStartTimeCol;
-    @FXML private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateInitialLoadCol;
-    @FXML private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateStartupTimeCol;
-    @FXML private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateHoldTimeCol;
-    @FXML private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateShutdownTimeCol;
-    @FXML private Button addUltimateStepButton;
-    @FXML private Button removeUltimateStepButton;
-
-    private final ObservableList<com.qa.app.model.threadgroups.UltimateThreadGroupStep> ultimateSteps = FXCollections.observableArrayList();
+    @FXML
+    private Tab ultimateTab;
+    @FXML
+    private TableView<com.qa.app.model.threadgroups.UltimateThreadGroupStep> ultimateStepsTable;
+    @FXML
+    private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateStartTimeCol;
+    @FXML
+    private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateInitialLoadCol;
+    @FXML
+    private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateStartupTimeCol;
+    @FXML
+    private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateHoldTimeCol;
+    @FXML
+    private TableColumn<com.qa.app.model.threadgroups.UltimateThreadGroupStep, Integer> ultimateShutdownTimeCol;
+    @FXML
+    private Button addUltimateStepButton;
+    @FXML
+    private Button removeUltimateStepButton;
 
     private final java.util.Map<Scenario, javafx.beans.property.BooleanProperty> selectionMap = new java.util.HashMap<>();
     private final javafx.scene.control.CheckBox selectAllCheckBoxSc = new javafx.scene.control.CheckBox();
 
     private boolean isUpdatingSelection = false;
 
-    @FXML private Button runScenarioButton;
-    @FXML private Button moveScenarioUpButton;
-    @FXML private Button moveScenarioDownButton;
-    @FXML private TableColumn<ScenarioStep, String> overriddenCol;
+    @FXML
+    private Button runScenarioButton;
+    @FXML
+    private Button moveScenarioUpButton;
+    @FXML
+    private Button moveScenarioDownButton;
+    @FXML
+    private TableColumn<ScenarioStep, String> overriddenCol;
 
     public void setMainViewModel(MainViewModel vm) {
         this.mainViewModel = vm;
@@ -137,22 +198,46 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     @FXML
     public void initialize() {
         AppConfig.addChangeListener(this);
+
+        // Initialize Helpers
+        loadModelHandler = new GatlingLoadModelHandler(
+                loadModelTabPane, standardLoadTab,
+                standardNumThreadsSpinner, standardRampUpSpinner, standardLoopsSpinner,
+                standardSchedulerCheckBox, standardDurationSpinner, standardDelaySpinner,
+                steppingLoadTab,
+                steppingNumThreadsSpinner, steppingInitialDelaySpinner,
+                steppingStartUsersSpinner, steppingIncrementUsersSpinner,
+                steppingIncrementTimeSpinner, steppingHoldLoadSpinner,
+                ultimateTab, ultimateStepsTable,
+                ultimateStartTimeCol, ultimateInitialLoadCol, ultimateStartupTimeCol,
+                ultimateHoldTimeCol, ultimateShutdownTimeCol,
+                addUltimateStepButton, removeUltimateStepButton);
+        loadModelHandler.initialize();
+
+        stepHandler = new GatlingScenarioStepHandler(scenarioStepTable, availableTestTable);
+
         // bind table data
         availableTestTable.setItems(availableTests);
-        scenarioStepTable.setItems(steps);
+        scenarioStepTable.setItems(stepHandler.getSteps());
         scenarioTable.setItems(scenarios);
 
         // set column binding
         tcidCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTcid()));
-        suiteCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getSuite()));
-        availableTagsCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTags()));
-        availableDescCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getDescriptions()));
-        // HTML-aware cell factory (shows plain text, but popups full HTML on hover)
+        suiteCol.setCellValueFactory(
+                cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getSuite()));
+        availableTagsCol
+                .setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTags()));
+        availableDescCol.setCellValueFactory(
+                cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getDescriptions()));
+
+        // HTML-aware cell factory
         availableDescCol.setCellFactory(column -> new TableCell<GatlingTest, String>() {
             private final org.controlsfx.control.PopOver pop = new org.controlsfx.control.PopOver();
             private final javafx.scene.web.WebView webView = new javafx.scene.web.WebView();
-            private final javafx.animation.PauseTransition showDelay = new javafx.animation.PauseTransition(javafx.util.Duration.millis(200));
-            private final javafx.animation.PauseTransition hideDelay = new javafx.animation.PauseTransition(javafx.util.Duration.millis(200));
+            private final javafx.animation.PauseTransition showDelay = new javafx.animation.PauseTransition(
+                    javafx.util.Duration.millis(200));
+            private final javafx.animation.PauseTransition hideDelay = new javafx.animation.PauseTransition(
+                    javafx.util.Duration.millis(200));
 
             {
                 webView.setPrefSize(300, 200);
@@ -190,9 +275,12 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             }
         });
 
-        orderCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().getOrder()));
-        stepTcidCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTestTcid()));
-        waitCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().getWaitTime()).asObject());
+        orderCol.setCellValueFactory(
+                cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().getOrder()));
+        stepTcidCol.setCellValueFactory(
+                cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTestTcid()));
+        waitCol.setCellValueFactory(
+                cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().getWaitTime()).asObject());
         waitCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
         waitCol.setOnEditCommit(evt -> {
             ScenarioStep step = evt.getRowValue();
@@ -201,16 +289,20 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
                 step.setWaitTime(newVal);
             }
         });
-        stepTagsCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTags()));
+        stepTagsCol
+                .setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getTags()));
 
         scNameCol.setCellValueFactory(cell -> cell.getValue().nameProperty());
-        functionalCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().isFunctionalTest() ? "Y" : "N"));
+        functionalCol.setCellValueFactory(
+                cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().isFunctionalTest() ? "Y" : "N"));
         scDescCol.setCellValueFactory(cell -> cell.getValue().descriptionProperty());
         scDescCol.setCellFactory(column -> new TableCell<Scenario, String>() {
             private final org.controlsfx.control.PopOver pop = new org.controlsfx.control.PopOver();
             private final javafx.scene.web.WebView webView = new javafx.scene.web.WebView();
-            private final javafx.animation.PauseTransition showDelay = new javafx.animation.PauseTransition(javafx.util.Duration.millis(200));
-            private final javafx.animation.PauseTransition hideDelay = new javafx.animation.PauseTransition(javafx.util.Duration.millis(200));
+            private final javafx.animation.PauseTransition showDelay = new javafx.animation.PauseTransition(
+                    javafx.util.Duration.millis(200));
+            private final javafx.animation.PauseTransition hideDelay = new javafx.animation.PauseTransition(
+                    javafx.util.Duration.millis(200));
 
             {
                 webView.setPrefSize(300, 200);
@@ -250,29 +342,34 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
 
         // Type column shows load model type
         scTypeCol.setCellValueFactory(cell -> {
-            String type="";
+            String type = "";
             try {
                 String json = cell.getValue().getThreadGroupJson();
-                if(json!=null && !json.isBlank()){
-                    com.fasterxml.jackson.databind.ObjectMapper om=new com.fasterxml.jackson.databind.ObjectMapper();
-                    com.qa.app.model.GatlingLoadParameters p = om.readValue(json, com.qa.app.model.GatlingLoadParameters.class);
-                    if(p.getType()!=null) type = p.getType().name();
+                if (json != null && !json.isBlank()) {
+                    com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.qa.app.model.GatlingLoadParameters p = om.readValue(json,
+                            com.qa.app.model.GatlingLoadParameters.class);
+                    if (p.getType() != null)
+                        type = p.getType().name();
                 }
-            } catch(Exception ignore){}
+            } catch (Exception ignore) {
+            }
             return new javafx.beans.property.SimpleStringProperty(type);
         });
 
         // Steps count column
         scStepCountCol.setCellValueFactory(cell -> {
-            int count=0;
+            int count = 0;
             try {
                 count = scenarioService.findStepsByScenarioId(cell.getValue().getId()).size();
-            } catch(Exception ignore){}
+            } catch (Exception ignore) {
+            }
             return new javafx.beans.property.SimpleIntegerProperty(count);
         });
 
         // table selection listener same as endpoint
-        scenarioTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showScenarioDetails(newSel));
+        scenarioTable.getSelectionModel().selectedItemProperty()
+                .addListener((obs, oldSel, newSel) -> showScenarioDetails(newSel));
 
         // init combos
         frequencyCombo.setItems(FXCollections.observableArrayList("Once", "Daily", "Weekly"));
@@ -290,14 +387,11 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
 
         updateSuiteFilterOptions();
 
-        // ----- Load Model Pane initialization -----
-        initLoadModelPane();
-
-        // 设置多选表格及复选框列
+        // 设置多选表格及复选框�?
         scenarioTable.setEditable(true);
         scenarioTable.getSelectionModel().setSelectionMode(javafx.scene.control.SelectionMode.MULTIPLE);
 
-        // ---- 添加选择列 ----
+        // ---- 添加选择�?----
         javafx.scene.control.TableColumn<Scenario, Boolean> selectColumn = new javafx.scene.control.TableColumn<>();
         selectColumn.setGraphic(selectAllCheckBoxSc);
         selectColumn.setPrefWidth(40);
@@ -317,17 +411,20 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             if (nameIndex != -1) {
                 scenarioTable.getColumns().add(nameIndex + 1, functionalCol);
             }
-            functionalCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().isFunctionalTest() ? "Y" : "N"));
+            functionalCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(
+                    cell.getValue().isFunctionalTest() ? "Y" : "N"));
         }
 
         // 监听表格多选变化以同步 selectionMap
-        scenarioTable.getSelectionModel().getSelectedItems().addListener((javafx.collections.ListChangeListener<Scenario>) c -> {
-            if (isUpdatingSelection) return;
-            isUpdatingSelection = true;
-            syncSelectionProperties();
-            updateSelectAllCheckBoxState();
-            isUpdatingSelection = false;
-        });
+        scenarioTable.getSelectionModel().getSelectedItems()
+                .addListener((javafx.collections.ListChangeListener<Scenario>) c -> {
+                    if (isUpdatingSelection)
+                        return;
+                    isUpdatingSelection = true;
+                    syncSelectionProperties();
+                    updateSelectAllCheckBoxState();
+                    isUpdatingSelection = false;
+                });
 
         // selectAll 逻辑
         selectAllCheckBoxSc.setOnAction(e -> {
@@ -362,7 +459,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
                 String mark = (s != null && s.hasAnyOverrides()) ? "Y" : "";
                 return new javafx.beans.property.SimpleStringProperty(mark);
             });
-        
+
             overriddenCol.setCellFactory(col -> new TableCell<>() {
                 @Override
                 protected void updateItem(String item, boolean empty) {
@@ -381,7 +478,6 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
                 }
             });
         }
-        
     }
 
     @Override
@@ -396,11 +492,8 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             suiteFilterCombo.setItems(FXCollections.observableArrayList("All"));
             return;
         }
-        List<String> suites = availableTests.stream()
-                .map(GatlingTest::getSuite)
-                .filter(s -> s != null && !s.isBlank())
-                .distinct()
-                .collect(Collectors.toList());
+        List<String> suites = availableTests.stream().map(GatlingTest::getSuite).filter(s -> s != null && !s.isBlank())
+                .distinct().collect(Collectors.toList());
         suites.add(0, "All");
         suiteFilterCombo.setItems(FXCollections.observableArrayList(suites));
     }
@@ -429,7 +522,8 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             for (Scenario sc : scenarios) {
                 javafx.beans.property.BooleanProperty selected = new javafx.beans.property.SimpleBooleanProperty(false);
                 selected.addListener((obs, wasSel, isSel) -> {
-                    if (isUpdatingSelection) return;
+                    if (isUpdatingSelection)
+                        return;
                     if (isSel) {
                         scenarioTable.getSelectionModel().select(sc);
                     } else {
@@ -471,46 +565,27 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
 
     @FXML
     private void handleAddToSteps(ActionEvent evt) {
-        GatlingTest selected = availableTestTable.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
-        ScenarioStep step = new ScenarioStep(steps.size() + 1, selected.getTcid(), selected.getWaitTime(), selected.getTags());
-        steps.add(step);
+        stepHandler.handleAddToSteps(evt);
     }
 
     @FXML
     private void handleRemoveFromSteps(ActionEvent evt) {
-        ScenarioStep sel = scenarioStepTable.getSelectionModel().getSelectedItem();
-        if (sel != null) {
-            steps.remove(sel);
-            reindexSteps();
-        }
+        stepHandler.handleRemoveFromSteps(evt);
     }
 
     @FXML
     private void handleMoveStepUp(ActionEvent evt) {
-        int idx = scenarioStepTable.getSelectionModel().getSelectedIndex();
-        if (idx > 0) {
-            ScenarioStep s = steps.remove(idx);
-            steps.add(idx - 1, s);
-            reindexSteps();
-            scenarioStepTable.getSelectionModel().select(idx - 1);
-        }
+        stepHandler.handleMoveStepUp(evt);
     }
 
     @FXML
     private void handleMoveStepDown(ActionEvent evt) {
-        int idx = scenarioStepTable.getSelectionModel().getSelectedIndex();
-        if (idx < steps.size() - 1 && idx >= 0) {
-            ScenarioStep s = steps.remove(idx);
-            steps.add(idx + 1, s);
-            reindexSteps();
-            scenarioStepTable.getSelectionModel().select(idx + 1);
-        }
+        stepHandler.handleMoveStepDown(evt);
     }
 
     @FXML
     private void handleClearSteps(ActionEvent evt) {
-        steps.clear();
+        stepHandler.handleClearSteps(evt);
     }
 
     @FXML
@@ -554,12 +629,6 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         }
     }
 
-    private void reindexSteps() {
-        for (int i = 0; i < steps.size(); i++) {
-            steps.get(i).setOrder(i + 1);
-        }
-    }
-
     // clear form fields
     @FXML
     private void handleClearScenarioForm(ActionEvent evt) {
@@ -569,15 +638,17 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     private void clearScenarioForm() {
         scenarioNameField.clear();
         scenarioDescArea.setHtmlText("");
-        steps.clear();
+        stepHandler.getSteps().clear();
         scenarioTable.getSelectionModel().clearSelection();
 
         // reset functional flag
-        if (functionalTestCheckBox != null) functionalTestCheckBox.setSelected(false);
+        if (functionalTestCheckBox != null)
+            functionalTestCheckBox.setSelected(false);
 
         startDatePicker.setValue(null);
         frequencyCombo.getSelectionModel().clearSelection();
-        if (threadGroupCombo != null) threadGroupCombo.getSelectionModel().clearSelection();
+        if (threadGroupCombo != null)
+            threadGroupCombo.getSelectionModel().clearSelection();
 
         resetLoadModelDefaults();
 
@@ -585,22 +656,11 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     }
 
     private void resetLoadModelDefaults() {
-        // Create default parameter object based on model defaults
-        com.qa.app.model.GatlingLoadParameters def = new com.qa.app.model.GatlingLoadParameters();
-        def.setType(com.qa.app.model.threadgroups.ThreadGroupType.STANDARD);
-        def.setStandardThreadGroup(new com.qa.app.model.threadgroups.StandardThreadGroup());
-        def.setSteppingThreadGroup(new com.qa.app.model.threadgroups.SteppingThreadGroup());
-        com.qa.app.model.threadgroups.UltimateThreadGroup ut = new com.qa.app.model.threadgroups.UltimateThreadGroup();
-        java.util.List<com.qa.app.model.threadgroups.UltimateThreadGroupStep> stepsDef = new java.util.ArrayList<>();
-        stepsDef.add(new com.qa.app.model.threadgroups.UltimateThreadGroupStep());
-        ut.setSteps(stepsDef);
-        def.setUltimateThreadGroup(ut);
-
-        // apply to UI
-        populateLoadModelFromParams(def);
+        loadModelHandler.resetToDefaults();
     }
 
-    @FXML private void openLoadDialog(ActionEvent evt) {
+    @FXML
+    private void openLoadDialog(ActionEvent evt) {
         showInfo("Load dialog feature is not implemented yet.");
     }
 
@@ -630,15 +690,18 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
             sc.setThreadGroupJson(om.writeValueAsString(buildLoadParameters()));
             sc.setScheduleJson(buildScheduleJson());
-        } catch(Exception ex){ sc.setThreadGroupJson("{}"); }
+        } catch (Exception ex) {
+            sc.setThreadGroupJson("{}");
+        }
         try {
-            scenarioService.createScenario(sc, new ArrayList<>(steps));
+            scenarioService.createScenario(sc, new ArrayList<>(stepHandler.getSteps()));
             // save scheduler cron after id generated
             saveSchedulerToDb(sc.getId());
             scenarios.add(sc); // add to end
             javafx.beans.property.BooleanProperty selProp = new javafx.beans.property.SimpleBooleanProperty(false);
             selProp.addListener((obs, wasSel, isSel) -> {
-                if (isUpdatingSelection) return;
+                if (isUpdatingSelection)
+                    return;
                 if (isSel) {
                     scenarioTable.getSelectionModel().select(sc);
                 } else {
@@ -656,7 +719,10 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     @FXML
     private void handleSaveScenario(ActionEvent evt) {
         Scenario selected = scenarioTable.getSelectionModel().getSelectedItem();
-        if (selected == null) { showError("please select a scenario to update"); return; }
+        if (selected == null) {
+            showError("please select a scenario to update");
+            return;
+        }
         String name = scenarioNameField.getText();
         if (name == null || name.isBlank()) {
             showError("scenario name cannot be empty");
@@ -671,22 +737,23 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
             selected.setThreadGroupJson(om.writeValueAsString(buildLoadParameters()));
             selected.setScheduleJson(buildScheduleJson());
-            scenarioService.updateScenario(selected, new ArrayList<>(steps));
+            scenarioService.updateScenario(selected, new ArrayList<>(stepHandler.getSteps()));
             // save scheduler cron after id generated
             saveSchedulerToDb(selected.getId());
             showInfo("Scenario '" + selected.getName() + "' saved successfully.");
             reloadScenarios();
         } catch (ServiceException se) {
             showError(se.getMessage());
-        } catch (Exception ex){
-            showError("save failed: "+ex.getMessage());
+        } catch (Exception ex) {
+            showError("save failed: " + ex.getMessage());
         }
     }
 
     @FXML
     private void handleDuplicateScenario(ActionEvent evt) {
         Scenario sel = scenarioTable.getSelectionModel().getSelectedItem();
-        if (sel == null) return;
+        if (sel == null)
+            return;
         try {
             Scenario dup = scenarioService.duplicateScenario(sel.getId());
             // Set displayOrder to max + 1
@@ -695,7 +762,8 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             scenarios.add(dup); // add to end
             javafx.beans.property.BooleanProperty dupSel = new javafx.beans.property.SimpleBooleanProperty(false);
             dupSel.addListener((obs, wasSel, isSel) -> {
-                if (isUpdatingSelection) return;
+                if (isUpdatingSelection)
+                    return;
                 if (isSel) {
                     scenarioTable.getSelectionModel().select(dup);
                 } else {
@@ -711,8 +779,10 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
 
     @FXML
     private void handleDeleteScenario(ActionEvent evt) {
-        javafx.collections.ObservableList<Scenario> selectedScenarios = scenarioTable.getSelectionModel().getSelectedItems();
-        if (selectedScenarios.isEmpty()) return;
+        javafx.collections.ObservableList<Scenario> selectedScenarios = scenarioTable.getSelectionModel()
+                .getSelectedItems();
+        if (selectedScenarios.isEmpty())
+            return;
         try {
             for (Scenario sc : new java.util.ArrayList<>(selectedScenarios)) {
                 scenarioService.deleteScenario(sc.getId());
@@ -739,7 +809,7 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             boolean hasMixed = selected.stream().anyMatch(sc -> sc.isFunctionalTest() != firstFunctional);
             if (hasMixed) {
                 showError("Cannot run mixed functional and non-functional scenarios together.");
-                return;  // Cancel run
+                return; // Cancel run
             }
         }
 
@@ -752,7 +822,8 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         } else {
             srcBtn = null;
         }
-        if (srcBtn != null) srcBtn.setDisable(true);
+        if (srcBtn != null)
+            srcBtn.setDisable(true);
 
         String runningMsg = "Running " + selected.size() + " scenario(s)...";
         if (mainViewModel != null) {
@@ -762,7 +833,8 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         }
 
         Runnable onComplete = () -> javafx.application.Platform.runLater(() -> {
-            if (srcBtn != null) srcBtn.setDisable(false);
+            if (srcBtn != null)
+                srcBtn.setDisable(false);
             reloadScenarios();
         });
 
@@ -770,7 +842,8 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
             // Always call the multi-scenario API for simplicity
             scenarioService.runScenarios(new java.util.ArrayList<>(selected), onComplete);
         } catch (ServiceException e) {
-            if (srcBtn != null) srcBtn.setDisable(false);
+            if (srcBtn != null)
+                srcBtn.setDisable(false);
             showError(e.getMessage());
         }
     }
@@ -778,7 +851,10 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
     @FXML
     private void handleScheduleScenario(ActionEvent evt) {
         Scenario sel = scenarioTable.getSelectionModel().getSelectedItem();
-        if (sel == null) { showError("please select a scenario"); return; }
+        if (sel == null) {
+            showError("please select a scenario");
+            return;
+        }
 
         LocalDate date = startDatePicker.getValue();
         String freq = frequencyCombo.getValue();
@@ -790,9 +866,16 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         // simple cron mapping
         String cron = "";
         switch (freq) {
-            case "Daily": cron = "0 0 0 * * ?"; break;
-            case "Weekly": cron = "0 0 0 ? * MON"; break;
-            case "Once": default: cron = ""; break;
+            case "Daily":
+                cron = "0 0 0 * * ?";
+                break;
+            case "Weekly":
+                cron = "0 0 0 ? * MON";
+                break;
+            case "Once":
+            default:
+                cron = "";
+                break;
         }
 
         int h = hourSpinner.getValue();
@@ -803,7 +886,8 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         try {
             scenarioService.upsertSchedule(sel.getId(), cron, true);
             // 更新 scenario.scheduleJson
-            sel.setScheduleJson("{\"startDateTime\":\""+startDateTime.toString()+"\",\"frequency\":\""+freq+"\"}");
+            sel.setScheduleJson(
+                    "{\"startDateTime\":\"" + startDateTime.toString() + "\",\"frequency\":\"" + freq + "\"}");
             scenarioService.updateScenario(sel, scenarioService.findStepsByScenarioId(sel.getId()));
             showInfo("Schedule saved for scenario '" + sel.getName() + "'.");
         } catch (ServiceException e) {
@@ -833,185 +917,105 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         if (sc == null) {
             scenarioNameField.clear();
             scenarioDescArea.setHtmlText("");
-            steps.clear();
-            if (functionalTestCheckBox != null) functionalTestCheckBox.setSelected(false);
+            stepHandler.getSteps().clear();
+            if (functionalTestCheckBox != null)
+                functionalTestCheckBox.setSelected(false);
             return;
         }
         scenarioNameField.setText(sc.getName());
         scenarioDescArea.setHtmlText(sc.getDescription());
         try {
-            steps.setAll(scenarioService.findStepsByScenarioId(sc.getId()));
+            stepHandler.getSteps().setAll(scenarioService.findStepsByScenarioId(sc.getId()));
         } catch (ServiceException e) {
-            steps.clear();
+            stepHandler.getSteps().clear();
         }
         // set functional checkbox state
         if (functionalTestCheckBox != null) {
             functionalTestCheckBox.setSelected(sc.isFunctionalTest());
         }
         try {
-            if(sc.getThreadGroupJson()!=null && !sc.getThreadGroupJson().isBlank()){
-               com.fasterxml.jackson.databind.ObjectMapper om=new com.fasterxml.jackson.databind.ObjectMapper();
-               var p=om.readValue(sc.getThreadGroupJson(), com.qa.app.model.GatlingLoadParameters.class);
-               populateLoadModelFromParams(p);
+            if (sc.getThreadGroupJson() != null && !sc.getThreadGroupJson().isBlank()) {
+                com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+                var p = om.readValue(sc.getThreadGroupJson(), com.qa.app.model.GatlingLoadParameters.class);
+                populateLoadModelFromParams(p);
             }
-        }catch(Exception ignore){}
+        } catch (Exception ignore) {
+        }
 
         // populate schedule UI
-        try{
-            String schedJson=sc.getScheduleJson();
-            if(schedJson!=null && !schedJson.isBlank()){
-                com.fasterxml.jackson.databind.ObjectMapper om=new com.fasterxml.jackson.databind.ObjectMapper();
-                java.util.Map<String,Object> map = om.readValue(schedJson, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String,Object>>(){});
-                Object dtObj=map.get("startDateTime");
-                if(dtObj!=null){
-                    LocalDateTime ldt=LocalDateTime.parse(dtObj.toString());
+        try {
+            String schedJson = sc.getScheduleJson();
+            if (schedJson != null && !schedJson.isBlank()) {
+                com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+                java.util.Map<String, Object> map = om.readValue(schedJson,
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {
+                        });
+                Object dtObj = map.get("startDateTime");
+                if (dtObj != null) {
+                    LocalDateTime ldt = LocalDateTime.parse(dtObj.toString());
                     startDatePicker.setValue(ldt.toLocalDate());
                     hourSpinner.getValueFactory().setValue(ldt.getHour());
                     minuteSpinner.getValueFactory().setValue(ldt.getMinute());
                     secondSpinner.getValueFactory().setValue(ldt.getSecond());
                 }
-                Object freqObj=map.get("frequency");
-                if(freqObj!=null){
+                Object freqObj = map.get("frequency");
+                if (freqObj != null) {
                     frequencyCombo.setValue(freqObj.toString());
                 }
             }
-        }catch(Exception ignore){}
-    }
-
-    private void initLoadModelPane() {
-        // Ultimate table setup
-        if (ultimateStepsTable != null) {
-            ultimateStepsTable.setItems(ultimateSteps);
-            ultimateStartTimeCol.setCellValueFactory(cd -> cd.getValue().startTimeProperty().asObject());
-            ultimateInitialLoadCol.setCellValueFactory(cd -> cd.getValue().initialLoadProperty().asObject());
-            ultimateStartupTimeCol.setCellValueFactory(cd -> cd.getValue().startupTimeProperty().asObject());
-            ultimateHoldTimeCol.setCellValueFactory(cd -> cd.getValue().holdTimeProperty().asObject());
-            ultimateShutdownTimeCol.setCellValueFactory(cd -> cd.getValue().shutdownTimeProperty().asObject());
-
-            ultimateStartTimeCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
-            ultimateInitialLoadCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
-            ultimateStartupTimeCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
-            ultimateHoldTimeCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
-            ultimateShutdownTimeCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
-
-            if (addUltimateStepButton != null)
-                addUltimateStepButton.setOnAction(e -> ultimateSteps.add(new com.qa.app.model.threadgroups.UltimateThreadGroupStep()));
-            if (removeUltimateStepButton != null)
-                removeUltimateStepButton.setOnAction(e -> {
-                    var sel = ultimateStepsTable.getSelectionModel().getSelectedItem();
-                    if (sel != null) ultimateSteps.remove(sel);
-                });
-        }
-
-        // Standard field bindings
-        if (standardSchedulerCheckBox != null) {
-            standardDurationSpinner.disableProperty().bind(standardSchedulerCheckBox.selectedProperty().not());
-            standardDelaySpinner.disableProperty().bind(standardSchedulerCheckBox.selectedProperty().not());
-            standardLoopsSpinner.disableProperty().bind(standardSchedulerCheckBox.selectedProperty());
+        } catch (Exception ignore) {
         }
     }
-
 
     private com.qa.app.model.GatlingLoadParameters buildLoadParameters() {
-        com.qa.app.model.GatlingLoadParameters params = new com.qa.app.model.GatlingLoadParameters();
-
-        javafx.scene.control.Tab sel = loadModelTabPane != null ? loadModelTabPane.getSelectionModel().getSelectedItem() : null;
-        int selIndex = loadModelTabPane != null ? loadModelTabPane.getSelectionModel().getSelectedIndex() : 0;
-
-        if ((sel != null && sel == standardLoadTab) || selIndex==0) {
-            params.setType(com.qa.app.model.threadgroups.ThreadGroupType.STANDARD);
-            com.qa.app.model.threadgroups.StandardThreadGroup stdCfg = new com.qa.app.model.threadgroups.StandardThreadGroup();
-            stdCfg.setNumThreads(standardNumThreadsSpinner.getValue());
-            stdCfg.setRampUp(standardRampUpSpinner.getValue());
-            stdCfg.setLoops(standardLoopsSpinner.getValue());
-            stdCfg.setScheduler(standardSchedulerCheckBox.isSelected());
-            stdCfg.setDuration(standardDurationSpinner.getValue());
-            stdCfg.setDelay(standardDelaySpinner.getValue());
-            params.setStandardThreadGroup(stdCfg);
-        } else if ((sel != null && sel == steppingLoadTab) || selIndex==1) {
-            params.setType(com.qa.app.model.threadgroups.ThreadGroupType.STEPPING);
-            com.qa.app.model.threadgroups.SteppingThreadGroup stepCfg = new com.qa.app.model.threadgroups.SteppingThreadGroup();
-            stepCfg.setNumThreads(steppingNumThreadsSpinner.getValue());
-            stepCfg.setInitialDelay(steppingInitialDelaySpinner.getValue());
-            stepCfg.setStartUsers(steppingStartUsersSpinner.getValue());
-            stepCfg.setIncrementUsers(steppingIncrementUsersSpinner.getValue());
-            stepCfg.setIncrementTime(steppingIncrementTimeSpinner.getValue());
-            stepCfg.setHoldLoad(steppingHoldLoadSpinner.getValue());
-            params.setSteppingThreadGroup(stepCfg);
-        } else {
-            params.setType(com.qa.app.model.threadgroups.ThreadGroupType.ULTIMATE);
-            com.qa.app.model.threadgroups.UltimateThreadGroup ultCfg = new com.qa.app.model.threadgroups.UltimateThreadGroup();
-            ultCfg.setSteps(new java.util.ArrayList<>(ultimateSteps));
-            params.setUltimateThreadGroup(ultCfg);
-        }
-        return params;
+        return loadModelHandler.buildLoadParameters();
     }
 
-    private void populateLoadModelFromParams(com.qa.app.model.GatlingLoadParameters p){
-        if (p == null) return;
-        switch(p.getType()){
-            case STANDARD -> {
-                loadModelTabPane.getSelectionModel().select(standardLoadTab);
-                var s=p.getStandardThreadGroup(); if(s==null) return;
-                standardNumThreadsSpinner.getValueFactory().setValue(s.getNumThreads());
-                standardRampUpSpinner.getValueFactory().setValue(s.getRampUp());
-                standardLoopsSpinner.getValueFactory().setValue(s.getLoops());
-                standardSchedulerCheckBox.setSelected(s.isScheduler());
-                standardDurationSpinner.getValueFactory().setValue(s.getDuration());
-                standardDelaySpinner.getValueFactory().setValue(s.getDelay());
-            }
-            case STEPPING -> {
-                loadModelTabPane.getSelectionModel().select(steppingLoadTab);
-                var st=p.getSteppingThreadGroup(); if(st==null) return;
-                steppingNumThreadsSpinner.getValueFactory().setValue(st.getNumThreads());
-                steppingInitialDelaySpinner.getValueFactory().setValue(st.getInitialDelay());
-                steppingStartUsersSpinner.getValueFactory().setValue(st.getStartUsers());
-                steppingIncrementUsersSpinner.getValueFactory().setValue(st.getIncrementUsers());
-                steppingIncrementTimeSpinner.getValueFactory().setValue(st.getIncrementTime());
-                steppingHoldLoadSpinner.getValueFactory().setValue(st.getHoldLoad());
-            }
-            case ULTIMATE -> {
-                loadModelTabPane.getSelectionModel().select(ultimateTab);
-                var ut=p.getUltimateThreadGroup(); if(ut==null) return;
-                ultimateSteps.setAll(ut.getSteps());
-            }
-        }
+    private void populateLoadModelFromParams(com.qa.app.model.GatlingLoadParameters p) {
+        loadModelHandler.populateLoadModelFromParams(p);
     }
 
     private void setCurrentTimeDefaults() {
         java.time.LocalDate today = java.time.LocalDate.now();
-        if(startDatePicker!=null) startDatePicker.setValue(today);
+        if (startDatePicker != null)
+            startDatePicker.setValue(today);
         LocalTime now = LocalTime.now();
         hourSpinner.getValueFactory().setValue(now.getHour());
         minuteSpinner.getValueFactory().setValue(now.getMinute());
         secondSpinner.getValueFactory().setValue(now.getSecond());
     }
 
-    private void saveSchedulerToDb(int scenarioId){
-        try{
-            LocalDate date=startDatePicker.getValue();
-            if(date==null) return;
-            LocalTime t=LocalTime.of(hourSpinner.getValue(), minuteSpinner.getValue(), secondSpinner.getValue());
-            String freq=frequencyCombo.getValue();
-            String cron="";
-            if("Daily".equals(freq)) cron="0 "+t.getMinute()+" "+t.getHour()+" * * ?";
-            else if("Weekly".equals(freq)) cron="0 "+t.getMinute()+" "+t.getHour()+" ? * MON";
-            // Once 无 cron
+    private void saveSchedulerToDb(int scenarioId) {
+        try {
+            LocalDate date = startDatePicker.getValue();
+            if (date == null)
+                return;
+            LocalTime t = LocalTime.of(hourSpinner.getValue(), minuteSpinner.getValue(), secondSpinner.getValue());
+            String freq = frequencyCombo.getValue();
+            String cron = "";
+            if ("Daily".equals(freq))
+                cron = "0 " + t.getMinute() + " " + t.getHour() + " * * ?";
+            else if ("Weekly".equals(freq))
+                cron = "0 " + t.getMinute() + " " + t.getHour() + " ? * MON";
+            // Once �?cron
             scenarioService.upsertSchedule(scenarioId, cron, true);
             // update scheduleJson
-        }catch(Exception ignore){}
+        } catch (Exception ignore) {
+        }
     }
 
-    private String buildScheduleJson(){
-        java.util.Map<String,Object> map=new java.util.HashMap<>();
-        if(startDatePicker.getValue()!=null){
-           LocalTime lt=LocalTime.of(hourSpinner.getValue(),minuteSpinner.getValue(),secondSpinner.getValue());
-           map.put("startDateTime",java.time.LocalDateTime.of(startDatePicker.getValue(),lt).toString());
+    private String buildScheduleJson() {
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        if (startDatePicker.getValue() != null) {
+            LocalTime lt = LocalTime.of(hourSpinner.getValue(), minuteSpinner.getValue(), secondSpinner.getValue());
+            map.put("startDateTime", java.time.LocalDateTime.of(startDatePicker.getValue(), lt).toString());
         }
-        map.put("frequency",frequencyCombo.getValue());
-        try{
+        map.put("frequency", frequencyCombo.getValue());
+        try {
             return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(map);
-        }catch(Exception e){return "{}";}
+        } catch (Exception e) {
+            return "{}";
+        }
     }
 
     private void updateSelectAllCheckBoxState() {
@@ -1043,37 +1047,50 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
 
     // Reuse toggle logic similar to GatlingTestViewModel
     private void toggleTooltip(javafx.scene.control.Tooltip tooltip, javafx.scene.Node owner) {
-        if (tooltip == null || owner == null) return;
+        if (tooltip == null || owner == null)
+            return;
         if (tooltip.isShowing()) {
             tooltip.hide();
         } else {
-            javafx.geometry.Point2D p = owner.localToScreen(owner.getBoundsInLocal().getMaxX(), owner.getBoundsInLocal().getMaxY());
+            javafx.geometry.Point2D p = owner.localToScreen(owner.getBoundsInLocal().getMaxX(),
+                    owner.getBoundsInLocal().getMaxY());
             tooltip.show(owner, p.getX(), p.getY());
         }
     }
-    @FXML private void handleEditStepOverrides() {
+
+
+@FXML
+    private void handleEditStepOverrides() {
         ScenarioStep sel = scenarioStepTable.getSelectionModel().getSelectedItem();
-        if (sel == null) { showError("select a step first"); return; }
+        if (sel == null) {
+            showError("select a step first");
+            return;
+        }
         // 获取当前场景
         Scenario currentScenario = scenarioTable.getSelectionModel().getSelectedItem();
-        if (currentScenario == null) { showError("select a scenario first"); return; }
+        if (currentScenario == null) {
+            showError("select a scenario first");
+            return;
+        }
         try {
-            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/qa/app/ui/view/step_override_editor.fxml"));
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(
+                    getClass().getResource("/com/qa/app/ui/view/step_override_editor.fxml"));
             javafx.scene.Parent root = loader.load();
             StepOverrideEditorViewModel ctrl = loader.getController();
             javafx.stage.Stage dialog = new javafx.stage.Stage();
             dialog.setTitle("Edit Overrides - " + sel.getTestTcid());
             dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
-            
+
             if (scenarioStepTable.getScene() != null && scenarioStepTable.getScene().getWindow() != null) {
                 dialog.initOwner(scenarioStepTable.getScene().getWindow());
             }
             dialog.setScene(new javafx.scene.Scene(root));
             ctrl.setDialogStage(dialog);
             ctrl.setStep(sel); // controller will populate tables
+
             dialog.showAndWait();
             if (ctrl != null && ctrl.isSaved()) {
-                // 持久化单步覆盖修改
+                // 持久化单步覆盖修�?
                 try {
                     scenarioService.updateStep(currentScenario.getId(), sel);
                 } catch (ServiceException se) {
@@ -1087,16 +1104,17 @@ public class GatlingScenarioViewModel implements AppConfigChangeListener {
         }
     }
 
-    @FXML private void handleClearStepOverrides() {
+    @FXML
+    private void handleClearStepOverrides() {
         var selected = scenarioStepTable.getSelectionModel().getSelectedItems();
-        if (selected == null || selected.isEmpty()) { showError("select step(s) first"); return; }
-        for (ScenarioStep s : selected) { s.clearOverrides(); }
+        if (selected == null || selected.isEmpty()) {
+            showError("select step(s) first");
+            return;
+        }
+        for (ScenarioStep s : selected) {
+            s.clearOverrides();
+        }
         scenarioStepTable.refresh();
         showInfo("Overrides cleared for " + selected.size() + " step(s)");
-    }
-
-    /** 检查是否含有覆盖标记，可用于表格自定义渲染渲染 */
-    private boolean stepHasOverrides(ScenarioStep step) {
-        return step != null && step.hasAnyOverrides();
     }
 }
